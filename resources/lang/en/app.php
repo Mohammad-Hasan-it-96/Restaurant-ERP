@@ -489,9 +489,13 @@ return [
     'currency'                    => 'SAR',
     'unknown'                     => 'Unknown',
 
-    // Orders
+    // Orders API
     'order_placed_successfully'   => 'Your order has been placed successfully.',
     'order_failed'                => 'Failed to place the order. Please try again.',
+    'order_not_found'             => 'Order not found.',
+    'order_cancel_not_allowed'    => 'This order cannot be cancelled.',
+    'order_cancel_window_passed'  => 'The cancellation window for this scheduled order has passed.',
+    'order_cancelled_by_customer' => 'Your order has been cancelled.',
     'customer_blocked_message'    => 'Your account has been blocked. Please contact support.',
     'some_products_not_found'     => 'One or more selected products could not be found.',
     'product_not_active'          => 'The product ":name" is currently unavailable.',

@@ -454,6 +454,10 @@ return [
     // Orders API
     'order_placed_successfully'   => 'تم تقديم طلبك بنجاح.',
     'order_failed'                => 'فشل تقديم الطلب. يرجى المحاولة مرة أخرى.',
+    'order_not_found'             => 'الطلب غير موجود.',
+    'order_cancel_not_allowed'    => 'لا يمكن إلغاء هذا الطلب.',
+    'order_cancel_window_passed'  => 'انتهت مهلة إلغاء هذا الطلب المجدول.',
+    'order_cancelled_by_customer' => 'تم إلغاء طلبك.',
     'customer_blocked_message'    => 'تم حظر حسابك. يرجى التواصل مع الدعم.',
     'some_products_not_found'     => 'أحد المنتجات المختارة غير موجود.',
     'product_not_active'          => 'المنتج ":name" غير متاح حالياً.',
