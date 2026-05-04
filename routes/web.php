@@ -94,6 +94,18 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
         });
     });
 
+    // Orders routes
+    Route::group(['prefix' => 'orders', 'as' => 'orders.'], function () {
+        Route::get('', [App\Http\Controllers\Admin\OrderController::class, 'index'])->name('index');
+        Route::get('{order}', [App\Http\Controllers\Admin\OrderController::class, 'show'])->name('show');
+        Route::middleware(['moderator'])->group(function () {
+            Route::post('{order}/accept',   [App\Http\Controllers\Admin\OrderController::class, 'accept'])->name('accept');
+            Route::post('{order}/reject',   [App\Http\Controllers\Admin\OrderController::class, 'reject'])->name('reject');
+            Route::post('{order}/cancel',   [App\Http\Controllers\Admin\OrderController::class, 'cancel'])->name('cancel');
+            Route::post('{order}/complete', [App\Http\Controllers\Admin\OrderController::class, 'complete'])->name('complete');
+        });
+    });
+
     // Delivery Zones routes
     Route::group(['prefix' => 'delivery-zones', 'as' => 'delivery-zones.'], function () {
         Route::get('', [App\Http\Controllers\Admin\DeliveryZoneController::class, 'index'])->name('index');

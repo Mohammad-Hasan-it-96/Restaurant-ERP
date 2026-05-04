@@ -296,6 +296,18 @@
                         <span>{{ \App\Helpers\Helpers::translate('dashboard') }}</span>
                     </a>
 
+                    <!-- Orders Link -->
+                    <a href="{{ route('admin.orders.index') }}"
+                       class="nav-link d-flex align-items-center py-3 px-3 rounded-3 mb-1 {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}">
+                        <i class="bi bi-receipt me-3"></i>
+                        <span>{{ \App\Helpers\Helpers::translate('orders') }}</span>
+                        {{-- Pending badge --}}
+                        @php $pendingCount = \App\Models\Order::where('status','pending')->count(); @endphp
+                        @if($pendingCount)
+                        <span class="badge bg-warning text-dark ms-auto">{{ $pendingCount }}</span>
+                        @endif
+                    </a>
+
                     <!-- Categories Dropdown -->
                     <div class="sidebar-item mb-1">
                         <button class="nav-link d-flex align-items-center justify-content-between w-100 py-3 px-3 rounded-3 border-0 bg-transparent {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"
