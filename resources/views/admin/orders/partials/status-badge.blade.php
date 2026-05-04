@@ -1,13 +1,15 @@
 @php
     $map = [
-        'pending'   => ['warning',  'app.pending'],
-        'accepted'  => ['primary',  'app.accepted'],
-        'preparing' => ['info',     'app.preparing'],
-        'ready'     => ['info',     'app.ready'],
-        'delivered' => ['success',  'app.delivered'],
-        'completed' => ['success',  'app.completed'],
-        'cancelled' => ['dark',     'app.cancelled'],
-        'rejected'  => ['danger',   'app.rejected'],
+        'pending'               => ['warning',  'app.pending'],
+        'accepted'              => ['primary',  'app.accepted'],
+        'preparing'             => ['info',     'app.preparing'],
+        'ready'                 => ['info',     'app.ready'],
+        'delivered'             => ['success',  'app.delivered'],
+        'completed'             => ['success',  'app.completed'],
+        'cancelled'             => ['dark',     'app.cancelled'],
+        'cancelled_by_admin'    => ['dark',     'app.cancelled_by_admin'],
+        'cancelled_by_customer' => ['secondary','app.cancelled_by_customer'],
+        'rejected'              => ['danger',   'app.rejected'],
     ];
     [$color, $key] = $map[$status] ?? ['secondary', 'app.unknown'];
 @endphp

@@ -2,12 +2,10 @@
 
 use App\Http\Controllers\API\DashboardController;
 use App\Http\Controllers\API\LanguageController;
-use App\Http\Controllers\API\ProductController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\API\ProfileController;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\AuthController;
-use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [DashboardController::class, 'welcome']);
@@ -34,7 +32,7 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
     Route::get('dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
 
     // Products routes
-    Route::group(['middleware' => 'auth', 'prefix' => 'products', 'as' => 'products.'], function () {
+    Route::group(['prefix' => 'products', 'as' => 'products.'], function () {
         Route::get('', [AdminProductController::class, 'index'])->name('index');
         Route::get('export', [AdminProductController::class, 'export'])->name('export');
         Route::get('import', [AdminProductController::class, 'import'])->name('import');

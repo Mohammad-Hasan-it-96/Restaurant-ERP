@@ -10,14 +10,16 @@ class Order extends Model
     const TYPE_DELIVERY = 'delivery';
     const TYPE_TAKEAWAY = 'takeaway';
     // ??? Status constants ??????????????????????????????????????????
-    const STATUS_PENDING   = 'pending';
-    const STATUS_ACCEPTED  = 'accepted';
-    const STATUS_PREPARING = 'preparing';
-    const STATUS_READY     = 'ready';
-    const STATUS_DELIVERED = 'delivered';
-    const STATUS_COMPLETED = 'completed';
-    const STATUS_CANCELLED = 'cancelled';
-    const STATUS_REJECTED  = 'rejected';
+    const STATUS_PENDING              = 'pending';
+    const STATUS_ACCEPTED             = 'accepted';
+    const STATUS_PREPARING            = 'preparing';
+    const STATUS_READY                = 'ready';
+    const STATUS_DELIVERED            = 'delivered';
+    const STATUS_COMPLETED            = 'completed';
+    const STATUS_CANCELLED            = 'cancelled';              // legacy / generic
+    const STATUS_CANCELLED_BY_ADMIN   = 'cancelled_by_admin';
+    const STATUS_CANCELLED_BY_CUSTOMER= 'cancelled_by_customer';
+    const STATUS_REJECTED             = 'rejected';
     // ??? Payment status constants ??????????????????????????????????
     const PAYMENT_UNPAID = 'unpaid';
     const PAYMENT_PAID   = 'paid';
@@ -28,6 +30,7 @@ class Order extends Model
         'source',
         'order_type',
         'table_number',
+        'address',
         'delivery_type',
         'scheduled_at',
         'status',

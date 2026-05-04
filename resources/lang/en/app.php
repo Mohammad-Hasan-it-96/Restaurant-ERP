@@ -309,38 +309,6 @@ return [
     'tax_rate_help' => 'Default tax rate percentage (e.g., 10 for 10%)', // Added
     'shipping_fee_help' => 'Default shipping fee amount', // Added
 
-    // Config keys labels (Add missing ones from seeder)
-    'site_name' => 'Site Name',
-    'site_description' => 'Site Description',
-    'site_logo' => 'Site Logo',
-    'site_favicon' => 'Site Favicon',
-    'site_email' => 'Site Email',
-    'maintenance_mode' => 'Maintenance Mode',
-    'mail_from_address' => 'Mail From Address',
-    'mail_from_name' => 'Mail From Name',
-    'facebook_url' => 'Facebook URL',
-    'twitter_url' => 'Twitter URL',
-    'instagram_url' => 'Instagram URL',
-    'support_phone' => 'Support Phone',
-    'support_telegram' => 'Support Telegram',
-    'active_dashboard' => 'Active Dashboard', // Added (if not already present)
-    'home_banner_text' => 'Home Banner Text',
-    'custom_css' => 'Custom CSS',
-    'custom_js' => 'Custom JavaScript',
-    'analytics_enabled' => 'Analytics Enabled',
-    'google_analytics_id' => 'Google Analytics ID', // Added
-    'notification_api_token' => 'Notification API Token',
-    'firebase_server_key' => 'Firebase Server Key', // Added
-    'pusher_app_id' => 'Pusher App ID', // Added
-    'pusher_app_key' => 'Pusher App Key', // Added
-    'pusher_app_secret' => 'Pusher App Secret', // Added
-    'min_password_length' => 'Minimum Password Length',
-    'require_password_confirmation' => 'Require Password Confirmation',
-    'two_factor_enabled' => 'Two-Factor Authentication',
-    'allow_guest_checkout' => 'Allow Guest Checkout',
-    'default_currency' => 'Default Currency', // Added
-    'tax_rate' => 'Tax Rate (%)', // Added
-    'shipping_fee' => 'Shipping Fee', // Added
 
     // Categories management
     'categories'                     => 'Categories',
@@ -357,9 +325,7 @@ return [
     'category_image'                 => 'Category Image',
     'parent_category'                => 'Parent Category',
     'no_parent'                      => 'No Parent (Root)',
-    'sort_order'                     => 'Sort Order',
     'search_categories'              => 'Search categories...',
-    'all_categories'                 => 'All Categories',
     'no_categories_found'            => 'No categories found',
     'category_created'               => 'Category created successfully',
     'category_updated'               => 'Category updated successfully',
@@ -411,9 +377,7 @@ return [
     'invoice'                     => 'Invoice',
     'print_invoice'               => 'Print Invoice',
     'print'                       => 'Print',
-    'date'                        => 'Date',
     'qty'                         => 'Qty',
-    'price'                       => 'Price',
     'address'                     => 'Address',
     'invoice_thank_you'           => 'Thank you for your order!',
 
@@ -465,16 +429,12 @@ return [
     'discount'                    => 'Discount',
     'payment_status'              => 'Payment Status',
     'unit_price'                  => 'Unit Price',
-    'product_name'                => 'Product',
     'phone'                       => 'Phone',
     'all'                         => 'All',
-    'pending'                     => 'Pending',
     'accepted'                    => 'Accepted',
     'preparing'                   => 'Preparing',
     'ready'                       => 'Ready',
     'delivered'                   => 'Delivered',
-    'completed'                   => 'Completed',
-    'cancelled'                   => 'Cancelled',
     'rejected'                    => 'Rejected',
     'unpaid'                      => 'Unpaid',
     'paid'                        => 'Paid',
@@ -485,9 +445,9 @@ return [
     'delivery'                    => 'Delivery',
     'takeaway'                    => 'Takeaway',
     'yes_cancel'                  => 'Yes, Cancel',
-    'no'                          => 'No',
     'currency'                    => 'SAR',
-    'unknown'                     => 'Unknown',
+    'cancelled_by_admin'          => 'Cancelled by Admin',
+    'cancelled_by_customer'       => 'Cancelled by Customer',
 
     // Orders API
     'order_placed_successfully'   => 'Your order has been placed successfully.',

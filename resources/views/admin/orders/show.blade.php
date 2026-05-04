@@ -30,7 +30,7 @@
                 <i class="bi bi-bag-check me-1"></i>{{ __('app.complete') }}
             </button>
         @endif
-        @if(!in_array($order->status, ['completed', 'rejected', 'cancelled']))
+        @if(!in_array($order->status, ['completed', 'rejected', 'cancelled', 'cancelled_by_admin', 'cancelled_by_customer']))
             <button class="btn btn-outline-dark btn-sm" data-bs-toggle="modal" data-bs-target="#cancelModal">
                 <i class="bi bi-slash-circle me-1"></i>{{ __('app.cancel') }}
             </button>
@@ -107,6 +107,9 @@
                         @endif
 
                         @if($order->order_type === 'delivery')
+                        <dt class="col-6 text-muted">{{ __('app.address') }}</dt>
+                        <dd class="col-6">{{ $order->address ?? '—' }}</dd>
+
                         <dt class="col-6 text-muted">{{ __('app.delivery_type') }}</dt>
                         <dd class="col-6">{{ $order->delivery_type ? __('app.' . $order->delivery_type) : '—' }}</dd>
 

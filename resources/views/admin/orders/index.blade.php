@@ -30,12 +30,13 @@
     {{-- Status Tabs --}}
     @php
         $statuses = [
-            'all'       => ['label' => __('app.all'),       'color' => 'secondary'],
-            'pending'   => ['label' => __('app.pending'),   'color' => 'warning'],
-            'accepted'  => ['label' => __('app.accepted'),  'color' => 'primary'],
-            'rejected'  => ['label' => __('app.rejected'),  'color' => 'danger'],
-            'completed' => ['label' => __('app.completed'), 'color' => 'success'],
-            'cancelled' => ['label' => __('app.cancelled'), 'color' => 'dark'],
+            'all'                   => ['label' => __('app.all'),                   'color' => 'secondary'],
+            'pending'               => ['label' => __('app.pending'),               'color' => 'warning'],
+            'accepted'              => ['label' => __('app.accepted'),              'color' => 'primary'],
+            'rejected'              => ['label' => __('app.rejected'),              'color' => 'danger'],
+            'completed'             => ['label' => __('app.completed'),             'color' => 'success'],
+            'cancelled_by_admin'    => ['label' => __('app.cancelled_by_admin'),    'color' => 'dark'],
+            'cancelled_by_customer' => ['label' => __('app.cancelled_by_customer'), 'color' => 'secondary'],
         ];
         $currentStatus = request('status', 'all');
     @endphp

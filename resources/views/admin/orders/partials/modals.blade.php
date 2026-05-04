@@ -84,7 +84,7 @@
 
 {{-- ── CANCEL MODAL ──────────────────────────────────────────── --}}
 @php
-    $terminal = ['completed', 'rejected', 'cancelled'];
+    $terminal = ['completed', 'rejected', 'cancelled', 'cancelled_by_admin', 'cancelled_by_customer'];
 @endphp
 @if(!in_array($order->status, $terminal))
 <div class="modal fade" id="cancelModal" tabindex="-1">

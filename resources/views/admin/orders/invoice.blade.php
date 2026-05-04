@@ -157,9 +157,9 @@
         <dt>{{ __('app.phone') }}</dt>
         <dd>{{ $order->customer->phone ?? '—' }}</dd>
 
-        @if($order->order_type === 'delivery' && $order->customer_note)
+        @if($order->order_type === 'delivery' && $order->address)
         <dt>{{ __('app.address') }}</dt>
-        <dd>{{ $order->customer_note }}</dd>
+        <dd>{{ $order->address }}</dd>
         @endif
 
         @if($order->order_type === 'delivery' && $order->delivery_type)

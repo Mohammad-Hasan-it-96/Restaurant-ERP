@@ -13,6 +13,8 @@ class OrderResource extends JsonResource
             'order_number'       => $this->order_number,
             'status'             => $this->status,
             'order_type'         => $this->order_type,
+            'table_number'       => $this->table_number,
+            'address'            => $this->address,
             'delivery_type'      => $this->delivery_type,
             'scheduled_at'       => $this->scheduled_at?->toIso8601String(),
             'subtotal'           => (float) $this->subtotal,

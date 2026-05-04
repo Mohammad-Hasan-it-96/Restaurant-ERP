@@ -102,7 +102,8 @@ class OrderController extends Controller
             Order::STATUS_COMPLETED,
             Order::STATUS_REJECTED,
             Order::STATUS_CANCELLED,
-            'cancelled_by_admin',
+            Order::STATUS_CANCELLED_BY_ADMIN,
+            Order::STATUS_CANCELLED_BY_CUSTOMER,
         ];
 
         if (in_array($order->status, $terminal)) {
@@ -110,7 +111,7 @@ class OrderController extends Controller
         }
 
         $order->update([
-            'status'       => Order::STATUS_CANCELLED,
+            'status'       => Order::STATUS_CANCELLED_BY_ADMIN,
             'cancelled_at' => now(),
         ]);
 

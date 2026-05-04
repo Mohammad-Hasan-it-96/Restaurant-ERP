@@ -132,6 +132,7 @@ class OrderService
                 'source'                => 'website',
                 'order_type'            => $data['order_type'],
                 'table_number'          => $data['table_number']   ?? null,
+                'address'               => $data['address']        ?? null,
                 'delivery_type'         => $data['delivery_type']  ?? null,
                 'scheduled_at'          => isset($data['scheduled_at'])
                                             ? Carbon::parse($data['scheduled_at'])
@@ -143,22 +144,8 @@ class OrderService
                 'estimated_delivery_fee'=> $data['estimated_delivery_fee'] ?? null,
                 'delivery_fee'          => null,
                 'discount'              => 0,
-                'total'                 => $subtotal, // delivery_fee added by admin later
+                'total'                 => $subtotal,
             ]);
-
-            // Persist delivery address on the order (no DB column yet, store in customer_note prefix)
-            // If the orders table has an `address` column it will be set automatically via fillable;
-            // otherwise we store it in the note gracefully.
-            if (! empty($data['address'])) {
-                try {
-                    $order->address = $data['address'];
-                    $order->save();
-                } catch (\Throwable) {
-                    // column doesn't exist yet — append to note
-                    $note = trim(($data['address'] ?? '') . "\n" . ($order->customer_note ?? ''));
-                    $order->update(['customer_note' => $note]);
-                }
-            }
 
             // ── 7. Persist order items ───────────────────────────────
             foreach ($itemsData as $item) {
