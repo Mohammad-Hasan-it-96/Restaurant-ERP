@@ -98,6 +98,7 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
     Route::group(['prefix' => 'orders', 'as' => 'orders.'], function () {
         Route::get('', [App\Http\Controllers\Admin\OrderController::class, 'index'])->name('index');
         Route::get('{order}', [App\Http\Controllers\Admin\OrderController::class, 'show'])->name('show');
+        Route::get('{order}/invoice', [App\Http\Controllers\Admin\OrderController::class, 'invoice'])->name('invoice');
         Route::middleware(['moderator'])->group(function () {
             Route::post('{order}/accept',   [App\Http\Controllers\Admin\OrderController::class, 'accept'])->name('accept');
             Route::post('{order}/reject',   [App\Http\Controllers\Admin\OrderController::class, 'reject'])->name('reject');

@@ -131,5 +131,22 @@ class OrderController extends Controller
 
         return back()->with('success', __('app.order_completed'));
     }
+
+    // ── Invoice ────────────────────────────────────────────────────────────────
+    public function invoice(Order $order)
+    {
+        $order->load('customer', 'items');
+
+        $restaurantName  = $this->config->get('restaurant_name', config('app.name'));
+        $restaurantPhone = $this->config->get('restaurant_phone');
+        $restaurantLogo  = $this->config->get('restaurant_logo');
+
+        return view('admin.orders.invoice', compact(
+            'order',
+            'restaurantName',
+            'restaurantPhone',
+            'restaurantLogo'
+        ));
+    }
 }
 

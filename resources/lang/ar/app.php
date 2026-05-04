@@ -371,6 +371,15 @@ return [
     'customer_cancel_before_minutes_help' => 'عدد الدقائق التي يُسمح فيها للزبون بإلغاء طلبه',
     'order_closed_message_help'      => 'الرسالة التي تظهر حين تكون الطلبات مغلقة',
     'delivery_note_help'             => 'ملاحظة تظهر للزبائن عن رسوم التوصيل',
+    // Invoice
+    'invoice'                     => 'فاتورة',
+    'print_invoice'               => 'طباعة الفاتورة',
+    'print'                       => 'طباعة',
+    'date'                        => 'التاريخ',
+    'qty'                         => 'الكمية',
+    'price'                       => 'السعر',
+    'address'                     => 'العنوان',
+    'invoice_thank_you'           => 'شكراً لطلبك!',
     // Orders management
     'orders'                      => 'الطلبات',
     'orders_management'           => 'إدارة الطلبات',

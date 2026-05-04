@@ -407,6 +407,16 @@ return [
     'order_closed_message_help'     => 'Message shown when orders are disabled',
     'delivery_note_help'            => 'Note shown to customers regarding delivery fees',
 
+    // Invoice
+    'invoice'                     => 'Invoice',
+    'print_invoice'               => 'Print Invoice',
+    'print'                       => 'Print',
+    'date'                        => 'Date',
+    'qty'                         => 'Qty',
+    'price'                       => 'Price',
+    'address'                     => 'Address',
+    'invoice_thank_you'           => 'Thank you for your order!',
+
     // Orders management
     'orders'                      => 'Orders',
     'orders_management'           => 'Orders Management',

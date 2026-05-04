@@ -35,6 +35,13 @@
                 <i class="bi bi-slash-circle me-1"></i>{{ __('app.cancel') }}
             </button>
         @endif
+        {{-- Print Invoice --}}
+        @if(in_array($order->status, ['accepted', 'completed']))
+        <a href="{{ route('admin.orders.invoice', $order) }}" target="_blank"
+           class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-printer me-1"></i>{{ __('app.print_invoice') }}
+        </a>
+        @endif
     </div>
 
     {{-- Flash --}}
