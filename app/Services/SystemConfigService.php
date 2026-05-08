@@ -65,6 +65,77 @@ class SystemConfigService
         return SystemConfig::getNumber($key, $default);
     }
 
+    /**
+     * Return the first non-empty text value from a list of keys.
+     */
+    public function getFirstText(array $keys, string $default = ''): string
+    {
+        foreach ($keys as $key) {
+            $value = $this->getText($key, '');
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return $default;
+    }
+
+    /**
+     * Get a config value as normalized plain text.
+     *
+     * This handles cases where text was accidentally stored as a JSON string
+     * (for example: "\"\\u0627...\"").
+     */
+    public function getText(string $key, string $default = ''): string
+    {
+        $value = $this->get($key, $default);
+
+        if ($value === null) {
+            return $default;
+        }
+
+        if (! is_string($value)) {
+            return (string) $value;
+        }
+
+        return $this->decodePossiblyEscapedText($value);
+    }
+
+    /**
+     * Decode a raw text value that may be JSON-encoded or unicode-escaped.
+     */
+    protected function decodePossiblyEscapedText(string $value): string
+    {
+        $trimmed = trim($value);
+
+        if ($trimmed === '') {
+            return '';
+        }
+
+        // Treat explicit null-like strings as empty
+        if (in_array(strtolower($trimmed), ['null', 'undefined'], true)) {
+            return '';
+        }
+
+        // Case 1: full JSON string, e.g. "\"مطعم\"" or "\"\\u0627...\""
+        $decoded = json_decode($trimmed, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_string($decoded)) {
+            return trim($decoded);
+        }
+
+        // Case 2: raw string containing unicode escapes, e.g. "\\u0627\\u0644..."
+        if (str_contains($trimmed, '\\u')) {
+            $wrapped = '"' . str_replace('"', '\\"', $trimmed) . '"';
+            $decodedWrapped = json_decode($wrapped, true);
+
+            if (json_last_error() === JSON_ERROR_NONE && is_string($decodedWrapped)) {
+                return trim($decodedWrapped);
+            }
+        }
+
+        return $trimmed;
+    }
+
     // ─── Restaurant-specific helpers ───────────────────────────────
 
     /**

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\V1;
 use App\Http\Controllers\Controller;
 use App\Services\SystemConfigService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 
 class PublicSettingsController extends Controller
 {
@@ -17,17 +18,25 @@ class PublicSettingsController extends Controller
      */
     public function __invoke(): JsonResponse
     {
-        return $this->success([
-            'restaurant_name'    => $this->config->get('restaurant_name', config('app.name')),
-            'restaurant_logo'    => $this->config->get('restaurant_logo')
-                                     ? asset('storage/' . $this->config->get('restaurant_logo'))
-                                     : null,
-            'restaurant_phone'   => $this->config->get('restaurant_phone'),
-            'restaurant_whatsapp'=> $this->config->get('restaurant_whatsapp'),
-            'opening_hours'      => $this->config->getOpeningHours(),
-            'is_open_now'        => $this->config->isOpenAt(),
-            'delivery_note'      => $this->config->get('delivery_note'),
-        ]);
+        $logoPath = $this->config->getFirstText(['restaurant_logo', 'site_logo'], '');
+
+        $payload = [
+            // Prefer restaurant keys; fallback to dashboard general/support keys when empty.
+            'restaurant_name'      => $this->config->getFirstText(['restaurant_name', 'site_name'], config('app.name')),
+            'restaurant_logo'      => $logoPath !== '' ? asset('storage/' . ltrim($logoPath, '/')) : null,
+            'restaurant_phone'     => $this->config->getFirstText(['restaurant_phone', 'support_phone'], ''),
+            'restaurant_whatsapp'  => $this->config->getFirstText(['restaurant_whatsapp'], ''),
+            'opening_hours'        => $this->config->getOpeningHours(),
+            'is_accepting_orders'  => $this->config->isAcceptingOrders(),
+            'is_open_now'          => $this->config->isOpenAt(),
+            'delivery_note'        => $this->config->getFirstText(['delivery_note'], ''),
+        ];
+
+        // Temporary debug helper: inspect public settings payload in logs while validating dashboard sync.
+        if (config('app.debug')) {
+            Log::debug('api.v1.settings.public payload', $payload);
+        }
+
+        return $this->success($payload);
     }
 }
-

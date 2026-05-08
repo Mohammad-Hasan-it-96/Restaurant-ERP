@@ -6,9 +6,10 @@ use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\API\ProfileController;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Public\HomeController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [DashboardController::class, 'welcome']);
+Route::get('/', [HomeController::class, 'index'])->name('public.home');
 
 // Move the language change route outside the auth middleware
 Route::get('/language/{locale}', [LanguageController::class, 'changeLanguage'])->name('language.change');
