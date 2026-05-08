@@ -25,6 +25,9 @@ class DatabaseSeeder extends Seeder
             SystemConfigSeeder::class,
             RestaurantConfigSeeder::class,
             LanguageSeeder::class,
+            CategorySeeder::class,
+            ProductSeeder::class,
+            DeliveryZoneSeeder::class,
         ]);
     }
 }
