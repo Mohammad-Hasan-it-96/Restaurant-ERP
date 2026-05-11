@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AdminMiddleware;
+use App\Http\Middleware\ApiLoggingMiddleware;
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\ModeratorMiddleware;
 use App\Http\Middleware\RedirectIfAuthenticated;
@@ -19,6 +20,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [
             SetLocale::class,
+        ]);
+
+        $middleware->api(append: [
+            ApiLoggingMiddleware::class,
         ]);
 
         // Register custom middleware

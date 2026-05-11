@@ -28,5 +28,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::post('orders',                          [\App\Http\Controllers\API\V1\OrderController::class, 'store']) ->name('orders.store');
     Route::get ('orders/{order_number}',           [\App\Http\Controllers\API\V1\OrderController::class, 'show'])  ->name('orders.show');
     Route::post('orders/{order_number}/cancel',    [\App\Http\Controllers\API\V1\OrderController::class, 'cancel'])->name('orders.cancel');
+
+    // Frontend error logging
+    Route::post('logs/frontend', \App\Http\Controllers\API\V1\FrontendLogController::class)->name('logs.frontend');
 });
 

@@ -300,8 +300,48 @@ window.i18n = {
 };
 </script>
 <script>
+// ── Remote Log Helper ────────────────────────────────────────────────────────
+function sendLog(type, message, data) {
+    try {
+        navigator.sendBeacon
+            ? navigator.sendBeacon('/api/v1/logs/frontend', new Blob(
+                [JSON.stringify({ type, message, data })],
+                { type: 'application/json' }
+              ))
+            : fetch('/api/v1/logs/frontend', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body:    JSON.stringify({ type, message, data }),
+                keepalive: true,
+              }).catch(() => {});
+    } catch {}
+}
+
+// ── Global Error Handler ─────────────────────────────────────────────────────
+window.onerror = function(msg, src, line, col, error) {
+    console.error('[JS ERROR]', { msg, src, line, col, error });
+    sendLog('js.error', String(msg), { src, line, col, error: error ? error.toString() : null });
+};
+
+window.addEventListener('unhandledrejection', function(e) {
+    const message = e.reason instanceof Error ? e.reason.message : String(e.reason);
+    console.error('[JS UNHANDLED REJECTION]', message);
+    sendLog('js.unhandledrejection', message, {});
+});
+
 (() => {
     'use strict';
+
+    // ── Logging Helper ───────────────────────────────────────────────────────
+    function logEvent(type, data) {
+        console.debug(`[APP][${type}]`, data);
+    }
+
+    function logError(type, message, data) {
+        console.error(`[APP][${type}]`, message, data);
+        sendLog(type, message, data);
+    }
+
     const apiBase    = '/api/v1';
     const storageKey = 'restaurant_cart_v1';
     const isAr       = document.documentElement.lang.startsWith('ar');
@@ -546,6 +586,7 @@ window.i18n = {
              const err      = new Error(normalizedMessage);
              err.errors     = normalizeApiErrors(body.errors);
              err.httpStatus = response.status;
+             sendLog('api.error', normalizedMessage, { url, status: response.status });
              throw err;
          }
          console.debug('[fetchJSON] success response:', body);
@@ -669,6 +710,7 @@ window.i18n = {
              }));
 
              console.debug('[products] ✓ state.products stored:', state.products.length, 'items');
+             logEvent('products.loaded', { count: state.products.length });
          } catch (err) {
              console.warn('[API] products error:', err.message, err);
              loadErrors.products = err.message;
@@ -864,6 +906,11 @@ window.i18n = {
         }
 
         const products = getFilteredProducts();
+        logEvent('filter.applied', {
+            root:  state.selectedRootCategoryId,
+            sub:   state.selectedSubCategoryId,
+            count: products.length,
+        });
         console.debug('[filter] renderProducts() start → state.products count:', state.products.length);
         console.debug('[filter] selected → root:', state.selectedRootCategoryId, '| sub:', state.selectedSubCategoryId);
 
@@ -946,6 +993,7 @@ window.i18n = {
          }
 
          activeProduct = product;
+         logEvent('product.open', product);
          console.debug('[openProductModal] activeProduct set:', product.name);
 
         el.productModalTitle.textContent = product.name;
@@ -1012,6 +1060,7 @@ window.i18n = {
         }
 
         saveCart();
+        logEvent('cart.add', { productId });
         renderCart();
     }
 
@@ -1083,6 +1132,7 @@ window.i18n = {
         }
 
         saveCart();
+        logEvent('cart.update', state.cart);
         renderCart();
     }
 
@@ -1093,6 +1143,7 @@ window.i18n = {
         const pid = Number(productId);
         state.cart = state.cart.filter(item => Number(item.id) !== pid);
         saveCart();
+        logEvent('cart.update', state.cart);
         renderCart();
     }
 
@@ -1198,6 +1249,7 @@ window.i18n = {
         }
 
         console.debug('[order] payload â†’', JSON.stringify(payload, null, 2));
+        logEvent('order.submit', payload);
 
         el.submitOrderBtn.disabled    = true;
         el.submitOrderBtn.textContent = window.i18n.sending;
@@ -1228,6 +1280,9 @@ window.i18n = {
 
          } catch (error) {
              console.error('[submitCheckout] error:', error.message, error);
+             logError('order.submit.failed', error.message || 'submit failed', {
+                 httpStatus: error.httpStatus ?? null,
+             });
              showCheckoutAlert('danger', error.message || window.i18n.failed_submit_order);
              if (error.errors && typeof error.errors === 'object') {
                  console.error('[submitCheckout] validation errors:', error.errors);

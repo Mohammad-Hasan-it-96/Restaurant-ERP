@@ -32,10 +32,7 @@ class PublicSettingsController extends Controller
             'delivery_note'        => $this->config->getFirstText(['delivery_note'], ''),
         ];
 
-        // Temporary debug helper: inspect public settings payload in logs while validating dashboard sync.
-        if (config('app.debug')) {
-            Log::debug('api.v1.settings.public payload', $payload);
-        }
+        Log::debug('settings.public.response', $payload);
 
         return $this->success($payload);
     }

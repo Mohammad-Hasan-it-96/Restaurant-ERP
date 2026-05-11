@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Services\SystemConfigService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class OrderService
@@ -27,7 +28,14 @@ class OrderService
      */
     public function createOrder(array $data): Order
     {
-        return DB::transaction(function () use ($data) {
+        Log::info('order.create.start', [
+            'customer_phone' => $data['customer_phone'],
+            'order_type'     => $data['order_type'],
+            'items_count'    => count($data['items']),
+        ]);
+
+        try {
+            $order = DB::transaction(function () use ($data) {
 
             // ── 1. Resolve customer ──────────────────────────────────
             $customer = Customer::firstOrCreate(
@@ -153,7 +161,24 @@ class OrderService
             }
 
             return $order->fresh('items', 'customer');
-        });
+            });
+
+            Log::info('order.create.success', [
+                'order_id'     => $order->id,
+                'order_number' => $order->order_number,
+                'total'        => $order->total,
+            ]);
+
+            return $order;
+
+        } catch (\Throwable $e) {
+            Log::error('order.create.failed', [
+                'error'   => $e->getMessage(),
+                'payload' => $data,
+            ]);
+
+            throw $e;
+        }
     }
 }
 
