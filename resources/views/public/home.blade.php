@@ -1,4 +1,4 @@
-@php
+﻿@php
     $activeLanguages = \App\Models\Language::where('status', 1)->orderByDesc('is_default')->get();
     $currentLocale = session('locale', app()->getLocale());
     $isRtl = ($currentLocale === 'ar') || (session('site_direction') === 'rtl');
@@ -113,7 +113,7 @@
     <section id="productsSection" class="section-card p-2 p-md-3 mb-4">
         <div class="d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
             <h2 class="h6 mb-0">{{ __('app.products_by_category') }}</h2>
-            <input id="productSearch" class="form-control form-control-sm product-search-input" placeholder="{{ __('app.search_product') }}">
+            <input id="productSearch" data-action="search-products" class="form-control form-control-sm product-search-input" placeholder="{{ __('app.search_product') }}">
         </div>
         <div id="productsState"></div>
         <div id="categoryProducts" class="row g-3 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4"></div>
@@ -166,7 +166,7 @@
             <span class="text-muted">{{ __('app.subtotal') }}</span>
             <strong id="cartSubtotal">0.00</strong>
         </div>
-        <button id="checkoutOpenBtn" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#checkoutModal">{{ __('app.checkout') }}</button>
+        <button id="checkoutOpenBtn" class="btn btn-success w-100">{{ __('app.checkout') }}</button>
     </div>
 </div>
 
@@ -264,6 +264,7 @@
 <script>
 window.i18n = {
     price:                      @json(__('app.price')),
+    checkout:                   @json(__('app.checkout')),
     all:                        @json(__('app.all')),
     delete:                     @json(__('app.delete')),
     sending:                    @json(__('app.sending')),
@@ -300,265 +301,404 @@ window.i18n = {
 </script>
 <script>
 (() => {
-    const apiBase = '/api/v1';
+    'use strict';
+    const apiBase    = '/api/v1';
     const storageKey = 'restaurant_cart_v1';
+    const isAr       = document.documentElement.lang.startsWith('ar');
 
+    // ── State ───────────────────────────────────────────────────────────────────
     const state = {
-        settings: null,
+        settings: {},
         categories: [],
         products: [],
         deliveryZones: [],
-        selectedRoot: null,
-        selectedSub: null,
-        cart: loadCart(),
-        loading: {
-            settings: true,
-            categories: true,
-            products: true,
-            deliveryZones: true,
-        },
-        errors: {
-            settings: null,
-            categories: null,
-            products: null,
-            deliveryZones: null,
-        },
+        selectedRootCategoryId: null,
+        selectedSubCategoryId: null,
+        searchQuery: '',
+        cart: [],
     };
+    const loadErrors = { settings: null, categories: null, products: null, deliveryZones: null };
 
+
+    // â”€â”€ DOM refs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const el = {
-        globalError: document.getElementById('globalError'),
-        globalErrorText: document.getElementById('globalErrorText'),
-        retryLoadBtn: document.getElementById('retryLoadBtn'),
-
-        restaurantNameNav: document.getElementById('restaurantNameNav'),
-        statusTextNav: document.getElementById('statusTextNav'),
-        appLogoMini: document.getElementById('appLogoMini'),
-        navLogoFallback: document.getElementById('navLogoFallback'),
-
-        heroLogo: document.getElementById('heroLogo'),
-        heroLogoFallback: document.getElementById('heroLogoFallback'),
-        heroName: document.getElementById('heroName'),
-        openBadge: document.getElementById('openBadge'),
-        todayHours: document.getElementById('todayHours'),
-        deliveryNote: document.getElementById('deliveryNote'),
-        phoneLink: document.getElementById('phoneLink'),
-        phoneText: document.getElementById('phoneText'),
-        whatsappLink: document.getElementById('whatsappLink'),
-        whatsappText: document.getElementById('whatsappText'),
-
-        rootSection: document.getElementById('rootSection'),
-        subSection: document.getElementById('subSection'),
-        featuredSection: document.getElementById('featuredSection'),
-        productsSection: document.getElementById('productsSection'),
-
-        rootCategoriesState: document.getElementById('rootCategoriesState'),
-        rootCategories: document.getElementById('rootCategories'),
-        subCategoriesState: document.getElementById('subCategoriesState'),
-        subCategories: document.getElementById('subCategories'),
-
-        featuredState: document.getElementById('featuredState'),
-        featuredProducts: document.getElementById('featuredProducts'),
-
-        productsState: document.getElementById('productsState'),
-        categoryProducts: document.getElementById('categoryProducts'),
-        productSearch: document.getElementById('productSearch'),
-
-        desktopCartBtn: document.getElementById('desktopCartBtn'),
-        mobileCartBtn: document.getElementById('mobileCartBtn'),
-        cartCountTop: document.getElementById('cartCountTop'),
-        cartCountMobile: document.getElementById('cartCountMobile'),
-
-        cartItems: document.getElementById('cartItems'),
-        cartSubtotal: document.getElementById('cartSubtotal'),
-
-        productModalTitle: document.getElementById('productModalTitle'),
-        productModalImageWrap: document.getElementById('productModalImageWrap'),
-        productModalImage: document.getElementById('productModalImage'),
-        productModalDesc: document.getElementById('productModalDesc'),
-        productModalPrice: document.getElementById('productModalPrice'),
-        productModalOldPrice: document.getElementById('productModalOldPrice'),
+        globalError:             document.getElementById('globalError'),
+        globalErrorText:         document.getElementById('globalErrorText'),
+        retryLoadBtn:            document.getElementById('retryLoadBtn'),
+        restaurantNameNav:       document.getElementById('restaurantNameNav'),
+        statusTextNav:           document.getElementById('statusTextNav'),
+        appLogoMini:             document.getElementById('appLogoMini'),
+        navLogoFallback:         document.getElementById('navLogoFallback'),
+        heroLogo:                document.getElementById('heroLogo'),
+        heroLogoFallback:        document.getElementById('heroLogoFallback'),
+        heroName:                document.getElementById('heroName'),
+        openBadge:               document.getElementById('openBadge'),
+        todayHours:              document.getElementById('todayHours'),
+        deliveryNote:            document.getElementById('deliveryNote'),
+        phoneLink:               document.getElementById('phoneLink'),
+        phoneText:               document.getElementById('phoneText'),
+        whatsappLink:            document.getElementById('whatsappLink'),
+        whatsappText:            document.getElementById('whatsappText'),
+        subSection:              document.getElementById('subSection'),
+        featuredSection:         document.getElementById('featuredSection'),
+        rootCategoriesState:     document.getElementById('rootCategoriesState'),
+        rootCategories:          document.getElementById('rootCategories'),
+        subCategoriesState:      document.getElementById('subCategoriesState'),
+        subCategories:           document.getElementById('subCategories'),
+        featuredState:           document.getElementById('featuredState'),
+        featuredProducts:        document.getElementById('featuredProducts'),
+        productsState:           document.getElementById('productsState'),
+        categoryProducts:        document.getElementById('categoryProducts'),
+        productSearch:           document.getElementById('productSearch'),
+        cartCountTop:            document.getElementById('cartCountTop'),
+        cartCountMobile:         document.getElementById('cartCountMobile'),
+        cartItems:               document.getElementById('cartItems'),
+        cartSubtotal:            document.getElementById('cartSubtotal'),
+        checkoutOpenBtn:         document.getElementById('checkoutOpenBtn'),
+        productModalTitle:       document.getElementById('productModalTitle'),
+        productModalImageWrap:   document.getElementById('productModalImageWrap'),
+        productModalImage:       document.getElementById('productModalImage'),
+        productModalDesc:        document.getElementById('productModalDesc'),
+        productModalPrice:       document.getElementById('productModalPrice'),
+        productModalOldPrice:    document.getElementById('productModalOldPrice'),
         productModalUnavailable: document.getElementById('productModalUnavailable'),
-        productModalAddBtn: document.getElementById('productModalAddBtn'),
-
-        checkoutForm: document.getElementById('checkoutForm'),
-        checkoutAlert: document.getElementById('checkoutAlert'),
-        checkoutApiErrors: document.getElementById('checkoutApiErrors'),
-        submitOrderBtn: document.getElementById('submitOrderBtn'),
-
-        orderType: document.getElementById('orderType'),
-        deliveryType: document.getElementById('deliveryType'),
-        tableFields: document.getElementById('tableFields'),
-        deliveryFields: document.getElementById('deliveryFields'),
-        scheduledField: document.getElementById('scheduledField'),
-        deliveryZone: document.getElementById('deliveryZone'),
-
-        orderSuccessNumber: document.getElementById('orderSuccessNumber'),
+        productModalAddBtn:      document.getElementById('productModalAddBtn'),
+        checkoutForm:            document.getElementById('checkoutForm'),
+        checkoutAlert:           document.getElementById('checkoutAlert'),
+        checkoutApiErrors:       document.getElementById('checkoutApiErrors'),
+        submitOrderBtn:          document.getElementById('submitOrderBtn'),
+        orderType:               document.getElementById('orderType'),
+        deliveryType:            document.getElementById('deliveryType'),
+        tableFields:             document.getElementById('tableFields'),
+        deliveryFields:          document.getElementById('deliveryFields'),
+        scheduledField:          document.getElementById('scheduledField'),
+        deliveryZone:            document.getElementById('deliveryZone'),
+        orderSuccessNumber:      document.getElementById('orderSuccessNumber'),
     };
 
     let activeProduct = null;
 
     init();
 
+    // â”€â”€ Bootstrap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     async function init() {
+        state.cart = loadCart();
         wireEvents();
         renderLoadingSkeletons();
         await loadAll();
         renderAll();
     }
 
+    // â”€â”€ Event Wiring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function wireEvents() {
+        // â”€â”€ Retry
         el.retryLoadBtn.addEventListener('click', async () => {
             await loadAll();
             renderAll();
         });
 
-        el.productSearch.addEventListener('input', renderProducts);
-
+        // â”€â”€ Checkout form dynamics
         el.orderType.addEventListener('change', handleOrderTypeUI);
         el.deliveryType.addEventListener('change', handleDeliveryTypeUI);
+        el.checkoutForm.addEventListener('submit', submitCheckout);
 
-        el.checkoutForm.addEventListener('submit', submitOrder);
-
-        el.productModalAddBtn.addEventListener('click', () => {
-            if (!activeProduct) return;
-            addToCart(activeProduct);
-            bootstrap.Modal.getInstance(document.getElementById('productModal')).hide();
+        // â”€â”€ Checkout open â€“ guard empty cart
+        el.checkoutOpenBtn.addEventListener('click', () => {
+            if (!state.cart.length) {
+                const orig = el.checkoutOpenBtn.innerHTML;
+                el.checkoutOpenBtn.innerHTML = `<i class="bi bi-exclamation-circle me-1"></i>${window.i18n.cart_is_empty}`;
+                el.checkoutOpenBtn.disabled = true;
+                setTimeout(() => {
+                    el.checkoutOpenBtn.innerHTML = orig;
+                    el.checkoutOpenBtn.disabled = false;
+                }, 2000);
+                return;
+            }
+            // Close cart offcanvas first then open checkout
+            const cartCanvas = bootstrap.Offcanvas.getInstance(document.getElementById('cartCanvas'));
+            if (cartCanvas) {
+                cartCanvas.hide();
+                // Wait for offcanvas close animation then open modal
+                document.getElementById('cartCanvas').addEventListener('hidden.bs.offcanvas', () => {
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('checkoutModal')).show();
+                }, { once: true });
+            } else {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('checkoutModal')).show();
+            }
         });
+
+        // â”€â”€ Product modal â€“ add to cart
+        el.productModalAddBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            if (!activeProduct) return;
+            console.debug('[addToCart] modal â†’ product:', activeProduct.id, activeProduct.name);
+            addToCart(activeProduct.id);
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('productModal')).hide();
+        });
+
+        // â”€â”€ Event delegation for filters and search
+        document.addEventListener('click', handleFilterClick);
+        document.addEventListener('input', handleFilterInput);
+
+        // â”€â”€ GLOBAL click delegation (product/cart actions)
+        document.addEventListener('click', handleGlobalClick);
     }
 
+    /**
+     * Handles delegated click actions for category filters only.
+     */
+    function handleFilterClick(e) {
+        const actionEl = e.target.closest('[data-action]');
+        if (!actionEl) return;
+
+        const action = actionEl.dataset.action;
+        const categoryId = actionEl.dataset.categoryId;
+
+        if (action === 'select-root-category') {
+            const id = Number(categoryId);
+            if (!Number.isFinite(id) || state.selectedRootCategoryId === id) return;
+            state.selectedRootCategoryId = id;
+            state.selectedSubCategoryId = null;
+            renderCategories();
+            renderSubCategories();
+            renderProducts();
+            return;
+        }
+
+        if (action === 'select-sub-category') {
+            state.selectedSubCategoryId = (categoryId === 'all') ? null : Number(categoryId);
+            renderSubCategories();
+            renderProducts();
+        }
+    }
+
+    /**
+     * Handles delegated input actions for product search only.
+     */
+    function handleFilterInput(e) {
+        const actionEl = e.target.closest('[data-action="search-products"]');
+        if (!actionEl) return;
+        state.searchQuery = actionEl.value.trim();
+        renderProducts();
+    }
+
+    /**
+     * Single global click handler – replaces all querySelectorAll + forEach bindings.
+     * Works correctly even after innerHTML re-renders.
+     *
+     * Product/Cart: data-action="open-product|add-to-cart|cart-plus|cart-minus|cart-remove"
+     *                 data-product-id="<numeric id>"
+     */
+    function handleGlobalClick(e) {
+        const t = e.target;
+
+        // ── Unified action dispatcher (data-action + data-product-id/category-id) ─────────
+        const actionEl = t.closest('[data-action]');
+        if (!actionEl) return;
+
+        const action    = actionEl.dataset.action;
+        const productId = actionEl.dataset.productId ? Number(actionEl.dataset.productId) : null;
+        const categoryId = actionEl.dataset.categoryId;
+
+        console.debug('[click] action:', action, '| productId:', productId, '| categoryId:', categoryId);
+
+        switch (action) {
+            case 'open-product': {
+                openProductModal(productId);
+                break;
+            }
+            case 'add-to-cart': {
+                if (actionEl.disabled) break;
+                addToCart(productId);
+                break;
+            }
+            case 'cart-plus':   { updateCartQuantity(productId,  1); break; }
+            case 'cart-minus':  { updateCartQuantity(productId, -1); break; }
+            case 'cart-remove': { removeFromCart(productId); break; }
+        }
+    }
+
+    // â”€â”€ Data Fetching â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     async function loadAll() {
         resetErrors();
-
         await Promise.allSettled([
             fetchSettings(),
             fetchCategories(),
             fetchProducts(),
             fetchDeliveryZones(),
         ]);
-
-        const failures = Object.values(state.errors).filter(Boolean);
+        const failures = Object.values(loadErrors).filter(Boolean);
         el.globalError.classList.toggle('d-none', failures.length === 0);
-
-        if (failures.length) {
-            el.globalErrorText.textContent = window.i18n.failed_loading_partial;
-        }
-
-        // Keep page browsable even with partial failures.
-        state.loading.settings = false;
-        state.loading.categories = false;
-        state.loading.products = false;
-        state.loading.deliveryZones = false;
+        if (failures.length) el.globalErrorText.textContent = window.i18n.failed_loading_partial;
     }
 
     async function fetchJSON(url, options = {}) {
-        const response = await fetch(url, {
-            headers: {
-                'Accept': 'application/json',
-                ...(options.headers || {}),
-            },
-            ...options,
+         console.debug('[fetchJSON] GET/POST:', url, 'options:', options);
+         const response = await fetch(url, {
+             headers: { 'Accept': 'application/json', ...(options.headers || {}) },
+             ...options,
+         });
+         console.debug('[fetchJSON] status:', response.status, 'ok:', response.ok);
+         const body = await response.json().catch(() => ({}));
+         if (!response.ok) {
+             console.error('[fetchJSON] error response:', body);
+             const normalizedMessage = normalizeMaybeEscapedText(body.message || '', `HTTP ${response.status}`);
+             const err      = new Error(normalizedMessage);
+             err.errors     = normalizeApiErrors(body.errors);
+             err.httpStatus = response.status;
+             throw err;
+         }
+         console.debug('[fetchJSON] success response:', body);
+         return body;
+     }
+
+    /**
+     * Normalizes API validation errors and decodes escaped unicode strings.
+     */
+    function normalizeApiErrors(errors) {
+        if (!errors || typeof errors !== 'object') return null;
+
+        const normalized = {};
+        Object.entries(errors).forEach(([field, messages]) => {
+            const list = Array.isArray(messages) ? messages : [messages];
+            normalized[field] = list
+                .map(message => normalizeMaybeEscapedText(message, ''))
+                .filter(message => message !== '');
         });
 
-        const body = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-            const err = new Error(body.message || 'Request failed');
-            err.errors = body.errors || null;
-            throw err;
-        }
-
-        return body;
+        return normalized;
     }
 
-    function normalizeData(payload) {
-        const data = payload && payload.success !== undefined ? payload.data : payload;
-        if (data && Array.isArray(data.data)) return data.data;
-        return data;
+    /**
+     * Extracts arrays from known API payload shapes.
+     */
+    function extractArray(response) {
+        if (Array.isArray(response?.data)) return response.data;
+        if (Array.isArray(response?.data?.data)) return response.data.data;
+        if (Array.isArray(response?.data?.data?.data)) return response.data.data.data;
+        if (Array.isArray(response?.data?.items)) return response.data.items;
+        return [];
     }
+
+     /**
+      * Unwraps the unified API envelope for non-array payloads (e.g. settings object).
+      */
+     function normalizeData(payload) {
+         if (!payload) return null;
+         const data = (payload.success !== undefined) ? payload.data : payload;
+         if (!data) return null;
+         if (!Array.isArray(data) && Array.isArray(data.data)) return data.data;
+         if (!Array.isArray(data) && Array.isArray(data.items)) return data.items;
+         return data;
+     }
 
     function normalizeMaybeEscapedText(value, fallback = '') {
-        if (value === null || value === undefined) return fallback;
-        if (typeof value !== 'string') return String(value);
-
-        const raw = value.trim();
-        if (raw === '') return fallback;
-
-        try {
-            const decodedJson = JSON.parse(raw);
-            if (typeof decodedJson === 'string') {
-                return decodedJson;
-            }
-        } catch (_) {}
-
+        if (value == null) return fallback;
+        const raw = String(value).trim();
+        if (!raw) return fallback;
+        try { const d = JSON.parse(raw); if (typeof d === 'string') return d; } catch {}
         if (raw.includes('\\u')) {
             try {
-                const wrapped = JSON.parse('"' + raw.replace(/"/g, '\\"') + '"');
-                if (typeof wrapped === 'string') return wrapped;
-            } catch (_) {}
+                const w = JSON.parse('"' + raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"');
+                if (typeof w === 'string') return w;
+            } catch {}
         }
-
         return raw;
     }
 
-    async function fetchSettings() {
-        try {
-            const payload = await fetchJSON(`${apiBase}/settings/public`);
-            const settings = normalizeData(payload) || {};
-            settings.restaurant_name = normalizeMaybeEscapedText(settings.restaurant_name, 'Restaurant');
-            // Temporary debug helper for settings sync checks.
-            console.info('settings/public payload', settings);
-            state.settings = settings;
-        } catch (err) {
-            state.errors.settings = err.message;
-            state.settings = {
-                restaurant_name: 'Restaurant',
-                restaurant_logo: null,
-                is_open_now: false,
-                opening_hours: {},
-            };
-        }
-    }
+     async function fetchSettings() {
+         try {
+             console.debug('[API] fetching settings...');
+             const payload  = await fetchJSON(`${apiBase}/settings/public`);
+             const settings = normalizeData(payload) || {};
+             settings.restaurant_name = normalizeMaybeEscapedText(settings.restaurant_name, 'Restaurant');
+             console.debug('[API] settings loaded:', settings);
+             state.settings = settings;
+         } catch (err) {
+             console.warn('[API] settings error:', err.message);
+             loadErrors.settings = err.message;
+             state.settings = { restaurant_name: 'Restaurant', restaurant_logo: null, is_open_now: false, opening_hours: {} };
+         }
+     }
 
-    async function fetchCategories() {
-        try {
-            const payload = await fetchJSON(`${apiBase}/categories`);
-            state.categories = normalizeData(payload) || [];
-            if (!state.selectedRoot && state.categories.length) {
-                const roots = state.categories.filter(c => c.parent_id === null);
-                state.selectedRoot = roots.length ? roots[0].id : state.categories[0].id;
-            }
-        } catch (err) {
-            state.errors.categories = err.message;
-            state.categories = [];
-        }
-    }
+     async function fetchCategories() {
+         try {
+             console.debug('[API] fetching categories → GET', `${apiBase}/categories`);
+             const payload = await fetchJSON(`${apiBase}/categories`);
+             state.categories = extractArray(payload);
+             console.debug('[categories] ✓ loaded', state.categories.length, 'items');
+             if (state.categories.length) {
+                 console.debug('[categories] first item sample:', JSON.stringify(state.categories[0]));
+                 const rootCount = state.categories.filter(c => c.parent_id === null || c.parent_id === undefined).length;
+                 console.debug('[categories] root categories:', rootCount, '| sub categories:', state.categories.length - rootCount);
+             }
 
-    async function fetchProducts() {
-        try {
-            const payload = await fetchJSON(`${apiBase}/products`);
-            state.products = normalizeData(payload) || [];
-        } catch (err) {
-            state.errors.products = err.message;
-            state.products = [];
-        }
-    }
+             if (!state.selectedRootCategoryId && state.categories.length) {
+                 const roots = state.categories.filter(c => c.parent_id === null || c.parent_id === undefined);
+                 state.selectedRootCategoryId = roots.length ? roots[0].id : state.categories[0].id;
+                 console.debug('[categories] auto-selected root id:', state.selectedRootCategoryId);
+             }
+         } catch (err) {
+             console.warn('[API] categories error:', err.message, err);
+             loadErrors.categories = err.message;
+             state.categories = [];
+         }
+     }
 
-    async function fetchDeliveryZones() {
-        try {
-            const payload = await fetchJSON(`${apiBase}/delivery-zones`);
-            state.deliveryZones = normalizeData(payload) || [];
-        } catch (err) {
-            state.errors.deliveryZones = err.message;
-            state.deliveryZones = [];
-        }
-    }
+     async function fetchProducts() {
+         try {
+             console.debug('[API] fetching products → GET', `${apiBase}/products`);
+             const payload = await fetchJSON(`${apiBase}/products`);
+             const raw = extractArray(payload);
+             console.debug('[products] ✓ raw extracted:', raw.length, 'items');
 
+             if (raw.length) {
+                 console.debug('[products] first item sample:', JSON.stringify(raw[0]));
+                 const withCat = raw.filter(p => p.category_id != null).length;
+                 console.debug('[products] items WITH category_id:', withCat, '| WITHOUT:', raw.length - withCat);
+             }
+
+             // Map to ensure effective_price is always a valid number
+             // (API returns it, but recalculate as fallback in case it's missing)
+             state.products = raw.map(p => ({
+                 ...p,
+                 category_id:    p.category_id != null ? Number(p.category_id) : null,
+                 effective_price: (p.effective_price != null)
+                     ? Number(p.effective_price)
+                     : Number(p.discount_price || p.price || 0),
+             }));
+
+             console.debug('[products] ✓ state.products stored:', state.products.length, 'items');
+         } catch (err) {
+             console.warn('[API] products error:', err.message, err);
+             loadErrors.products = err.message;
+             state.products = [];
+         }
+     }
+
+     async function fetchDeliveryZones() {
+         try {
+             console.debug('[API] fetching delivery zones → GET', `${apiBase}/delivery-zones`);
+             const payload        = await fetchJSON(`${apiBase}/delivery-zones`);
+             state.deliveryZones  = extractArray(payload);
+             console.debug('[API] delivery zones ✓ loaded:', state.deliveryZones.length, 'items');
+         } catch (err) {
+             console.warn('[API] delivery zones error:', err.message, err);
+             loadErrors.deliveryZones = err.message;
+             state.deliveryZones = [];
+         }
+     }
+
+    /**
+     * Resets loading errors for all API resources.
+     */
     function resetErrors() {
-        Object.keys(state.errors).forEach(key => {
-            state.errors[key] = null;
+        Object.keys(loadErrors).forEach(key => {
+            loadErrors[key] = null;
         });
     }
 
+    // â”€â”€ Rendering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function renderAll() {
         renderAppHeader();
         renderCategories();
@@ -572,299 +712,252 @@ window.i18n = {
     }
 
     function renderLoadingSkeletons() {
-        el.featuredState.innerHTML = skeletonRow(4);
-        el.productsState.innerHTML = skeletonRow(8);
+        el.featuredState.innerHTML  = skeletonRow(4);
+        el.productsState.innerHTML  = skeletonRow(8);
     }
 
     function renderAppHeader() {
-        const s = state.settings || {};
+        const s    = state.settings || {};
         const name = normalizeMaybeEscapedText(s.restaurant_name, 'Restaurant');
 
         el.restaurantNameNav.textContent = name;
-        el.heroName.textContent = name;
+        el.heroName.textContent          = name;
 
         setLogoWithFallback(el.appLogoMini, el.navLogoFallback, s.restaurant_logo);
         setLogoWithFallback(el.heroLogo, el.heroLogoFallback, s.restaurant_logo);
 
-        const isAccepting = s.is_accepting_orders !== false;
-        const isOpen = !!s.is_open_now;
-        const effectivelyOpen = isAccepting && isOpen;
-
-        el.openBadge.className = `badge ${effectivelyOpen ? 'text-bg-success' : 'text-bg-danger'}`;
-        el.openBadge.textContent = effectivelyOpen ? window.i18n.open_for_orders : window.i18n.closed_now;
+        const effectivelyOpen = (s.is_accepting_orders !== false) && !!s.is_open_now;
+        el.openBadge.className      = `badge ${effectivelyOpen ? 'text-bg-success' : 'text-bg-danger'}`;
+        el.openBadge.textContent    = effectivelyOpen ? window.i18n.open_for_orders : window.i18n.closed_now;
         el.statusTextNav.textContent = effectivelyOpen ? window.i18n.accepting_orders_now : window.i18n.browsing_available;
-
-        el.todayHours.textContent = getTodayHoursSummary(s.opening_hours || {});
+        el.todayHours.textContent   = getTodayHoursSummary(s.opening_hours || {});
         el.deliveryNote.textContent = s.delivery_note || '';
 
         if (s.restaurant_phone) {
             el.phoneText.textContent = s.restaurant_phone;
-            el.phoneLink.href = `tel:${s.restaurant_phone}`;
+            el.phoneLink.href        = `tel:${s.restaurant_phone}`;
             el.phoneLink.classList.remove('d-none');
-        } else {
-            el.phoneLink.classList.add('d-none');
-        }
+        } else { el.phoneLink.classList.add('d-none'); }
 
         if (s.restaurant_whatsapp) {
             const phone = s.restaurant_whatsapp.replace(/\D/g, '');
             el.whatsappText.textContent = s.restaurant_whatsapp;
-            el.whatsappLink.href = `https://wa.me/${phone}`;
+            el.whatsappLink.href        = `https://wa.me/${phone}`;
             el.whatsappLink.classList.remove('d-none');
-        } else {
-            el.whatsappLink.classList.add('d-none');
-        }
+        } else { el.whatsappLink.classList.add('d-none'); }
     }
 
     function getTodayHoursSummary(openingHours) {
-        const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        const todayKey = days[new Date().getDay()];
-        const today = openingHours[todayKey];
-
-        if (!today) return window.i18n.hours_not_set;
-        if (!today.is_open) return window.i18n.closed_today;
+        const days    = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+        const today   = openingHours[days[new Date().getDay()]];
+        if (!today)              return window.i18n.hours_not_set;
+        if (!today.is_open)      return window.i18n.closed_today;
         if (!today.from || !today.to) return window.i18n.open_today;
-
         return `${window.i18n.today_hours}: ${today.from} - ${today.to}`;
     }
 
     function setLogoWithFallback(imgNode, fallbackNode, src) {
-        if (!src) {
-            imgNode.classList.add('d-none');
-            fallbackNode.classList.remove('d-none');
-            return;
-        }
-
-        imgNode.onload = () => {
-            imgNode.classList.remove('d-none');
-            fallbackNode.classList.add('d-none');
-        };
-
-        imgNode.onerror = () => {
-            imgNode.classList.add('d-none');
-            fallbackNode.classList.remove('d-none');
-        };
-
+        if (!src) { imgNode.classList.add('d-none'); fallbackNode.classList.remove('d-none'); return; }
+        imgNode.onload  = () => { imgNode.classList.remove('d-none'); fallbackNode.classList.add('d-none'); };
+        imgNode.onerror = () => { imgNode.classList.add('d-none');    fallbackNode.classList.remove('d-none'); };
         imgNode.src = src;
     }
 
     function renderCategories() {
-        if (state.errors.categories) {
+        if (loadErrors.categories) {
             el.rootCategoriesState.innerHTML = errorState(window.i18n.failed_categories);
             el.rootCategories.innerHTML = '';
             return;
         }
-
-        const roots = state.categories.filter(c => c.parent_id === null);
-
+        // Use state.categories variable
+        const roots = state.categories.filter(c => c.parent_id === null || c.parent_id === undefined);
         if (!roots.length) {
             el.rootCategoriesState.innerHTML = emptyState(window.i18n.no_categories_added);
             el.rootCategories.innerHTML = '';
             return;
         }
-
         el.rootCategoriesState.innerHTML = '';
-
         el.rootCategories.innerHTML = roots.map(c => `
-            <button class="btn btn-sm main-chip cat-chip ${state.selectedRoot === c.id ? 'active' : ''}" data-root-id="${c.id}">
-                ${c.image ? `<img src="${c.image}" class="chip-thumb me-1 js-chip-thumb" alt="">` : ''}
+            <button class="btn btn-sm main-chip cat-chip ${state.selectedRootCategoryId === c.id ? 'active' : ''}"
+                    data-action="select-root-category"
+                    data-category-id="${c.id}">
+                ${c.image ? `<img src="${escapeHtml(c.image)}" class="chip-thumb me-1 js-chip-thumb" alt="">` : ''}
                 ${escapeHtml(c.name)}
             </button>
         `).join('');
-
-        bindChipImageFallbacks(el.rootCategories);
-
-        el.rootCategories.querySelectorAll('[data-root-id]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                state.selectedRoot = Number(btn.dataset.rootId);
-                state.selectedSub = null;
-                renderCategories();
-                renderSubCategories();
-                renderProducts();
-            });
+        // Image fallback for chips (onerror doesn't bubble → bind explicitly)
+        el.rootCategories.querySelectorAll('.js-chip-thumb').forEach(img => {
+            img.addEventListener('error', () => img.remove(), { once: true });
         });
     }
 
     function renderSubCategories() {
-        if (!state.selectedRoot || !state.categories.length) {
+        if (!state.selectedRootCategoryId || !state.categories.length) {
             el.subSection.classList.add('d-none');
-            el.subCategoriesState.innerHTML = '';
-            el.subCategories.innerHTML = '';
             return;
         }
-
-        const subs = state.categories.filter(c => c.parent_id === state.selectedRoot);
-
+        const rootId = Number(state.selectedRootCategoryId);
+        const subs = state.categories.filter(c => c.parent_id !== null && c.parent_id !== undefined && Number(c.parent_id) === rootId);
+        console.debug('[renderSubCategories] rootId:', rootId, '→', subs.length, 'sub-categories found');
         if (!subs.length) {
             el.subSection.classList.add('d-none');
-            el.subCategoriesState.innerHTML = `<small class="text-muted">${window.i18n.no_subcategories_section}</small>`;
             el.subCategories.innerHTML = '';
             return;
         }
-
         el.subSection.classList.remove('d-none');
         el.subCategoriesState.innerHTML = '';
         el.subCategories.innerHTML = `
-            <button class="btn btn-sm btn-outline-secondary cat-chip sub-chip ${state.selectedSub === null ? 'active' : ''}" data-sub-id="all">${window.i18n.all}</button>
+            <button class="btn btn-sm btn-outline-secondary cat-chip sub-chip ${state.selectedSubCategoryId === null ? 'active' : ''}"
+                    data-action="select-sub-category"
+                    data-category-id="all">${window.i18n.all}</button>
             ${subs.map(c => `
-                <button class="btn btn-sm btn-outline-secondary cat-chip sub-chip ${state.selectedSub === c.id ? 'active' : ''}" data-sub-id="${c.id}">
-                    ${escapeHtml(c.name)}
-                </button>
+                <button class="btn btn-sm btn-outline-secondary cat-chip sub-chip ${state.selectedSubCategoryId === c.id ? 'active' : ''}"
+                        data-action="select-sub-category"
+                        data-category-id="${c.id}">${escapeHtml(c.name)}</button>
             `).join('')}
         `;
-
-        el.subCategories.querySelectorAll('[data-sub-id]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                state.selectedSub = btn.dataset.subId === 'all' ? null : Number(btn.dataset.subId);
-                renderSubCategories();
-                renderProducts();
-            });
-        });
     }
 
     function renderFeatured() {
-        if (state.errors.products) {
+        if (loadErrors.products) {
             el.featuredSection.classList.remove('d-none');
-            el.featuredState.innerHTML = errorState(window.i18n.failed_featured);
+            el.featuredState.innerHTML  = errorState(window.i18n.failed_featured);
             el.featuredProducts.innerHTML = '';
             return;
         }
-
         const featured = state.products.filter(p => !!p.is_featured).slice(0, 8);
-
-        if (!featured.length) {
-            el.featuredSection.classList.add('d-none');
-            el.featuredState.innerHTML = '';
-            el.featuredProducts.innerHTML = '';
-            return;
-        }
+        if (!featured.length) { el.featuredSection.classList.add('d-none'); return; }
 
         el.featuredSection.classList.remove('d-none');
-        el.featuredState.innerHTML = '';
-        el.featuredProducts.innerHTML = featured.map(productCard).join('');
-        bindProductActions(el.featuredProducts);
+        el.featuredState.innerHTML      = '';
+        el.featuredProducts.innerHTML   = featured.map(productCard).join('');
+        bindProductImageFallbacks(el.featuredProducts); // onerror doesn't bubble
+    }
+
+    function getFilteredProducts() {
+        let products = [...state.products];
+
+        if (state.selectedSubCategoryId !== null && state.selectedSubCategoryId !== undefined) {
+            products = products.filter(p => p.category_id != null && Number(p.category_id) === state.selectedSubCategoryId);
+        } else if (state.selectedRootCategoryId !== null && state.selectedRootCategoryId !== undefined) {
+            const rootId = Number(state.selectedRootCategoryId);
+            const childIds = state.categories.filter(c => c.parent_id !== null && c.parent_id !== undefined && Number(c.parent_id) === rootId).map(c => Number(c.id));
+            const allowed = new Set([rootId, ...childIds]);
+            products = products.filter(p => p.category_id != null && allowed.has(Number(p.category_id)));
+        }
+
+        if (state.searchQuery) {
+            products = products.filter(p => {
+                const haystack = [p.name || '', p.name_ar || '', p.name_en || '', p.description_ar || '', p.description_en || ''].join(' ').toLowerCase();
+                return haystack.includes(state.searchQuery.toLowerCase());
+            });
+        }
+
+        return products;
     }
 
     function renderProducts() {
-        if (state.errors.products) {
-            el.productsState.innerHTML = errorState(window.i18n.failed_products);
+        if (loadErrors.products) {
+            el.productsState.innerHTML    = errorState(window.i18n.failed_products);
             el.categoryProducts.innerHTML = '';
             return;
         }
 
-        let products = [...state.products];
+        const products = getFilteredProducts();
+        console.debug('[filter] renderProducts() start → state.products count:', state.products.length);
+        console.debug('[filter] selected → root:', state.selectedRootCategoryId, '| sub:', state.selectedSubCategoryId);
 
-        if (state.selectedSub) {
-            products = products.filter(p => Number(p.category_id) === Number(state.selectedSub));
-        } else if (state.selectedRoot) {
-            const childIds = state.categories.filter(c => c.parent_id === state.selectedRoot).map(c => c.id);
-            const allowed = new Set([state.selectedRoot, ...childIds]);
-            products = products.filter(p => allowed.has(Number(p.category_id)));
-        }
-
-        const search = el.productSearch.value.trim().toLowerCase();
-        if (search) {
-            products = products.filter(p => (p.name || '').toLowerCase().includes(search));
-        }
+        console.debug('[filter] ✓ final filtered count:', products.length,
+                      '| root:', state.selectedRootCategoryId, '| sub:', state.selectedSubCategoryId,
+                      '| search:', state.searchQuery || '—');
 
         if (!products.length) {
-            el.productsState.innerHTML = `<div class="empty-state d-flex align-items-center gap-2"><i class="bi bi-emoji-neutral"></i><span>${window.i18n.no_products_now}</span></div>`;
+            el.productsState.innerHTML = `
+                <div class="empty-state d-flex align-items-center gap-2">
+                    <i class="bi bi-emoji-neutral"></i>
+                    <span>${window.i18n.no_products_now}</span>
+                </div>`;
             el.categoryProducts.innerHTML = '';
             return;
         }
 
-        el.productsState.innerHTML = '';
-        el.categoryProducts.innerHTML = products.map(productCard).join('');
-        bindProductImageFallbacks(el.categoryProducts);
-        bindProductActions(el.categoryProducts);
+        el.productsState.innerHTML      = '';
+        el.categoryProducts.innerHTML   = products.map(productCard).join('');
+        bindProductImageFallbacks(el.categoryProducts); // onerror doesn't bubble
     }
 
     function productCard(p) {
-        const available = !!p.is_available;
-        const desc = (p.description_ar || p.description_en || '').trim();
-        const shortDesc = desc.length > 90 ? `${desc.slice(0, 90)}...` : desc;
-
-        const oldPrice = p.discount_price
+        const available  = !!p.is_available;
+        const rawDesc    = isAr
+            ? (p.description_ar || p.description_en || '')
+            : (p.description_en || p.description_ar || '');
+        const shortDesc  = rawDesc.length > 90 ? `${rawDesc.slice(0, 90)}...` : rawDesc;
+        const oldPrice   = p.discount_price
             ? `<span class="price-old me-1">${num(p.price)}</span>`
             : '';
-
         const imageBlock = p.image
-            ? `<img src="${p.image}" alt="${escapeHtml(p.name)}" class="js-product-img">`
-            : `<div class="d-flex align-items-center justify-content-center h-100 text-muted"><i class="bi bi-image"></i></div>`;
+            ? `<img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" class="js-product-img">`
+            : `<div class="d-flex align-items-center justify-content-center h-100 text-muted"><i class="bi bi-image fs-2"></i></div>`;
 
         return `
             <div class="col">
-                <article class="product-card h-100 ${available ? '' : 'product-unavailable'}">
+                <article class="product-card h-100 ${available ? '' : 'product-unavailable'}"
+                         data-action="open-product"
+                         data-product-id="${p.id}">
                     <div class="product-img-wrap">${imageBlock}</div>
-                    <div class="p-3 d-flex flex-column h-100">
+                    <div class="p-3 d-flex flex-column h-100" style="min-height:0">
                         <h3 class="h6 mb-1">${escapeHtml(p.name)}</h3>
-                        <p class="text-muted small mb-2">${escapeHtml(shortDesc || window.i18n.no_description)}</p>
-
-                        <div class="mb-2">
-                            ${oldPrice}
-                            <span class="price-now">${num(p.effective_price)}</span>
-                        </div>
-
+                        <p class="text-muted small mb-2 flex-grow-1">${escapeHtml(shortDesc || window.i18n.no_description)}</p>
+                        <div class="mb-2">${oldPrice}<span class="price-now">${num(p.effective_price)}</span></div>
                         ${available ? '' : `<span class="badge text-bg-secondary mb-2">${window.i18n.unavailable}</span>`}
-
-                        <div class="mt-auto d-grid gap-2">
-                            <button class="btn btn-outline-secondary btn-sm" data-show-product="${p.id}">${window.i18n.details}</button>
-                            <button class="btn btn-primary btn-sm" data-add-product="${p.id}" ${available ? '' : 'disabled'}>
+                        <div class="d-grid gap-2 mt-auto">
+                            <button class="btn btn-outline-secondary btn-sm"
+                                    data-product-id="${p.id}"
+                                    data-action="open-product">${window.i18n.details}</button>
+                            <button class="btn btn-primary btn-sm"
+                                    data-product-id="${p.id}"
+                                    data-action="add-to-cart"
+                                    ${available ? '' : 'disabled'}>
                                 <i class="bi bi-plus-circle me-1"></i>${window.i18n.add_to_cart}
                             </button>
                         </div>
                     </div>
                 </article>
-            </div>
-        `;
+            </div>`;
     }
 
-    function bindProductActions(container) {
-        container.querySelectorAll('[data-show-product]').forEach(btn => {
-            btn.addEventListener('click', () => openProductModal(Number(btn.dataset.showProduct)));
-        });
-
-        container.querySelectorAll('[data-add-product]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const product = findProduct(Number(btn.dataset.addProduct));
-                if (!product) return;
-                addToCart(product);
-            });
-        });
-    }
-
-    function bindChipImageFallbacks(container) {
-        container.querySelectorAll('.js-chip-thumb').forEach(img => {
-            img.addEventListener('error', () => {
-                img.remove();
-            }, { once: true });
-        });
-    }
-
+    // onerror events don't bubble â†’ must bind explicitly
     function bindProductImageFallbacks(container) {
         container.querySelectorAll('.js-product-img').forEach(img => {
             img.addEventListener('error', () => {
                 const wrap = img.closest('.product-img-wrap');
-                if (!wrap) return;
-                wrap.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 text-muted"><i class="bi bi-image"></i></div>';
+                if (wrap) wrap.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 text-muted"><i class="bi bi-image fs-2"></i></div>';
             }, { once: true });
         });
     }
 
-    function openProductModal(productId) {
-        const product = findProduct(productId);
-        if (!product) return;
+    // â”€â”€ Product Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+     function openProductModal(productId) {
+         console.debug('[openProductModal] opening modal for productId:', productId);
+         const product = state.products.find(item => Number(item.id) === Number(productId));
+         if (!product) {
+             console.warn('[openProductModal] product not found:', productId);
+             return;
+         }
 
-        activeProduct = product;
+         activeProduct = product;
+         console.debug('[openProductModal] activeProduct set:', product.name);
+
         el.productModalTitle.textContent = product.name;
 
-        const desc = (product.description_ar || product.description_en || '').trim();
+        const desc = (isAr
+            ? (product.description_ar || product.description_en || '')
+            : (product.description_en || product.description_ar || '')).trim();
         el.productModalDesc.textContent = desc || window.i18n.no_description_detail;
 
         if (product.image) {
-            el.productModalImage.onerror = () => {
-                el.productModalImageWrap.classList.add('d-none');
-            };
-            el.productModalImage.src = product.image;
+            el.productModalImage.onerror = () => el.productModalImageWrap.classList.add('d-none');
+            el.productModalImage.src     = product.image;
             el.productModalImageWrap.classList.remove('d-none');
         } else {
             el.productModalImageWrap.classList.add('d-none');
@@ -879,175 +972,213 @@ window.i18n = {
 
         el.productModalPrice.textContent = num(product.effective_price);
 
-        const unavailable = !product.is_available;
-        el.productModalUnavailable.classList.toggle('d-none', !unavailable);
-        el.productModalAddBtn.disabled = unavailable;
+         const unavailable = !product.is_available;
+         el.productModalUnavailable.classList.toggle('d-none', !unavailable);
+         el.productModalAddBtn.disabled = unavailable;
+         el.productModalAddBtn.dataset.action = 'add-to-cart';
+         el.productModalAddBtn.dataset.productId = String(product.id);
 
-        new bootstrap.Modal(document.getElementById('productModal')).show();
-    }
+         console.debug('[openProductModal] showing modal, available:', !!product.is_available);
+         new bootstrap.Modal(document.getElementById('productModal')).show();
+     }
 
-    function addToCart(product) {
+    /**
+     * Adds a product to cart by product id.
+     */
+    function addToCart(productId) {
+        const product = findProduct(productId);
+        if (!product) return;
+
         if (!product.is_available) {
-            showCheckoutAlert('warning', window.i18n.product_unavailable_alert);
+            console.warn('[addToCart] not available, blocking:', product.id);
+            alert(window.i18n.product_unavailable_alert);
             return;
         }
 
-        const existing = state.cart.find(i => i.product_id === product.id);
+        const pid = Number(product.id);
+        const price = Number(product.effective_price ?? product.discount_price ?? product.price ?? 0);
+        const existing = state.cart.find(item => Number(item.id) === pid);
 
         if (existing) {
             existing.quantity += 1;
         } else {
             state.cart.push({
-                product_id: product.id,
-                product_name: product.name,
-                product_price: Number(product.effective_price),
+                id: pid,
+                name: product.name || '',
+                price,
+                image: product.image || null,
                 quantity: 1,
             });
         }
 
-        persistCart();
+        saveCart();
         renderCart();
     }
 
+    /**
+     * Renders cart items, subtotal, and cart badges.
+     */
     function renderCart() {
-        const count = state.cart.reduce((sum, item) => sum + item.quantity, 0);
+        const count = getCartCount();
+        const subtotal = getCartSubtotal();
+
         el.cartCountTop.textContent = count;
         el.cartCountMobile.textContent = count;
+        el.checkoutOpenBtn.disabled = state.cart.length === 0;
 
         if (!state.cart.length) {
-            el.cartItems.innerHTML = `<div class="cart-empty">${window.i18n.cart_is_empty}</div>`;
-            el.cartSubtotal.textContent = '0.00';
+            el.cartItems.innerHTML = `<div class="cart-empty text-center text-muted py-4"><i class="bi bi-cart3 fs-3 d-block mb-2"></i>${window.i18n.cart_is_empty}</div>`;
+            el.cartSubtotal.textContent = num(0);
             return;
         }
 
         el.cartItems.innerHTML = state.cart.map(item => {
-            const product = findProduct(item.product_id);
-            const isAvailableNow = product ? !!product.is_available : false;
-
+            const pid = Number(item.id);
+            const product = findProduct(pid);
+            const isAvailable = product ? !!product.is_available : false;
+            const lineTotal = Number(item.price) * item.quantity;
             return `
                 <div class="border rounded p-2 mb-2 bg-white">
                     <div class="d-flex justify-content-between align-items-start gap-2">
-                        <div>
-                            <div class="fw-semibold small">${escapeHtml(item.product_name)}</div>
-                            <div class="small text-muted">${num(item.product_price)} × ${item.quantity}</div>
-                            ${isAvailableNow ? '' : `<span class="badge text-bg-secondary mt-1">${window.i18n.not_available_now}</span>`}
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold small">${escapeHtml(item.name)}</div>
+                            <div class="small text-muted">${num(item.price)} &times; ${item.quantity}</div>
+                            ${isAvailable ? '' : `<span class="badge text-bg-secondary mt-1">${window.i18n.not_available_now}</span>`}
                         </div>
-                        <button class="btn btn-sm btn-link text-danger" data-cart-remove="${item.product_id}" title="${window.i18n.delete}">
+                        <button class="btn btn-sm btn-link text-danger p-0"
+                                data-product-id="${pid}"
+                                data-action="cart-remove">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
                     <div class="d-flex justify-content-between align-items-center mt-2">
                         <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-secondary qty-btn" data-cart-minus="${item.product_id}">-</button>
-                            <button class="btn btn-outline-secondary" disabled>${item.quantity}</button>
-                            <button class="btn btn-outline-secondary qty-btn" data-cart-plus="${item.product_id}">+</button>
+                            <button class="btn btn-outline-secondary qty-btn"
+                                    data-product-id="${pid}"
+                                    data-action="cart-minus">&minus;</button>
+                            <button class="btn btn-outline-secondary" disabled style="min-width:36px">${item.quantity}</button>
+                            <button class="btn btn-outline-secondary qty-btn"
+                                    data-product-id="${pid}"
+                                    data-action="cart-plus">+</button>
                         </div>
-                        <strong>${num(item.product_price * item.quantity)}</strong>
+                        <strong>${num(lineTotal)}</strong>
                     </div>
-                </div>
-            `;
+                </div>`;
         }).join('');
 
-        el.cartItems.querySelectorAll('[data-cart-plus]').forEach(btn => {
-            btn.addEventListener('click', () => changeQty(Number(btn.dataset.cartPlus), 1));
-        });
-
-        el.cartItems.querySelectorAll('[data-cart-minus]').forEach(btn => {
-            btn.addEventListener('click', () => changeQty(Number(btn.dataset.cartMinus), -1));
-        });
-
-        el.cartItems.querySelectorAll('[data-cart-remove]').forEach(btn => {
-            btn.addEventListener('click', () => removeFromCart(Number(btn.dataset.cartRemove)));
-        });
-
-        el.cartSubtotal.textContent = num(calcSubtotal());
+        el.cartSubtotal.textContent = num(subtotal);
     }
 
-    function changeQty(productId, delta) {
-        const index = state.cart.findIndex(i => i.product_id === productId);
+    /**
+     * Updates an item's quantity by delta.
+     */
+    function updateCartQuantity(productId, delta) {
+        const pid = Number(productId);
+        const index = state.cart.findIndex(item => Number(item.id) === pid);
         if (index < 0) return;
 
         state.cart[index].quantity += delta;
-
         if (state.cart[index].quantity <= 0) {
             state.cart.splice(index, 1);
         }
 
-        persistCart();
+        saveCart();
         renderCart();
     }
 
+    /**
+     * Removes an item from cart by product id.
+     */
     function removeFromCart(productId) {
-        state.cart = state.cart.filter(i => i.product_id !== productId);
-        persistCart();
+        const pid = Number(productId);
+        state.cart = state.cart.filter(item => Number(item.id) !== pid);
+        saveCart();
         renderCart();
     }
 
+    /**
+     * Returns cart subtotal amount.
+     */
+    function getCartSubtotal() {
+        return state.cart.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0);
+    }
+
+    /**
+     * Returns total cart items count.
+     */
+    function getCartCount() {
+        return state.cart.reduce((sum, item) => sum + Number(item.quantity), 0);
+    }
+
+    // â”€â”€ Checkout / Delivery Zones â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function renderDeliveryZones() {
         if (!state.deliveryZones.length) {
             el.deliveryZone.innerHTML = `<option value="">${window.i18n.no_delivery_zones_available}</option>`;
             return;
         }
-
-        el.deliveryZone.innerHTML = `<option value="">${window.i18n.select_zone}</option>` + state.deliveryZones.map(zone =>
-            `<option value="${zone.estimated_fee}">${escapeHtml(zone.area_name)} (${num(zone.estimated_fee)})</option>`
-        ).join('');
+        el.deliveryZone.innerHTML =
+            `<option value="">${window.i18n.select_zone}</option>` +
+            state.deliveryZones.map(z =>
+                `<option value="${z.estimated_fee}">${escapeHtml(z.area_name)} (${num(z.estimated_fee)})</option>`
+            ).join('');
     }
 
-    function handleOrderTypeUI() {
-        const type = el.orderType.value;
+     function handleOrderTypeUI() {
+         const type = el.orderType.value;
+         console.debug('[handleOrderTypeUI] selected type:', type);
+         toggleField(el.tableFields,    type === 'table');
+         toggleField(el.deliveryFields, type === 'delivery');
+     }
 
-        toggleField(el.tableFields, type === 'table');
-        toggleField(el.deliveryFields, type === 'delivery');
-    }
-
-    function handleDeliveryTypeUI() {
-        const type = el.deliveryType.value;
-        toggleField(el.scheduledField, type === 'scheduled');
-    }
+     function handleDeliveryTypeUI() {
+         const deliveryType = el.deliveryType.value;
+         console.debug('[handleDeliveryTypeUI] delivery type:', deliveryType);
+         toggleField(el.scheduledField, deliveryType === 'scheduled');
+     }
 
     function toggleField(node, visible) {
         node.classList.toggle('checkout-hidden', !visible);
-        node.classList.toggle('checkout-visible', visible);
+        node.classList.toggle('checkout-visible',  visible);
     }
 
     function validateCartBeforeCheckout() {
         const unavailable = state.cart.filter(item => {
-            const p = findProduct(item.product_id);
+            const p = findProduct(item.id);
             return !p || !p.is_available;
         });
-
-        if (!unavailable.length) {
-            return true;
-        }
-
-        const names = unavailable.map(i => i.product_name).join('، ');
-        showCheckoutAlert('danger', `${window.i18n.some_products_unavailable} ${names}`);
+        if (!unavailable.length) return true;
+         showCheckoutAlert('danger', `${window.i18n.some_products_unavailable} ${unavailable.map(i => i.name).join(', ')}`);
         return false;
     }
 
-    async function submitOrder(event) {
+    /**
+     * Submits checkout form to orders API.
+     */
+    async function submitCheckout(event) {
         event.preventDefault();
         el.checkoutApiErrors.innerHTML = '';
+        hideCheckoutAlert();
 
         if (!state.cart.length) {
             showCheckoutAlert('danger', window.i18n.cart_is_empty);
             return;
         }
-
-        if (!validateCartBeforeCheckout()) {
-            return;
-        }
+        if (!validateCartBeforeCheckout()) return;
 
         const formData = new FormData(el.checkoutForm);
-        const payload = {
-            customer_name: String(formData.get('customer_name') || '').trim(),
+        const payload  = {
+            customer_name:  String(formData.get('customer_name')  || '').trim(),
             customer_phone: String(formData.get('customer_phone') || '').trim(),
-            order_type: formData.get('order_type'),
-            customer_note: String(formData.get('customer_note') || '').trim() || null,
+            order_type:     formData.get('order_type'),
+            table_number:   null,
+            address:        null,
+            delivery_type:  null,
+            scheduled_at:   null,
+            customer_note:  String(formData.get('customer_note')  || '').trim() || null,
+            estimated_delivery_fee: null,
             items: state.cart.map(item => ({
-                product_id: item.product_id,
-                quantity: item.quantity,
+                product_id: item.id,
+                quantity:   item.quantity,
             })),
         };
 
@@ -1056,63 +1187,60 @@ window.i18n = {
         }
 
         if (payload.order_type === 'delivery') {
-            payload.address = String(formData.get('address') || '').trim();
+            payload.address       = String(formData.get('address') || '').trim();
             payload.delivery_type = formData.get('delivery_type') || 'immediate';
-
             if (payload.delivery_type === 'scheduled') {
-                payload.scheduled_at = formData.get('scheduled_at');
+                payload.scheduled_at = formData.get('scheduled_at') || null;
             }
-
             if (el.deliveryZone.value) {
                 payload.estimated_delivery_fee = Number(el.deliveryZone.value);
             }
         }
 
-        el.submitOrderBtn.disabled = true;
+        console.debug('[order] payload â†’', JSON.stringify(payload, null, 2));
+
+        el.submitOrderBtn.disabled    = true;
         el.submitOrderBtn.textContent = window.i18n.sending;
 
         try {
-            const response = await fetchJSON(`${apiBase}/orders`, {
-                method: 'POST',
+            const response    = await fetchJSON(`${apiBase}/orders`, {
+                method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
+                body:    JSON.stringify(payload),
             });
 
-            const data = normalizeData(response) || {};
-            const orderNumber = data.order_number || '---';
+             const data        = normalizeData(response) || {};
+             const orderNumber = data.order_number || data.id || '---';
+             console.debug('[submitCheckout] extracted order_number:', orderNumber);
 
             state.cart = [];
-            persistCart();
+            clearCartStorage();
             renderCart();
-
             el.checkoutForm.reset();
             handleOrderTypeUI();
             handleDeliveryTypeUI();
-            showCheckoutAlert('success', `${window.i18n.order_sent_success} ${orderNumber}`);
 
-            const checkoutModal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
-            const cartCanvas = bootstrap.Offcanvas.getInstance(document.getElementById('cartCanvas'));
-
-            if (checkoutModal) checkoutModal.hide();
-            if (cartCanvas) cartCanvas.hide();
+            bootstrap.Modal.getInstance(document.getElementById('checkoutModal'))?.hide();
+            bootstrap.Offcanvas.getInstance(document.getElementById('cartCanvas'))?.hide();
 
             el.orderSuccessNumber.textContent = `#${orderNumber}`;
-            new bootstrap.Modal(document.getElementById('orderSuccessModal')).show();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('orderSuccessModal')).show();
 
-        } catch (error) {
-            showCheckoutAlert('danger', error.message || window.i18n.failed_submit_order);
-
-            if (error.errors && typeof error.errors === 'object') {
-                el.checkoutApiErrors.innerHTML = Object.values(error.errors)
-                    .flat()
-                    .map(msg => `<div>• ${escapeHtml(msg)}</div>`)
-                    .join('');
-            }
-        } finally {
-            el.submitOrderBtn.disabled = false;
-            el.submitOrderBtn.textContent = window.i18n.submit_order;
-        }
-    }
+         } catch (error) {
+             console.error('[submitCheckout] error:', error.message, error);
+             showCheckoutAlert('danger', error.message || window.i18n.failed_submit_order);
+             if (error.errors && typeof error.errors === 'object') {
+                 console.error('[submitCheckout] validation errors:', error.errors);
+                 el.checkoutApiErrors.innerHTML = Object.values(error.errors)
+                     .flat()
+                     .map(msg => `<div>• ${escapeHtml(msg)}</div>`)
+                     .join('');
+             }
+         } finally {
+             el.submitOrderBtn.disabled    = false;
+             el.submitOrderBtn.textContent = window.i18n.submit_order;
+         }
+     }
 
     function showCheckoutAlert(type, message) {
         el.checkoutAlert.className = `alert alert-${type}`;
@@ -1120,54 +1248,76 @@ window.i18n = {
         el.checkoutAlert.classList.remove('d-none');
     }
 
-    function findProduct(productId) {
-        return state.products.find(product => Number(product.id) === Number(productId));
+    function hideCheckoutAlert() {
+        el.checkoutAlert.classList.add('d-none');
     }
 
-    function calcSubtotal() {
-        return state.cart.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
-    }
+      function findProduct(productId) {
+          // Search in state.products (the single source of truth)
+          const found = state.products.find(p => Number(p.id) === Number(productId));
+          if (found) {
+              console.debug('[findProduct] found:', found.name, '(id:', productId, ')');
+              return found;
+          }
+          console.warn('[findProduct] NOT FOUND for id:', productId, '| total products:', state.products.length);
+          return null;
+       }
 
-    function persistCart() {
+    /**
+     * Saves cart to localStorage.
+     */
+    function saveCart() {
         localStorage.setItem(storageKey, JSON.stringify(state.cart));
     }
 
+    /**
+     * Clears cart key from localStorage.
+     */
+    function clearCartStorage() {
+        localStorage.removeItem(storageKey);
+    }
+
+    /**
+     * Loads cart from localStorage.
+     */
     function loadCart() {
         try {
-            return JSON.parse(localStorage.getItem(storageKey) || '[]');
-        } catch (_) {
+            const raw = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            return raw.map(item => ({
+                id:       item.id       ?? item.product_id   ?? null,
+                name:     item.name     ?? item.product_name ?? '',
+                price:    item.price    ?? item.product_price ?? 0,
+                image:    item.image    ?? null,
+                quantity: item.quantity ?? 1,
+            })).filter(item => item.id != null);
+        } catch {
             return [];
         }
     }
 
     function num(value) {
-        return Number(value || 0).toFixed(2);
+        const n = Number(value || 0);
+        return n.toLocaleString(isAr ? 'ar-SY' : 'en-US');
     }
 
     function escapeHtml(value) {
         return String(value || '')
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
-            .replaceAll("'", '&#039;');
+            .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;').replaceAll("'", '&#039;');
     }
 
     function skeletonRow(count) {
         return `<div class="row g-3 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4">${
-            Array.from({ length: count }).map(() => '<div class="col"><div class="skeleton skeleton-card"></div></div>').join('')
+            Array.from({ length: count }).map(() =>
+                '<div class="col"><div class="skeleton skeleton-card"></div></div>'
+            ).join('')
         }</div>`;
     }
 
-    function emptyState(text) {
-        return `<div class="empty-state">${escapeHtml(text)}</div>`;
-    }
+    function emptyState(text) { return `<div class="empty-state">${escapeHtml(text)}</div>`; }
+    function errorState(text) { return `<div class="error-state text-danger">${escapeHtml(text)}</div>`; }
 
-    function errorState(text) {
-        return `<div class="error-state text-danger">${escapeHtml(text)}</div>`;
-    }
 })();
 </script>
 </body>
 </html>
-
