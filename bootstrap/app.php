@@ -28,10 +28,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Register custom middleware
         $middleware->alias([
-            'admin' => AdminMiddleware::class,
-            'moderator' => ModeratorMiddleware::class,
-            'auth' => Authenticate::class,
-            'guest' => RedirectIfAuthenticated::class,
+            'admin'            => AdminMiddleware::class,
+            'moderator'        => ModeratorMiddleware::class,
+            'auth'             => Authenticate::class,
+            'guest'            => RedirectIfAuthenticated::class,
+            'customer.session' => \App\Http\Middleware\EnsureCustomerSession::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

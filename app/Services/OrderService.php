@@ -61,10 +61,20 @@ class OrderService
             $order = DB::transaction(function () use ($data) {
 
             // ── 1. Resolve customer ──────────────────────────────────
-            $customer = Customer::firstOrCreate(
-                ['phone' => $data['customer_phone']],
-                ['full_name' => $data['customer_name']]
-            );
+            // If a previous order already bound a customer to this session, reuse it.
+            $sessionCustomerId = session()->get('customer_id');
+
+            if ($sessionCustomerId) {
+                $customer = Customer::find($sessionCustomerId);
+            }
+
+            // Fall back to phone lookup / creation (covers first-time & session-less clients)
+            if (empty($customer)) {
+                $customer = Customer::firstOrCreate(
+                    ['phone' => $data['customer_phone']],
+                    ['full_name' => $data['customer_name']]
+                );
+            }
 
             // Update name if it changed
             if ($customer->full_name !== $data['customer_name']) {
@@ -76,6 +86,10 @@ class OrderService
                     'phone' => ['هذا الرقم محظور من الطلب'],
                 ]);
             }
+
+            // Bind the resolved customer to the session so subsequent requests
+            // (e.g. cart ↔ order correlation) don't need to look up by phone again.
+            session()->put('customer_id', $customer->id);
 
             // ── 2. Resolve & validate products ───────────────────────
             $productIds = collect($data['items'])->pluck('product_id')->unique()->toArray();
@@ -170,6 +184,9 @@ class OrderService
 
             return $order->fresh('items', 'customer');
             });
+
+            // ── Persist customer binding in session (outside transaction) ──
+            session()->put('customer_id', $order->customer_id);
 
             Log::info('order.create.success', [
                 'order_id'     => $order->id,

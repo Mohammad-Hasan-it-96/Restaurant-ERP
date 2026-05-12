@@ -33,12 +33,19 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
     Route::get('delivery-zones', [DeliveryZoneController::class, 'index'])->name('delivery-zones.index');
 
     // Orders — extra strict throttle: max 10 order attempts per IP per minute
-    Route::post('orders', [OrderController::class, 'store'])
-        ->middleware('throttle:10,1')
-        ->name('orders.store');
+    // StartSession + customer.session: bind customer_id to session on first order
+    Route::middleware([
+            \Illuminate\Session\Middleware\StartSession::class,
+            'customer.session',
+        ])->group(function () {
 
-    Route::get ('orders/{order_number}',        [OrderController::class, 'show'])  ->name('orders.show');
-    Route::post('orders/{order_number}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+        Route::post('orders', [OrderController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('orders.store');
+
+        Route::get ('orders/{order_number}',        [OrderController::class, 'show'])  ->name('orders.show');
+        Route::post('orders/{order_number}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+    });
 
     // Frontend error logging — relaxed throttle to avoid blocking legit error reports
     Route::post('logs/frontend', FrontendLogController::class)
@@ -47,7 +54,10 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         ->name('logs.frontend');
 
     // ── Cart (session-based, no auth required) ────────────────────────────────
-    Route::middleware(\Illuminate\Session\Middleware\StartSession::class)->group(function () {
+    Route::middleware([
+            \Illuminate\Session\Middleware\StartSession::class,
+            'customer.session',
+        ])->group(function () {
         Route::get ('cart',        [CartController::class, 'index'])  ->name('cart.index');
         Route::post('cart/add',    [CartController::class, 'add'])    ->name('cart.add');
         Route::post('cart/update', [CartController::class, 'update']) ->name('cart.update');

@@ -11,6 +11,7 @@ class OrderResource extends JsonResource
     {
         return [
             'order_number'       => $this->order_number,
+            'customer_id'        => $this->customer_id,   // guest-session correlation
             'status'             => $this->status,
             'order_type'         => $this->order_type,
             'table_number'       => $this->table_number,
