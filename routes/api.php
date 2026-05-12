@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\API\V1\CartController;
 use App\Http\Controllers\API\V1\CategoryController;
 use App\Http\Controllers\API\V1\DeliveryZoneController;
 use App\Http\Controllers\API\V1\FrontendLogController;
@@ -44,4 +45,13 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         ->withoutMiddleware('throttle:60,1')
         ->middleware('throttle:30,1')
         ->name('logs.frontend');
+
+    // ── Cart (session-based, no auth required) ────────────────────────────────
+    Route::middleware(\Illuminate\Session\Middleware\StartSession::class)->group(function () {
+        Route::get ('cart',        [CartController::class, 'index'])  ->name('cart.index');
+        Route::post('cart/add',    [CartController::class, 'add'])    ->name('cart.add');
+        Route::post('cart/update', [CartController::class, 'update']) ->name('cart.update');
+        Route::post('cart/remove', [CartController::class, 'remove']) ->name('cart.remove');
+        Route::post('cart/clear',  [CartController::class, 'clear'])  ->name('cart.clear');
+    });
 });

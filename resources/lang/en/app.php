@@ -540,4 +540,13 @@ return [
     'view'                       => 'View',
     'total'                      => 'Total',
     'total_spent'                => 'Total Spent',
+
+    // ── Cart API ──────────────────────────────────────────────────────────────
+    'cart_item_added'                  => 'Product added to cart.',
+    'cart_item_updated'                => 'Cart item quantity updated.',
+    'cart_item_removed'                => 'Product removed from cart.',
+    'cart_cleared'                     => 'Cart has been cleared.',
+    'cart_item_not_found'              => 'Product not found in cart.',
+    'product_not_found_or_unavailable' => 'Product not found or currently unavailable.',
+    'server_error'                     => 'A server error occurred, please try again later.',
 ];
