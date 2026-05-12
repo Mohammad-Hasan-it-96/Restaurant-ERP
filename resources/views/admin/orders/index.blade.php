@@ -2,15 +2,56 @@
 
 @section('title', __('app.orders_management'))
 
+@push('styles')
+<style>
+#newOrderBanner {
+    border-left: 5px solid #f59e0b;
+    animation: pulse-border 1s infinite alternate;
+}
+@keyframes pulse-border {
+    from { border-left-color: #f59e0b; }
+    to   { border-left-color: #ef4444; }
+}
+#autoRefreshBadge { cursor: pointer; transition: opacity .3s; }
+#autoRefreshBadge.paused { opacity: .5; }
+.quick-filter-btn.active-filter { box-shadow: 0 0 0 3px rgba(79,70,229,.35); }
+</style>
+@endpush
+
 @section('content')
-<div class="container-fluid py-4">
+<div class="container-fluid py-4"
+     id="ordersPage"
+     data-latest-id="{{ $latestId }}"
+     data-pending="{{ $counts['pending'] ?? 0 }}"
+     data-poll-url="{{ route('admin.orders.index', ['_poll' => 1]) }}">
 
     {{-- Header --}}
-    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
         <h2 class="fw-bold mb-0">
             <i class="bi bi-receipt me-2 text-primary"></i>
             {{ __('app.orders_management') }}
         </h2>
+        <div class="d-flex align-items-center gap-2">
+            <span id="lastRefreshText" class="text-muted small"></span>
+            <button id="testSoundBtn" class="btn btn-sm btn-outline-secondary"
+                    title="اختبار صوت التنبيه">
+                <i class="bi bi-volume-up"></i>
+            </button>
+            <button id="autoRefreshBadge" class="badge bg-success border-0 fs-6 px-3 py-2"
+                    title="اضغط لإيقاف/تشغيل التحديث التلقائي">
+                <i class="bi bi-arrow-repeat me-1"></i>تحديث تلقائي
+            </button>
+        </div>
+    </div>
+
+    {{-- New Order Banner --}}
+    <div id="newOrderBanner" class="alert alert-warning alert-dismissible d-none mb-3">
+        <i class="bi bi-bell-fill me-2 text-warning"></i>
+        <strong>طلب جديد!</strong> وصل طلب جديد.
+        <button id="refreshNowBtn" class="btn btn-sm btn-warning ms-2">
+            <i class="bi bi-arrow-clockwise me-1"></i>تحديث الآن
+        </button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 
     {{-- Flash --}}
@@ -27,34 +68,39 @@
     </div>
     @endif
 
-    {{-- Status Tabs --}}
+    {{-- ── Quick Filter Pills ──────────────────────────────────────────────── --}}
     @php
-        $statuses = [
-            'all'                   => ['label' => __('app.all'),                   'color' => 'secondary'],
-            'pending'               => ['label' => __('app.pending'),               'color' => 'warning'],
-            'accepted'              => ['label' => __('app.accepted'),              'color' => 'primary'],
-            'rejected'              => ['label' => __('app.rejected'),              'color' => 'danger'],
-            'completed'             => ['label' => __('app.completed'),             'color' => 'success'],
-            'cancelled_by_admin'    => ['label' => __('app.cancelled_by_admin'),    'color' => 'dark'],
-            'cancelled_by_customer' => ['label' => __('app.cancelled_by_customer'), 'color' => 'secondary'],
-        ];
         $currentStatus = request('status', 'all');
+        $quickFilters  = [
+            'all'       => ['label' => 'الكل',        'icon' => 'bi-list-ul',      'color' => 'secondary'],
+            'pending'   => ['label' => 'قيد الانتظار','icon' => 'bi-hourglass-split','color' => 'warning'],
+            'accepted'  => ['label' => 'مقبول',       'icon' => 'bi-check-circle', 'color' => 'primary'],
+            'completed' => ['label' => 'مكتمل',       'icon' => 'bi-check2-all',   'color' => 'success'],
+            'cancelled_by_admin'    => ['label' => 'ملغي (إدارة)',  'icon' => 'bi-x-circle',  'color' => 'dark'],
+            'cancelled_by_customer' => ['label' => 'ملغي (عميل)',  'icon' => 'bi-x-octagon', 'color' => 'secondary'],
+            'rejected'  => ['label' => 'مرفوض',       'icon' => 'bi-ban',          'color' => 'danger'],
+        ];
     @endphp
-
-    <ul class="nav nav-tabs mb-3 flex-wrap">
-        @foreach($statuses as $key => $meta)
-        <li class="nav-item">
-            <a href="{{ route('admin.orders.index', array_merge(request()->except('status','page'), $key !== 'all' ? ['status' => $key] : [])) }}"
-               class="nav-link {{ ($currentStatus === $key || ($key === 'all' && !request('status'))) ? 'active' : '' }}">
-                {{ $meta['label'] }}
-                @php $cnt = $key === 'all' ? $counts->sum() : ($counts[$key] ?? 0); @endphp
-                @if($cnt)
-                <span class="badge bg-{{ $meta['color'] }} ms-1">{{ $cnt }}</span>
-                @endif
-            </a>
-        </li>
+    <div class="d-flex gap-2 flex-wrap mb-3">
+        @foreach($quickFilters as $key => $meta)
+        @php
+            $isActive = ($currentStatus === $key) || ($key === 'all' && $currentStatus === 'all');
+            $cnt      = $key === 'all' ? $counts->sum() : ($counts[$key] ?? 0);
+            $href     = route('admin.orders.index', array_merge(
+                            request()->except('status','page'),
+                            $key !== 'all' ? ['status' => $key] : []
+                        ));
+        @endphp
+        <a href="{{ $href }}"
+           class="btn btn-sm quick-filter-btn {{ $isActive ? 'btn-'.$meta['color'].' active-filter' : 'btn-outline-'.$meta['color'] }}">
+            <i class="bi {{ $meta['icon'] }} me-1"></i>
+            {{ $meta['label'] }}
+            @if($cnt)
+            <span class="badge {{ $isActive ? 'bg-white text-dark' : 'bg-'.$meta['color'] }} ms-1">{{ $cnt }}</span>
+            @endif
+        </a>
         @endforeach
-    </ul>
+    </div>
 
     {{-- Search --}}
     <div class="card shadow-sm mb-4">
@@ -115,9 +161,19 @@
                             <td>@include('admin.orders.partials.status-badge', ['status' => $order->status])</td>
                             <td class="text-muted small">{{ $order->created_at->format('Y-m-d H:i') }}</td>
                             <td>
-                                <a href="{{ route('admin.orders.show', $order) }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-eye"></i>
-                                </a>
+                                <div class="d-flex gap-1">
+                                    <a href="{{ route('admin.orders.show', $order) }}"
+                                       class="btn btn-sm btn-outline-primary"
+                                       title="{{ __('app.view') }}">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ route('admin.orders.invoice', $order) }}"
+                                       target="_blank"
+                                       class="btn btn-sm btn-outline-secondary"
+                                       title="طباعة سريعة">
+                                        <i class="bi bi-printer"></i>
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         @empty
@@ -140,3 +196,107 @@
 </div>
 @endsection
 
+@push('scripts')
+<script>
+(function () {
+    'use strict';
+
+    const page        = document.getElementById('ordersPage');
+    const pollUrl     = page.dataset.pollUrl;
+    let   latestId    = parseInt(page.dataset.latestId) || 0;
+    let   autoRunning = true;
+    let   intervalId  = null;
+
+    const banner      = document.getElementById('newOrderBanner');
+    const badge       = document.getElementById('autoRefreshBadge');
+    const lastRefText = document.getElementById('lastRefreshText');
+    const refreshBtn  = document.getElementById('refreshNowBtn');
+
+    /* ── Notification sound (public/sounds/notification.wav) ───────────── */
+    const SOUND_URL = '{{ asset('sounds/notification.wav') }}';
+
+    // Pre-load so first play is instant
+    const notifAudio = new Audio(SOUND_URL);
+    notifAudio.volume = 1.0;   // full volume
+    notifAudio.preload = 'auto';
+
+    function beep() {
+        try {
+            // Clone the audio node so overlapping plays work
+            const s = notifAudio.cloneNode();
+            s.volume = 1.0;
+            // Play twice with a short gap for extra attention
+            s.play().catch(() => {});
+            setTimeout(() => {
+                const s2 = notifAudio.cloneNode();
+                s2.volume = 1.0;
+                s2.play().catch(() => {});
+            }, 1100);
+        } catch (e) { /* ignore */ }
+    }
+
+    /* ── Poll ────────────────────────────────────────────────────────────── */
+    async function poll() {
+        try {
+            const res  = await fetch(pollUrl, {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+
+            // Update last-refresh timestamp
+            const now = new Date();
+            lastRefText.textContent = 'آخر تحديث: ' + now.toLocaleTimeString('ar-SA');
+
+            // New order arrived?
+            if (data.latest_id > latestId) {
+                latestId = data.latest_id;
+                beep();
+                banner.classList.remove('d-none');
+
+                // Flash the tab title
+                let original = document.title;
+                let blink = 0;
+                const titleInterval = setInterval(() => {
+                    document.title = (blink++ % 2 === 0) ? '🔔 طلب جديد!' : original;
+                    if (blink > 10) { clearInterval(titleInterval); document.title = original; }
+                }, 600);
+            }
+        } catch (e) { /* network error — silent */ }
+    }
+
+    /* ── Start / Stop ─────────────────────────────────────────────────────── */
+    function startPolling() {
+        if (intervalId) clearInterval(intervalId);
+        intervalId    = setInterval(poll, 10000);
+        autoRunning   = true;
+        badge.classList.remove('paused');
+        badge.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>تحديث تلقائي';
+    }
+
+    function stopPolling() {
+        clearInterval(intervalId);
+        intervalId    = null;
+        autoRunning   = false;
+        badge.classList.add('paused');
+        badge.innerHTML = '<i class="bi bi-pause-circle me-1"></i>موقوف';
+    }
+
+    /* ── Test sound button ───────────────────────────────────────────────── */
+    const testBtn = document.getElementById('testSoundBtn');
+    if (testBtn) testBtn.addEventListener('click', () => beep());
+
+    badge.addEventListener('click', () => autoRunning ? stopPolling() : startPolling());
+
+    /* ── "تحديث الآن" button ─────────────────────────────────────────────── */
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => window.location.reload());
+    }
+
+    /* ── Boot ────────────────────────────────────────────────────────────── */
+    startPolling();
+    // Run once immediately after 2 s so the timestamp shows quickly
+    setTimeout(poll, 2000);
+})();
+</script>
+@endpush

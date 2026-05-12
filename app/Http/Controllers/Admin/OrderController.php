@@ -14,6 +14,14 @@ class OrderController extends Controller
     // ── Index ──────────────────────────────────────────────────────────────────
     public function index(Request $request)
     {
+        // ── Lightweight poll for JS auto-refresh ──────────────────────────────
+        if ($request->boolean('_poll')) {
+            return response()->json([
+                'latest_id'     => Order::max('id') ?? 0,
+                'pending_count' => Order::where('status', 'pending')->count(),
+            ]);
+        }
+
         $query = Order::with('customer')
             ->orderByDesc('id');
 
@@ -40,7 +48,10 @@ class OrderController extends Controller
             ->groupBy('status')
             ->pluck('total', 'status');
 
-        return view('admin.orders.index', compact('orders', 'counts'));
+        // Latest order ID for JS polling baseline
+        $latestId = Order::max('id') ?? 0;
+
+        return view('admin.orders.index', compact('orders', 'counts', 'latestId'));
     }
 
     // ── Show ───────────────────────────────────────────────────────────────────
