@@ -431,6 +431,19 @@ window.addEventListener('unhandledrejection', function(e) {
                 state.cart = [];
             }
         }
+
+        // ── Auto-fill customer info ───────────────────────────────────────────
+        try {
+            const savedCustomer = localStorage.getItem('customer_info');
+            if (savedCustomer) {
+                const info = JSON.parse(savedCustomer);
+                const nameInput  = document.querySelector('[name="customer_name"]');
+                const phoneInput = document.querySelector('[name="customer_phone"]');
+                if (nameInput  && info.name)  nameInput.value  = info.name;
+                if (phoneInput && info.phone) phoneInput.value = info.phone;
+            }
+        } catch (e) { /* ignore */ }
+
         wireEvents();
         renderLoadingSkeletons();
         await loadAll();
@@ -1273,10 +1286,27 @@ window.addEventListener('unhandledrejection', function(e) {
              const orderNumber = data.order_number || data.id || '---';
              console.debug('[submitCheckout] extracted order_number:', orderNumber);
 
+            // ── Save customer info for future auto-fill ───────────────────────
+            try {
+                localStorage.setItem('customer_info', JSON.stringify({
+                    name:  payload.customer_name,
+                    phone: payload.customer_phone,
+                }));
+            } catch (e) { /* ignore */ }
+
             state.cart = [];
             saveCart();
             renderCart();
             el.checkoutForm.reset();
+
+            // ── Re-fill customer info after reset ────────────────────────────
+            try {
+                const nameInput  = el.checkoutForm.querySelector('[name="customer_name"]');
+                const phoneInput = el.checkoutForm.querySelector('[name="customer_phone"]');
+                if (nameInput)  nameInput.value  = payload.customer_name;
+                if (phoneInput) phoneInput.value = payload.customer_phone;
+            } catch (e) { /* ignore */ }
+
             handleOrderTypeUI();
             handleDeliveryTypeUI();
 
