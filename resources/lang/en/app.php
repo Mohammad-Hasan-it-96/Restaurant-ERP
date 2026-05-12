@@ -509,8 +509,19 @@ return [
 
     // ... rest of the translations ...
 
+    // Dashboard – real data
+    'orders_today'          => 'Orders Today',
+    'sales_today'           => 'Sales Today',
+    'total_customers_count' => 'Total Customers',
+    'pending_orders'        => 'Pending Orders',
+    'view_orders'           => 'View Orders',
+    'view_pending'          => 'View Pending',
+    'excluding_cancelled'   => 'Excluding cancelled & rejected',
+    'orders_last_7_days'    => 'Orders – Last 7 Days',
+    'order_types'           => 'Order Types',
+
     // Customers management
-    'customers'                  => 'Customers',
+    'customers'              => 'Customers',
     'customers_management'       => 'Customers Management',
     'search_customers'           => 'Search by name or phone...',
     'no_customers_found'         => 'No customers found',

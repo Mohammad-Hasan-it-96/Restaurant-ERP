@@ -30,6 +30,18 @@ return [
     'products'  => 'المنتجات',
     'users'     => 'المستخدمين',
     'languages' => 'اللغات',
+    // Dashboard – real data
+    'orders_today'          => 'طلبات اليوم',
+    'sales_today'           => 'مبيعات اليوم',
+    'total_customers_count' => 'إجمالي العملاء',
+    'pending_orders'        => 'طلبات قيد الانتظار',
+    'view_orders'           => 'عرض الطلبات',
+    'view_pending'          => 'عرض المعلقة',
+    'excluding_cancelled'   => 'بدون الملغية والمرفوضة',
+    'orders_last_7_days'    => 'الطلبات خلال آخر 7 أيام',
+    'order_types'           => 'أنواع الطلبات',
+    'orders'                => 'طلبات',
+
     'customers' => 'العملاء',
     // Customers management
     'customers_management'       => 'إدارة العملاء',
