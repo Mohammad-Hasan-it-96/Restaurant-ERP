@@ -50,16 +50,17 @@ class OrderService
 
             if ($customer->is_blocked) {
                 throw ValidationException::withMessages([
-                    'customer_phone' => [
-                        $customer->blocked_reason
-                            ?? __('app.customer_blocked_message'),
-                    ],
+                    'phone' => ['هذا الرقم محظور من الطلب'],
                 ]);
             }
 
             // ── 2. Resolve & validate products ───────────────────────
             $productIds = collect($data['items'])->pluck('product_id')->unique()->toArray();
-            $products   = Product::whereIn('id', $productIds)->get()->keyBy('id');
+            $products   = Product::whereIn('id', $productIds)
+                            ->where('is_active', true)
+                            ->where('is_available', true)
+                            ->get()
+                            ->keyBy('id');
 
             $missingIds = array_diff($productIds, $products->keys()->toArray());
             if (count($missingIds)) {
@@ -67,23 +68,7 @@ class OrderService
                     'items' => [__('app.some_products_not_found')],
                 ]);
             }
-
-            foreach ($products as $product) {
-                if (! $product->is_active) {
-                    throw ValidationException::withMessages([
-                        'items' => [
-                            __('app.product_not_active', ['name' => $product->display_name]),
-                        ],
-                    ]);
-                }
-                if (! $product->is_available) {
-                    throw ValidationException::withMessages([
-                        'items' => [
-                            __('app.product_not_available', ['name' => $product->display_name]),
-                        ],
-                    ]);
-                }
-            }
+            // Note: quantity (stock) is intentionally ignored — no stock checks.
 
             // ── 3. Check opening hours ───────────────────────────────
             $checkAt = null;

@@ -29,9 +29,9 @@ class StoreOrderRequest extends FormRequest
             // Customer note
             'customer_note'  => 'nullable|string|max:1000',
 
-            // Items
+            // Items — only active & available products are accepted; quantity = order qty (no stock check)
             'items'              => 'required|array|min:1',
-            'items.*.product_id' => 'required|integer|exists:products,id',
+            'items.*.product_id' => 'required|integer|exists:products,id,is_active,1,is_available,1',
             'items.*.quantity'   => 'required|integer|min:1|max:100',
         ];
 
@@ -60,7 +60,7 @@ class StoreOrderRequest extends FormRequest
     {
         return [
             'items.required'              => 'يجب إضافة منتج واحد على الأقل.',
-            'items.*.product_id.exists'   => 'أحد المنتجات المختارة غير موجود.',
+            'items.*.product_id.exists'   => 'أحد المنتجات المختارة غير موجود أو غير متاح حالياً.',
             'items.*.quantity.min'        => 'الكمية يجب أن تكون 1 على الأقل.',
             'table_number.required'       => 'رقم الطاولة مطلوب لطلبات المطعم.',
             'address.required'            => 'العنوان مطلوب لطلبات التوصيل.',
