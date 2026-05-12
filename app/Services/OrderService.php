@@ -8,6 +8,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Services\SystemConfigService;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -33,6 +34,28 @@ class OrderService
             'order_type'     => $data['order_type'],
             'items_count'    => count($data['items']),
         ]);
+
+        // ── Duplicate order guard (5-second window) ──────────────────────────
+        $dupKey = 'order_dup_' . md5(
+            $data['customer_phone']
+            . '|' . $data['order_type']
+            . '|' . implode(',', array_map(
+                fn($i) => $i['product_id'] . 'x' . $i['quantity'],
+                $data['items']
+            ))
+        );
+
+        if (Cache::has($dupKey)) {
+            Log::warning('order.create.duplicate', [
+                'customer_phone' => $data['customer_phone'],
+            ]);
+            throw ValidationException::withMessages([
+                'items' => ['تم إرسال طلب مشابه مؤخراً، يرجى الانتظار لحظة قبل إعادة المحاولة.'],
+            ]);
+        }
+
+        // Mark this combination as "in-flight" for 5 seconds
+        Cache::put($dupKey, true, now()->addSeconds(5));
 
         try {
             $order = DB::transaction(function () use ($data) {
@@ -157,6 +180,9 @@ class OrderService
             return $order;
 
         } catch (\Throwable $e) {
+            // Release the duplicate-guard lock on real errors so the user can retry
+            Cache::forget($dupKey);
+
             Log::error('order.create.failed', [
                 'error'   => $e->getMessage(),
                 'payload' => $data,
