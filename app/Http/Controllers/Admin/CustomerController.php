@@ -15,6 +15,7 @@ class CustomerController extends Controller
     {
         $query = Customer::withCount('orders')
             ->withMax('orders', 'created_at')
+            ->withSum('orders', 'total')
             ->latest();
 
         if ($search = $request->input('search')) {
@@ -39,13 +40,34 @@ class CustomerController extends Controller
             ->paginate(10);
 
         $ordersCount = $customer->orders()->count();
+        $totalSpent  = (float) $customer->orders()->sum('total');
         $lastOrder   = $customer->orders()->latest()->first();
 
-        return view('admin.customers.show', compact('customer', 'orders', 'ordersCount', 'lastOrder'));
+        return view('admin.customers.show', compact('customer', 'orders', 'ordersCount', 'totalSpent', 'lastOrder'));
     }
 
     /**
-     * Toggle the blocked status of a customer.
+     * Block a customer.
+     */
+    public function block(Customer $customer)
+    {
+        $customer->update(['is_blocked' => true]);
+
+        return back()->with('success', __('app.customer_blocked_success'));
+    }
+
+    /**
+     * Unblock a customer.
+     */
+    public function unblock(Customer $customer)
+    {
+        $customer->update(['is_blocked' => false]);
+
+        return back()->with('success', __('app.customer_unblocked_success'));
+    }
+
+    /**
+     * Toggle the blocked status of a customer (legacy – kept for backward compat).
      */
     public function toggleBlock(Customer $customer)
     {

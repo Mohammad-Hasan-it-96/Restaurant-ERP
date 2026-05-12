@@ -22,7 +22,17 @@ class Customer extends Model
     {
         return $this->hasMany(Order::class);
     }
-    // ??? Helpers ??????????????????????????????????????????????????
+    // ── Accessors ─────────────────────────────────────────────────────────────
+    /**
+     * Sum of all order totals for this customer.
+     * Prefer using withSum('orders','total') on the query for bulk lists.
+     */
+    public function getTotalSpentAttribute(): float
+    {
+        return (float) ($this->orders_sum_total ?? $this->orders()->sum('total'));
+    }
+
+    // ── Scopes ────────────────────────────────────────────────────────────────
     /**
      * Scope to non-blocked customers.
      */

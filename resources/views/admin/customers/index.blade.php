@@ -57,6 +57,7 @@
                             <th>{{ __('app.full_name') }}</th>
                             <th>{{ __('app.phone') }}</th>
                             <th>{{ __('app.orders_count') }}</th>
+                            <th>{{ __('app.total_spent') }}</th>
                             <th>{{ __('app.last_order') }}</th>
                             <th>{{ __('app.status') }}</th>
                             <th>{{ __('app.actions') }}</th>
@@ -70,6 +71,10 @@
                             <td>{{ $customer->phone }}</td>
                             <td>
                                 <span class="badge bg-secondary">{{ $customer->orders_count }}</span>
+                            </td>
+                            <td class="fw-semibold text-success">
+                                {{ number_format($customer->orders_sum_total ?? 0, 2) }}
+                                <small class="text-muted">{{ __('app.currency') }}</small>
                             </td>
                             <td class="small text-muted">
                                 {{ $customer->orders_max_created_at
@@ -89,25 +94,31 @@
                                        class="btn btn-sm btn-outline-primary">
                                         <i class="bi bi-eye me-1"></i>{{ __('app.view') }}
                                     </a>
+                                    @if($customer->is_blocked)
                                     <form method="POST"
-                                          action="{{ route('admin.customers.toggle-block', $customer) }}"
-                                          onsubmit="return confirm('{{ $customer->is_blocked ? __('app.confirm_unblock') : __('app.confirm_block') }}')">
+                                          action="{{ route('admin.customers.unblock', $customer) }}"
+                                          onsubmit="return confirm('{{ __('app.confirm_unblock') }}')">
                                         @csrf
-                                        <button type="submit"
-                                                class="btn btn-sm {{ $customer->is_blocked ? 'btn-outline-success' : 'btn-outline-danger' }}">
-                                            @if($customer->is_blocked)
-                                                <i class="bi bi-unlock me-1"></i>{{ __('app.unblock') }}
-                                            @else
-                                                <i class="bi bi-ban me-1"></i>{{ __('app.block') }}
-                                            @endif
+                                        <button type="submit" class="btn btn-sm btn-outline-success">
+                                            <i class="bi bi-unlock me-1"></i>{{ __('app.unblock') }}
                                         </button>
                                     </form>
+                                    @else
+                                    <form method="POST"
+                                          action="{{ route('admin.customers.block', $customer) }}"
+                                          onsubmit="return confirm('{{ __('app.confirm_block') }}')">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-ban me-1"></i>{{ __('app.block') }}
+                                        </button>
+                                    </form>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="7" class="text-center py-4 text-muted">
+                            <td colspan="8" class="text-center py-4 text-muted">
                                 <i class="bi bi-people fs-3 d-block mb-2"></i>
                                 {{ __('app.no_customers_found') }}
                             </td>

@@ -539,4 +539,5 @@ return [
     'clear'                      => 'Clear',
     'view'                       => 'View',
     'total'                      => 'Total',
+    'total_spent'                => 'Total Spent',
 ];

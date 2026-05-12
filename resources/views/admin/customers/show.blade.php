@@ -17,19 +17,25 @@
             </h2>
         </div>
 
+        @if($customer->is_blocked)
         <form method="POST"
-              action="{{ route('admin.customers.toggle-block', $customer) }}"
-              onsubmit="return confirm('{{ $customer->is_blocked ? __('app.confirm_unblock') : __('app.confirm_block') }}')">
+              action="{{ route('admin.customers.unblock', $customer) }}"
+              onsubmit="return confirm('{{ __('app.confirm_unblock') }}')">
             @csrf
-            <button type="submit"
-                    class="btn {{ $customer->is_blocked ? 'btn-success' : 'btn-danger' }}">
-                @if($customer->is_blocked)
-                    <i class="bi bi-unlock me-1"></i>{{ __('app.unblock') }}
-                @else
-                    <i class="bi bi-ban me-1"></i>{{ __('app.block') }}
-                @endif
+            <button type="submit" class="btn btn-success">
+                <i class="bi bi-unlock me-1"></i>{{ __('app.unblock') }}
             </button>
         </form>
+        @else
+        <form method="POST"
+              action="{{ route('admin.customers.block', $customer) }}"
+              onsubmit="return confirm('{{ __('app.confirm_block') }}')">
+            @csrf
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-ban me-1"></i>{{ __('app.block') }}
+            </button>
+        </form>
+        @endif
     </div>
 
     {{-- Flash --}}
@@ -69,6 +75,17 @@
         <div class="col-md-3">
             <div class="card shadow-sm h-100">
                 <div class="card-body">
+                    <div class="text-muted small mb-1">{{ __('app.total_spent') }}</div>
+                    <div class="fw-semibold fs-5 text-success">
+                        {{ number_format($totalSpent, 2) }}
+                        <small class="text-muted fs-6">{{ __('app.currency') }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
                     <div class="text-muted small mb-1">{{ __('app.status') }}</div>
                     @if($customer->is_blocked)
                         <span class="badge bg-danger fs-6">{{ __('app.blocked') }}</span>
@@ -78,6 +95,16 @@
                 </div>
             </div>
         </div>
+        @if($customer->default_address)
+        <div class="col-md-9">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small mb-1">{{ __('app.address') }}</div>
+                    <div class="fw-semibold">{{ $customer->default_address }}</div>
+                </div>
+            </div>
+        </div>
+        @endif
     </div>
 
     {{-- Orders Table --}}
@@ -96,8 +123,10 @@
                     <thead class="table-light">
                         <tr>
                             <th>{{ __('app.order_number') }}</th>
+                            <th>{{ __('app.order_type') }}</th>
                             <th>{{ __('app.status') }}</th>
                             <th>{{ __('app.total') }}</th>
+                            <th>{{ __('app.payment_status') }}</th>
                             <th>{{ __('app.date') }}</th>
                             <th>{{ __('app.actions') }}</th>
                         </tr>
@@ -108,21 +137,44 @@
                             $statusColors = [
                                 'pending'               => 'warning',
                                 'accepted'              => 'primary',
+                                'preparing'             => 'info',
+                                'ready'                 => 'info',
+                                'delivered'             => 'primary',
                                 'completed'             => 'success',
                                 'rejected'              => 'danger',
+                                'cancelled'             => 'secondary',
                                 'cancelled_by_admin'    => 'dark',
                                 'cancelled_by_customer' => 'secondary',
                             ];
                             $color = $statusColors[$order->status] ?? 'secondary';
+                            $paymentColors = [
+                                'unpaid'   => 'warning',
+                                'paid'     => 'success',
+                                'refunded' => 'info',
+                            ];
+                            $payColor = $paymentColors[$order->payment_status] ?? 'secondary';
                         @endphp
                         <tr>
                             <td class="fw-semibold">#{{ $order->order_number }}</td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    {{ __('app.' . $order->order_type) }}
+                                </span>
+                            </td>
                             <td>
                                 <span class="badge bg-{{ $color }}">
                                     {{ __('app.' . $order->status) }}
                                 </span>
                             </td>
-                            <td>{{ number_format($order->total, 2) }}</td>
+                            <td class="fw-semibold">
+                                {{ number_format($order->total, 2) }}
+                                <small class="text-muted">{{ __('app.currency') }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ $payColor }}">
+                                    {{ __('app.' . $order->payment_status) }}
+                                </span>
+                            </td>
                             <td class="small text-muted">{{ $order->created_at->format('Y-m-d H:i') }}</td>
                             <td>
                                 <a href="{{ route('admin.orders.show', $order) }}"
@@ -133,7 +185,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="5" class="text-center py-4 text-muted">
+                            <td colspan="7" class="text-center py-4 text-muted">
                                 <i class="bi bi-receipt fs-3 d-block mb-2"></i>
                                 {{ __('app.no_orders_found') }}
                             </td>

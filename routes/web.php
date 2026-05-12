@@ -98,6 +98,8 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
     Route::group(['prefix' => 'customers', 'as' => 'customers.'], function () {
         Route::get('',                              [CustomerController::class, 'index'])->name('index');
         Route::get('{customer}',                    [CustomerController::class, 'show'])->name('show');
+        Route::post('{customer}/block',             [CustomerController::class, 'block'])->name('block');
+        Route::post('{customer}/unblock',           [CustomerController::class, 'unblock'])->name('unblock');
         Route::post('{customer}/toggle-block',      [CustomerController::class, 'toggleBlock'])->name('toggle-block');
     });
 

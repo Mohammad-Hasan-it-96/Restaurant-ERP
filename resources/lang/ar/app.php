@@ -59,6 +59,7 @@ return [
     'clear'                      => 'مسح',
     'view'                       => 'عرض',
     'total'                      => 'الإجمالي',
+    'total_spent'                => 'إجمالي المصروف',
     // Actions
     'list' => 'قائمة',
     'add_new' => 'إضافة جديد',
