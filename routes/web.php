@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\API\DashboardController;
 use App\Http\Controllers\API\LanguageController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
@@ -91,6 +92,13 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
             Route::put('{category}', [App\Http\Controllers\Admin\CategoryController::class, 'update'])->name('update');
             Route::delete('{category}', [App\Http\Controllers\Admin\CategoryController::class, 'destroy'])->name('destroy');
         });
+    });
+
+    // Customers routes
+    Route::group(['prefix' => 'customers', 'as' => 'customers.'], function () {
+        Route::get('',                              [CustomerController::class, 'index'])->name('index');
+        Route::get('{customer}',                    [CustomerController::class, 'show'])->name('show');
+        Route::post('{customer}/toggle-block',      [CustomerController::class, 'toggleBlock'])->name('toggle-block');
     });
 
     // Orders routes

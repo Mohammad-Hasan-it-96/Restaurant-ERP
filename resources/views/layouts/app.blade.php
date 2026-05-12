@@ -308,6 +308,13 @@
                         @endif
                     </a>
 
+                    <!-- Customers Link -->
+                    <a href="{{ route('admin.customers.index') }}"
+                       class="nav-link d-flex align-items-center py-3 px-3 rounded-3 mb-1 {{ request()->routeIs('admin.customers.*') ? 'active' : '' }}">
+                        <i class="bi bi-people me-3"></i>
+                        <span>{{ \App\Helpers\Helpers::translate('customers') }}</span>
+                    </a>
+
                     <!-- Categories Dropdown -->
                     <div class="sidebar-item mb-1">
                         <button class="nav-link d-flex align-items-center justify-content-between w-100 py-3 px-3 rounded-3 border-0 bg-transparent {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"
