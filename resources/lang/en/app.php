@@ -12,6 +12,8 @@ return [
     'sending'                    => 'Sending...',
     'details'                    => 'Details',
     'add_to_cart'                => 'Add to Cart',
+    'added_to_cart'              => 'Added to cart',
+    'cart_empty_hint'            => 'Add products to start your order',
     'not_available_now'          => 'Not available now',
     'failed_loading_data'        => 'Failed to load data.',
     'retry'                      => 'Retry',

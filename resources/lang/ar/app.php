@@ -493,6 +493,8 @@ return [
     'sending'                    => 'جاري الإرسال...',
     'details'                    => 'تفاصيل',
     'add_to_cart'                => 'إضافة للسلة',
+    'added_to_cart'              => 'أُضيف إلى السلة',
+    'cart_empty_hint'            => 'أضف منتجات لبدء طلبك',
     'not_available_now'          => 'غير متوفر حالياً',
     'failed_loading_data'        => 'تعذر تحميل البيانات.',
     'retry'                      => 'إعادة المحاولة',

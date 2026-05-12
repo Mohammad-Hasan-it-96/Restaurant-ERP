@@ -120,6 +120,9 @@
     </section>
 </main>
 
+{{-- ── Toast Container ────────────────────────────────────────────────── --}}
+<div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index:9999;margin-top:70px"></div>
+
 <button id="mobileCartBtn" class="btn btn-dark floating-cart d-md-none" data-bs-toggle="offcanvas" data-bs-target="#cartCanvas">
     <i class="bi bi-cart3 me-1"></i>
     <span id="cartCountMobile">0</span>
@@ -236,7 +239,9 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ __('app.close') }}</button>
-                <button id="submitOrderBtn" type="submit" class="btn btn-primary">{{ __('app.submit_order') }}</button>
+                <button id="submitOrderBtn" type="submit" class="btn btn-primary">
+                    <span id="submitOrderBtnText">{{ __('app.submit_order') }}</span>
+                </button>
             </div>
         </form>
     </div>
@@ -940,11 +945,7 @@ window.addEventListener('unhandledrejection', function(e) {
                       '| search:', state.searchQuery || '—');
 
         if (!products.length) {
-            el.productsState.innerHTML = `
-                <div class="empty-state d-flex align-items-center gap-2">
-                    <i class="bi bi-emoji-neutral"></i>
-                    <span>${window.i18n.no_products_now}</span>
-                </div>`;
+            el.productsState.innerHTML = emptyState(window.i18n.no_products_now, 'bi-bag-x');
             el.categoryProducts.innerHTML = '';
             return;
         }
@@ -1083,6 +1084,22 @@ window.addEventListener('unhandledrejection', function(e) {
         saveCart();
         logEvent('cart.add', { productId });
         renderCart();
+
+        // ── Toast notification ────────────────────────────────────────────
+        showToast(product.name);
+
+        // ── Open cart offcanvas + scroll to bottom item ───────────────────
+        const cartCanvasEl = document.getElementById('cartCanvas');
+        const existingCanvas = bootstrap.Offcanvas.getInstance(cartCanvasEl);
+        if (existingCanvas && cartCanvasEl.classList.contains('show')) {
+            // Already open → just scroll to last item
+            scrollCartToBottom();
+        } else {
+            // Open it, then scroll after animation
+            const oc = bootstrap.Offcanvas.getOrCreateInstance(cartCanvasEl);
+            cartCanvasEl.addEventListener('shown.bs.offcanvas', scrollCartToBottom, { once: true });
+            oc.show();
+        }
     }
 
     /**
@@ -1097,7 +1114,12 @@ window.addEventListener('unhandledrejection', function(e) {
         el.checkoutOpenBtn.disabled = state.cart.length === 0;
 
         if (!state.cart.length) {
-            el.cartItems.innerHTML = `<div class="cart-empty text-center text-muted py-4"><i class="bi bi-cart3 fs-3 d-block mb-2"></i>${window.i18n.cart_is_empty}</div>`;
+            el.cartItems.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-cart-x" style="font-size:3rem;opacity:.35"></i>
+                    <p class="mt-3 mb-0 fw-semibold">${window.i18n.cart_is_empty}</p>
+                    <p class="small mt-1">{{ __('app.cart_empty_hint') }}</p>
+                </div>`;
             el.cartSubtotal.textContent = num(0);
             return;
         }
@@ -1272,8 +1294,9 @@ window.addEventListener('unhandledrejection', function(e) {
         console.debug('[order] payload â†’', JSON.stringify(payload, null, 2));
         logEvent('order.submit', payload);
 
-        el.submitOrderBtn.disabled    = true;
-        el.submitOrderBtn.textContent = window.i18n.sending;
+        el.submitOrderBtn.disabled = true;
+        document.getElementById('submitOrderBtnText').innerHTML =
+            `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>${window.i18n.sending}`;
 
         try {
             const response    = await fetchJSON(`${apiBase}/orders`, {
@@ -1330,8 +1353,8 @@ window.addEventListener('unhandledrejection', function(e) {
                      .join('');
              }
          } finally {
-             el.submitOrderBtn.disabled    = false;
-             el.submitOrderBtn.textContent = window.i18n.submit_order;
+             el.submitOrderBtn.disabled = false;
+             document.getElementById('submitOrderBtnText').textContent = window.i18n.submit_order;
          }
      }
 
@@ -1383,8 +1406,49 @@ window.addEventListener('unhandledrejection', function(e) {
         }</div>`;
     }
 
-    function emptyState(text) { return `<div class="empty-state">${escapeHtml(text)}</div>`; }
-    function errorState(text) { return `<div class="error-state text-danger">${escapeHtml(text)}</div>`; }
+    function emptyState(text, icon = 'bi-inbox') {
+        return `<div class="empty-state text-center text-muted py-4">
+            <i class="bi ${icon} fs-2 d-block mb-2 opacity-50"></i>
+            <span>${escapeHtml(text)}</span>
+        </div>`;
+    }
+
+    function errorState(text) {
+        return `<div class="empty-state text-center py-4">
+            <i class="bi bi-exclamation-circle fs-2 d-block mb-2 text-danger opacity-75"></i>
+            <span class="text-danger">${escapeHtml(text)}</span>
+        </div>`;
+    }
+
+    // ── Toast notification ──────────────────────────────────────────────────
+    function showToast(productName) {
+        const id  = 'toast_' + Date.now();
+        const tpl = `
+            <div id="${id}" class="toast align-items-center text-bg-success border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body d-flex align-items-center gap-2">
+                        <i class="bi bi-cart-check-fill fs-5"></i>
+                        <div>
+                            <div class="fw-semibold small">${escapeHtml(productName)}</div>
+                            <div class="small opacity-75">{{ __('app.added_to_cart') }}</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>`;
+        const container = document.getElementById('toastContainer');
+        container.insertAdjacentHTML('beforeend', tpl);
+        const toastEl = document.getElementById(id);
+        const bsToast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 2800 });
+        bsToast.show();
+        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove(), { once: true });
+    }
+
+    // ── Scroll cart items to bottom ─────────────────────────────────────────
+    function scrollCartToBottom() {
+        const cartItems = el.cartItems;
+        if (cartItems) cartItems.scrollTo({ top: cartItems.scrollHeight, behavior: 'smooth' });
+    }
 
 })();
 </script>
