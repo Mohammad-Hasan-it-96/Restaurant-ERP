@@ -95,6 +95,7 @@
                     <div class="col-12">
                         <div class="d-flex flex-wrap gap-4">
                             <div class="form-check form-switch">
+                                <input type="hidden" name="is_available" value="0">
                                 <input class="form-check-input" type="checkbox" name="is_available" id="is_available"
                                        value="1" {{ old('is_available', $product->is_available) ? 'checked' : '' }}>
                                 <label class="form-check-label" for="is_available">
@@ -102,6 +103,7 @@
                                 </label>
                             </div>
                             <div class="form-check form-switch">
+                                <input type="hidden" name="is_featured" value="0">
                                 <input class="form-check-input" type="checkbox" name="is_featured" id="is_featured"
                                        value="1" {{ old('is_featured', $product->is_featured) ? 'checked' : '' }}>
                                 <label class="form-check-label" for="is_featured">
@@ -109,6 +111,7 @@
                                 </label>
                             </div>
                             <div class="form-check form-switch">
+                                <input type="hidden" name="is_active" value="0">
                                 <input class="form-check-input" type="checkbox" name="is_active" id="is_active"
                                        value="1" {{ old('is_active', $product->is_active) ? 'checked' : '' }}>
                                 <label class="form-check-label" for="is_active">

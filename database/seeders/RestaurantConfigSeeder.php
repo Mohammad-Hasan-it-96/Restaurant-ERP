@@ -14,13 +14,13 @@ class RestaurantConfigSeeder extends Seeder
     public function run(): void
     {
         $openingHoursJson = json_encode([
-            'saturday'  => ['is_open' => true, 'from' => '10:00', 'to' => '23:00'],
-            'sunday'    => ['is_open' => true, 'from' => '10:00', 'to' => '23:00'],
-            'monday'    => ['is_open' => true, 'from' => '10:00', 'to' => '23:00'],
-            'tuesday'   => ['is_open' => true, 'from' => '10:00', 'to' => '23:00'],
-            'wednesday' => ['is_open' => true, 'from' => '10:00', 'to' => '23:00'],
-            'thursday'  => ['is_open' => true, 'from' => '10:00', 'to' => '23:00'],
-            'friday'    => ['is_open' => true, 'from' => '12:00', 'to' => '23:00'],
+            'saturday'  => ['is_open' => true, 'from' => '00:00', 'to' => '23:59'],
+            'sunday'    => ['is_open' => true, 'from' => '00:00', 'to' => '23:59'],
+            'monday'    => ['is_open' => true, 'from' => '00:00', 'to' => '23:59'],
+            'tuesday'   => ['is_open' => true, 'from' => '00:00', 'to' => '23:59'],
+            'wednesday' => ['is_open' => true, 'from' => '00:00', 'to' => '23:59'],
+            'thursday'  => ['is_open' => true, 'from' => '00:00', 'to' => '23:59'],
+            'friday'    => ['is_open' => true, 'from' => '00:00', 'to' => '23:59'],
         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 
         $rejectionReasonsJson = json_encode([

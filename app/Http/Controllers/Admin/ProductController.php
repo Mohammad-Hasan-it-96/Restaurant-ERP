@@ -90,6 +90,9 @@ class ProductController extends Controller
             $validated['name'] = $validated['name_ar'];
         }
 
+        // Ensure legacy quantity always has a value (DB column has no default)
+        $validated['quantity'] = $validated['quantity'] ?? 0;
+
         $product          = new Product($validated);
         $product->user_id = Auth::id();
         $product->save();
@@ -145,6 +148,9 @@ class ProductController extends Controller
         if (empty($validated['name'])) {
             $validated['name'] = $validated['name_ar'];
         }
+
+        // Ensure legacy quantity always has a value
+        $validated['quantity'] = $validated['quantity'] ?? $product->quantity ?? 0;
 
         $product->update($validated);
 

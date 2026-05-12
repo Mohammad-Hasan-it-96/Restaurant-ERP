@@ -422,7 +422,15 @@ window.addEventListener('unhandledrejection', function(e) {
 
     // â”€â”€ Bootstrap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     async function init() {
-        state.cart = loadCart();
+        // ── Load cart from localStorage ──────────────────────────────────────
+        const saved = localStorage.getItem('restaurant_cart_v1');
+        if (saved) {
+            try {
+                state.cart = JSON.parse(saved);
+            } catch (e) {
+                state.cart = [];
+            }
+        }
         wireEvents();
         renderLoadingSkeletons();
         await loadAll();
@@ -1266,7 +1274,7 @@ window.addEventListener('unhandledrejection', function(e) {
              console.debug('[submitCheckout] extracted order_number:', orderNumber);
 
             state.cart = [];
-            clearCartStorage();
+            saveCart();
             renderCart();
             el.checkoutForm.reset();
             handleOrderTypeUI();
@@ -1325,30 +1333,6 @@ window.addEventListener('unhandledrejection', function(e) {
         localStorage.setItem(storageKey, JSON.stringify(state.cart));
     }
 
-    /**
-     * Clears cart key from localStorage.
-     */
-    function clearCartStorage() {
-        localStorage.removeItem(storageKey);
-    }
-
-    /**
-     * Loads cart from localStorage.
-     */
-    function loadCart() {
-        try {
-            const raw = JSON.parse(localStorage.getItem(storageKey) || '[]');
-            return raw.map(item => ({
-                id:       item.id       ?? item.product_id   ?? null,
-                name:     item.name     ?? item.product_name ?? '',
-                price:    item.price    ?? item.product_price ?? 0,
-                image:    item.image    ?? null,
-                quantity: item.quantity ?? 1,
-            })).filter(item => item.id != null);
-        } catch {
-            return [];
-        }
-    }
 
     function num(value) {
         const n = Number(value || 0);

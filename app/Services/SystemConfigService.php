@@ -210,7 +210,12 @@ class SystemConfigService
         $day   = strtolower($now->format('l')); // e.g. "saturday"
         $hours = $this->getOpeningHours();
 
-        // If no config exists for this day, treat as closed
+        // No opening_hours configured at all → treat as open 24/7 (no restriction)
+        if (empty($hours)) {
+            return true;
+        }
+
+        // Hours are configured but this day has no entry → treat as closed
         if (empty($hours[$day])) {
             return false;
         }

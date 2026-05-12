@@ -11,6 +11,14 @@ class Product extends Model
 {
     use HasFactory;
 
+    /**
+     * Default attribute values — prevents DB "no default" errors for legacy columns.
+     */
+    protected $attributes = [
+        'quantity'  => 0,
+        'sort_order' => 0,
+    ];
+
     protected $fillable = [
         // ── Legacy fields (kept as-is) ──
         'name',
