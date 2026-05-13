@@ -566,6 +566,31 @@ return [
     'payment_method_card'     => 'Card',
     'payment_method_online'   => 'Online',
 
+    // ── WhatsApp Customer Notifications ──────────────────────────────────────
+    'wa_notify_customer'    => 'Notify Customer via WhatsApp',
+    'wa_notify_hint'        => 'Click a button to open WhatsApp with a pre-filled message for the customer.',
+    'wa_preview_label'      => 'Message preview',
+    'wa_current'            => 'current',
+    'wa_no_phone'           => 'No phone',
+    'wa_no_phone_detail'    => 'No phone number is available for this customer; WhatsApp notification is unavailable.',
+    // Notification button labels
+    'wa_btn_accepted'           => 'Order Accepted',
+    'wa_btn_rejected'           => 'Order Rejected',
+    'wa_btn_preparing'          => 'Now Preparing',
+    'wa_btn_ready'              => 'Order Ready',
+    'wa_btn_delivered'          => 'Out for Delivery',
+    'wa_btn_completed'          => 'Order Completed',
+    'wa_btn_cancelled_by_admin' => 'Order Cancelled',
+    // WhatsApp message templates
+    'wa_msg_accepted'       => "Hello :name! 🎉\nYour order *:order* has been accepted and is now being processed.\nThank you for ordering from *:restaurant*!",
+    'wa_msg_rejected'       => "Hello :name,\nUnfortunately, your order *:order* has been rejected.\nReason: :reason\nWe apologise for the inconvenience. Please feel free to contact us for more details.\n— *:restaurant*",
+    'wa_msg_preparing'      => "Hello :name! 👨‍🍳\nGreat news — your order *:order* is now being prepared!\nWe'll notify you when it's ready.\n— *:restaurant*",
+    'wa_msg_ready_pickup'   => "Hello :name! ✅\nYour order *:order* is ready for pickup!\nPlease come and collect it at your earliest convenience.\n— *:restaurant*",
+    'wa_msg_ready_delivery' => "Hello :name! 🚀\nYour order *:order* is ready and our driver is on the way!\nPlease make sure someone is available to receive the order.\n— *:restaurant*",
+    'wa_msg_delivered'      => "Hello :name! 🛵\nYour order *:order* has been delivered. We hope you enjoy your meal!\nThank you for choosing *:restaurant*.",
+    'wa_msg_completed'      => "Hello :name! 😊\nYour order *:order* has been completed.\nThank you for dining with *:restaurant*! We hope to see you again soon.",
+    'wa_msg_cancelled'      => "Hello :name,\nYour order *:order* has been cancelled.\nWe apologise for the inconvenience. Please contact us if you have any questions.\n— *:restaurant*",
+
     // ── Reports & Analytics ───────────────────────────────────────────────────
     'reports'              => 'Reports & Analytics',
     'reports_analytics'    => 'Reports & Analytics',
@@ -583,4 +608,5 @@ return [
     'all_statuses'         => 'All Statuses',
     'no_data_for_period'   => 'No data for selected period',
     'orders_by_type'       => 'Orders by Type',
+    'created_at'           => 'Created At',
 ];

@@ -10,6 +10,7 @@ export function extractArray(body) {
   if (Array.isArray(body)) return body;
   if (Array.isArray(body.data)) return body.data;
   if (Array.isArray(body.data?.data)) return body.data.data;
+  if (Array.isArray(body.data?.data?.data)) return body.data.data.data;
   if (Array.isArray(body.data?.items)) return body.data.items;
   return [];
 }
@@ -23,9 +24,27 @@ export function extractData(body) {
   return d;
 }
 
-/** Format a price number */
-export function formatPrice(value, isRtl = false) {
-  const n = Number(value ?? 0);
-  return n.toLocaleString(isRtl ? 'ar-SY' : 'en-US');
+/**
+ * Decodes API strings that may arrive as JSON-escaped Unicode (e.g. "\\u0627...").
+ */
+export function decodeApiText(value, fallback = '') {
+  if (value == null || value === '') return fallback;
+  const raw = String(value).trim();
+  if (!raw) return fallback;
+  try {
+    const d = JSON.parse(raw);
+    if (typeof d === 'string') return d;
+  } catch {
+    /* ignore */
+  }
+  if (raw.includes('\\u')) {
+    try {
+      const w = JSON.parse(`"${raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`);
+      if (typeof w === 'string') return w;
+    } catch {
+      /* ignore */
+    }
+  }
+  return raw;
 }
 

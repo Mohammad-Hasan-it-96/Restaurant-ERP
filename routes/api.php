@@ -7,7 +7,7 @@ use App\Http\Controllers\API\V1\DeliveryZoneController;
 use App\Http\Controllers\API\V1\FrontendLogController;
 use App\Http\Controllers\API\V1\OrderController;
 use App\Http\Controllers\API\V1\PublicSettingsController;
-use Illuminate\Http\Request;
+use App\Http\Middleware\CustomerSession;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\API\RegisterController;
@@ -34,9 +34,10 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
     Route::get('delivery-zones', [DeliveryZoneController::class, 'index'])->name('delivery-zones.index');
 
     // Orders — extra strict throttle: max 10 order attempts per IP per minute
-    // StartSession + customer.session: bind customer_id to session on first order
+    // CustomerSession: boots a SEPARATE 'customer_spa_session' cookie so the
+    // admin's 'restaurant_session' is never touched by SPA requests.
     Route::middleware([
-            \Illuminate\Session\Middleware\StartSession::class,
+            CustomerSession::class,
             'customer.session',
         ])->group(function () {
 
@@ -56,7 +57,7 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
 
     // ── Customer session (guest profile) ──────────────────────────────────────
     Route::middleware([
-            \Illuminate\Session\Middleware\StartSession::class,
+            CustomerSession::class,
             'customer.session',
         ])->group(function () {
         Route::get('customer/me', [CustomerController::class, 'me'])->name('customer.me');
@@ -64,7 +65,7 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
 
     // ── Cart (session-based, no auth required) ────────────────────────────────
     Route::middleware([
-            \Illuminate\Session\Middleware\StartSession::class,
+            CustomerSession::class,
             'customer.session',
         ])->group(function () {
         Route::get ('cart',        [CartController::class, 'index'])  ->name('cart.index');

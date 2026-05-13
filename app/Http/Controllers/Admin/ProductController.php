@@ -38,7 +38,11 @@ class ProductController extends Controller
             $query->where('category_id', $categoryId);
         }
 
-        $products   = $query->orderBy('sort_order')->paginate(15)->withQueryString();
+        $allowed   = ['id', 'name_ar', 'price', 'discount_price', 'sort_order', 'created_at'];
+        $sortBy    = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'created_at';
+        $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+
+        $products   = $query->orderBy($sortBy, $direction)->paginate(15)->withQueryString();
         $categories = Category::orderBy('name_ar')->get();
 
         // Keep legacy users list for export dropdown

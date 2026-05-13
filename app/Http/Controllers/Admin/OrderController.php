@@ -22,8 +22,12 @@ class OrderController extends Controller
             ]);
         }
 
+        $allowed   = ['id', 'total', 'status', 'created_at'];
+        $sortBy    = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'id';
+        $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+
         $query = Order::with('customer')
-            ->orderByDesc('id');
+            ->orderBy($sortBy, $direction);
 
         // Filter by status tab
         if ($status = $request->input('status')) {
@@ -58,9 +62,11 @@ class OrderController extends Controller
     public function show(Order $order)
     {
         $order->load('customer', 'items');
-        $rejectionReasons = $this->config->getRejectionReasons();
+        $rejectionReasons   = $this->config->getRejectionReasons();
+        $restaurantName     = $this->config->getText('restaurant_name', config('app.name'));
+        $restaurantWhatsapp = $this->config->getText('restaurant_whatsapp');
 
-        return view('admin.orders.show', compact('order', 'rejectionReasons'));
+        return view('admin.orders.show', compact('order', 'rejectionReasons', 'restaurantName', 'restaurantWhatsapp'));
     }
 
     // ── Accept ─────────────────────────────────────────────────────────────────
@@ -227,8 +233,8 @@ class OrderController extends Controller
     {
         $order->load('customer', 'items');
 
-        $restaurantName  = $this->config->get('restaurant_name', config('app.name'));
-        $restaurantPhone = $this->config->get('restaurant_phone');
+        $restaurantName  = $this->config->getText('restaurant_name', config('app.name'));
+        $restaurantPhone = $this->config->getText('restaurant_phone');
         $restaurantLogo  = $this->config->get('restaurant_logo');
 
         return view('admin.orders.invoice', compact(

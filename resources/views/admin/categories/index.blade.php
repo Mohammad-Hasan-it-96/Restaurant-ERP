@@ -91,15 +91,31 @@
                 </div>
             @else
             <div class="table-responsive">
+                @php
+                    $sort = request('sort', 'created_at');
+                    $dir  = request('direction', 'desc');
+                    $sortUrl  = fn($col) => request()->fullUrlWithQuery(['sort' => $col, 'direction' => ($sort === $col && $dir === 'asc') ? 'desc' : 'asc', 'page' => 1]);
+                    $sortIcon = fn($col) => $sort === $col
+                        ? ($dir === 'asc' ? '<i class="bi bi-sort-up-alt text-primary ms-1"></i>' : '<i class="bi bi-sort-down-alt text-primary ms-1"></i>')
+                        : '<i class="bi bi-arrow-down-up text-muted ms-1 opacity-50"></i>';
+                @endphp
                 <table class="table table-hover align-middle mb-0">
                     <thead style="background-color: var(--sidebar-hover);">
                         <tr>
-                            <th class="px-4 py-3" style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">#</th>
+                            <th class="px-4 py-3" style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <a href="{{ $sortUrl('id') }}" class="text-decoration-none" style="color:var(--text-muted)"># {!! $sortIcon('id') !!}</a>
+                            </th>
                             <th class="py-3" style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">{{ \App\Helpers\Helpers::translate('category_image') }}</th>
-                            <th class="py-3" style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">{{ \App\Helpers\Helpers::translate('name_ar') }}</th>
-                            <th class="py-3" style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">{{ \App\Helpers\Helpers::translate('name_en') }}</th>
+                            <th class="py-3" style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <a href="{{ $sortUrl('name_ar') }}" class="text-decoration-none" style="color:var(--text-muted)">{{ \App\Helpers\Helpers::translate('name_ar') }} {!! $sortIcon('name_ar') !!}</a>
+                            </th>
+                            <th class="py-3" style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <a href="{{ $sortUrl('name_en') }}" class="text-decoration-none" style="color:var(--text-muted)">{{ \App\Helpers\Helpers::translate('name_en') }} {!! $sortIcon('name_en') !!}</a>
+                            </th>
                             <th class="py-3" style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">{{ \App\Helpers\Helpers::translate('parent_category') }}</th>
-                            <th class="py-3" style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">{{ \App\Helpers\Helpers::translate('sort_order') }}</th>
+                            <th class="py-3" style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <a href="{{ $sortUrl('sort_order') }}" class="text-decoration-none" style="color:var(--text-muted)">{{ \App\Helpers\Helpers::translate('sort_order') }} {!! $sortIcon('sort_order') !!}</a>
+                            </th>
                             <th class="py-3" style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">{{ \App\Helpers\Helpers::translate('status') }}</th>
                             <th class="py-3 text-end pe-4" style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">{{ \App\Helpers\Helpers::translate('actions') }}</th>
                         </tr>
@@ -161,48 +177,17 @@
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                     <button type="button"
-                                            class="btn btn-sm btn-outline-danger"
+                                            class="btn btn-sm btn-outline-danger delete-category"
                                             title="{{ \App\Helpers\Helpers::translate('delete') }}"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#deleteModal{{ $category->id }}">
+                                            data-id="{{ $category->id }}"
+                                            data-name="{{ $category->name_ar }}"
+                                            data-url="{{ route('admin.categories.destroy', $category) }}">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                     @endif
                                 </div>
                             </td>
                         </tr>
-
-                        {{-- Delete confirmation modal --}}
-                        @if(Auth::user()->role === 'admin' || Auth::user()->role === 'moderator')
-                        <div class="modal fade" id="deleteModal{{ $category->id }}" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog modal-dialog-centered">
-                                <div class="modal-content" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
-                                    <div class="modal-header" style="border-color: var(--border-color);">
-                                        <h5 class="modal-title text-danger">
-                                            <i class="bi bi-exclamation-triangle me-2"></i>
-                                            {{ \App\Helpers\Helpers::translate('confirm_delete') }}
-                                        </h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <div class="modal-body" style="color: var(--text);">
-                                        {{ \App\Helpers\Helpers::translate('delete_confirmation', ['name' => $category->name_ar]) }}
-                                    </div>
-                                    <div class="modal-footer" style="border-color: var(--border-color);">
-                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                                            {{ \App\Helpers\Helpers::translate('cancel') }}
-                                        </button>
-                                        <form action="{{ route('admin.categories.destroy', $category) }}" method="POST">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-danger">
-                                                <i class="bi bi-trash me-1"></i>{{ \App\Helpers\Helpers::translate('delete') }}
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        @endif
 
                         @endforeach
                     </tbody>

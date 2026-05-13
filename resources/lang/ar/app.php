@@ -565,7 +565,32 @@ return [
     'payment_method_card'     => 'بطاقة',
     'payment_method_online'   => 'إلكتروني',
 
-    // ── Reports & Analytics ───────────────────────────────────────────────────
+    // ── WhatsApp Customer Notifications ──────────────────────────────────────
+    'wa_notify_customer'    => 'إشعار العميل عبر واتساب',
+    'wa_notify_hint'        => 'انقر على أحد الأزرار لفتح واتساب برسالة جاهزة للعميل.',
+    'wa_preview_label'      => 'معاينة الرسالة',
+    'wa_current'            => 'الحالية',
+    'wa_no_phone'           => 'لا يوجد رقم',
+    'wa_no_phone_detail'    => 'لا يتوفر رقم هاتف لهذا العميل؛ إشعار واتساب غير متاح.',
+    // Notification button labels
+    'wa_btn_accepted'           => 'قُبل الطلب',
+    'wa_btn_rejected'           => 'رُفض الطلب',
+    'wa_btn_preparing'          => 'جاري التحضير',
+    'wa_btn_ready'              => 'الطلب جاهز',
+    'wa_btn_delivered'          => 'في الطريق',
+    'wa_btn_completed'          => 'اكتمل الطلب',
+    'wa_btn_cancelled_by_admin' => 'تم إلغاء الطلب',
+    // WhatsApp message templates
+    'wa_msg_accepted'       => "مرحباً :name! 🎉\nتم قبول طلبك *:order* ويجري العمل عليه الآن.\nشكراً لطلبك من *:restaurant*!",
+    'wa_msg_rejected'       => "مرحباً :name،\nللأسف تم رفض طلبك *:order*.\nالسبب: :reason\nنعتذر عن الإزعاج، ولا تتردد في التواصل معنا لمزيد من التفاصيل.\n— *:restaurant*",
+    'wa_msg_preparing'      => "مرحباً :name! 👨‍🍳\nطلبك *:order* يُحضَّر الآن!\nسنعلمك فور أن يصبح جاهزاً.\n— *:restaurant*",
+    'wa_msg_ready_pickup'   => "مرحباً :name! ✅\nطلبك *:order* جاهز للاستلام!\nيرجى التفضل باستلامه في أقرب وقت ممكن.\n— *:restaurant*",
+    'wa_msg_ready_delivery' => "مرحباً :name! 🚀\nطلبك *:order* جاهز وفي طريقه إليك!\nيرجى التأكد من وجود شخص لاستلام الطلب.\n— *:restaurant*",
+    'wa_msg_delivered'      => "مرحباً :name! 🛵\nتم توصيل طلبك *:order*. نتمنى لك وجبة شهية!\nشكراً لاختيارك *:restaurant*.",
+    'wa_msg_completed'      => "مرحباً :name! 😊\nاكتمل طلبك *:order* بنجاح.\nشكراً لتناولك الطعام معنا في *:restaurant*! نأمل رؤيتك مجدداً قريباً.",
+    'wa_msg_cancelled'      => "مرحباً :name،\nتم إلغاء طلبك *:order*.\nنعتذر عن الإزعاج، تواصل معنا إن كانت لديك أيّ استفسارات.\n— *:restaurant*",
+
+    // ── Reports & Analytics ──────────────────────────────────────────────���────
     'reports'              => 'التقارير والإحصاءات',
     'reports_analytics'    => 'التقارير والإحصاءات',
     'total_revenue'        => 'إجمالي الإيرادات',
@@ -582,4 +607,5 @@ return [
     'all_statuses'         => 'كل الحالات',
     'no_data_for_period'   => 'لا توجد بيانات للفترة المحددة',
     'orders_by_type'       => 'الطلبات حسب النوع',
+    'created_at'           => 'تاريخ الانشاء',
 ];

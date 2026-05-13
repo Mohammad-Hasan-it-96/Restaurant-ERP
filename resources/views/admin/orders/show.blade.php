@@ -105,6 +105,9 @@
         {{-- ── Left column: customer + order info ── --}}
         <div class="col-lg-5">
 
+            {{-- WhatsApp Notification Panel --}}
+            @include('admin.orders.partials.whatsapp-notify')
+
             {{-- Customer Card --}}
             <div class="card shadow-sm mb-4">
                 <div class="card-header fw-bold">

@@ -49,15 +49,31 @@
     {{-- Table --}}
     <div class="card shadow-sm">
         <div class="card-body p-0">
+            @php
+                $sort = request('sort', 'created_at');
+                $dir  = request('direction', 'desc');
+                $sortUrl  = fn($col) => request()->fullUrlWithQuery(['sort' => $col, 'direction' => ($sort === $col && $dir === 'asc') ? 'desc' : 'asc', 'page' => 1]);
+                $sortIcon = fn($col) => $sort === $col
+                    ? ($dir === 'asc' ? '<i class="bi bi-sort-up-alt text-primary ms-1"></i>' : '<i class="bi bi-sort-down-alt text-primary ms-1"></i>')
+                    : '<i class="bi bi-arrow-down-up text-muted ms-1" style="opacity:.5"></i>';
+            @endphp
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>#</th>
-                            <th>{{ __('app.full_name') }}</th>
+                            <th>
+                                <a href="{{ $sortUrl('created_at') }}" class="text-dark text-decoration-none"># {!! $sortIcon('created_at') !!}</a>
+                            </th>
+                            <th>
+                                <a href="{{ $sortUrl('full_name') }}" class="text-dark text-decoration-none">{{ __('app.full_name') }} {!! $sortIcon('full_name') !!}</a>
+                            </th>
                             <th>{{ __('app.phone') }}</th>
-                            <th>{{ __('app.orders_count') }}</th>
-                            <th>{{ __('app.total_spent') }}</th>
+                            <th>
+                                <a href="{{ $sortUrl('orders_count') }}" class="text-dark text-decoration-none">{{ __('app.orders_count') }} {!! $sortIcon('orders_count') !!}</a>
+                            </th>
+                            <th>
+                                <a href="{{ $sortUrl('orders_sum_total') }}" class="text-dark text-decoration-none">{{ __('app.total_spent') }} {!! $sortIcon('orders_sum_total') !!}</a>
+                            </th>
                             <th>{{ __('app.last_order') }}</th>
                             <th>{{ __('app.status') }}</th>
                             <th>{{ __('app.actions') }}</th>

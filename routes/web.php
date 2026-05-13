@@ -15,6 +15,7 @@ Route::get('/', [HomeController::class, 'index'])->name('public.home');
 
 // Move the language change route outside the auth middleware
 Route::get('/language/{locale}', [LanguageController::class, 'changeLanguage'])->name('language.change');
+Route::get('/lang/{locale}', [LanguageController::class, 'changeLanguage'])->name('lang.change');
 
 Route::group(['prefix' => 'auth', 'as' => 'auth.'], function () {
     Route::get('login', [AuthController::class, 'view_login'])->name('view_login');

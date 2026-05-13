@@ -1,17 +1,23 @@
 ﻿import ProductCard from './ProductCard';
-import { createT } from '../i18n';
+import { useI18n } from '../i18n';
+import { localName } from '../utils/format';
 
-export default function ProductList({ products, categories, onOpenModal, isRtl }) {
-  const t = createT(isRtl);
+export default function ProductList({
+  products,
+  categories,
+  onOpenModal,
+  onQuickAdd,
+}) {
+  const { t, lang } = useI18n();
 
   if (!products.length) {
     return <div className="empty-msg">{t('noProducts')}</div>;
   }
 
-  // Group products by their category
-  const categoryMap = new Map(categories.map(c => [c.id, c.name]));
+  const categoryMap = new Map(
+    categories.map((c) => [c.id, localName(c, lang)])
+  );
 
-  // Build ordered groups: maintain first-appearance order of categories
   const groups = [];
   const seen = new Map();
   for (const p of products) {
@@ -23,13 +29,17 @@ export default function ProductList({ products, categories, onOpenModal, isRtl }
     groups[seen.get(cid)].items.push(p);
   }
 
-  // If only one group (or no category info), render flat
   if (groups.length === 1 && !groups[0].name) {
     return (
       <section className="products-section">
         <div className="products-container">
-          {products.map(p => (
-            <ProductCard key={p.id} product={p} onOpenModal={onOpenModal} isRtl={isRtl} />
+          {products.map((p) => (
+            <ProductCard
+              key={p.id}
+              product={p}
+              onOpenModal={onOpenModal}
+              onQuickAdd={onQuickAdd}
+            />
           ))}
         </div>
       </section>
@@ -46,8 +56,13 @@ export default function ProductList({ products, categories, onOpenModal, isRtl }
             </div>
           )}
           <div className="products-container">
-            {items.map(p => (
-              <ProductCard key={p.id} product={p} onOpenModal={onOpenModal} isRtl={isRtl} />
+            {items.map((p) => (
+              <ProductCard
+                key={p.id}
+                product={p}
+                onOpenModal={onOpenModal}
+                onQuickAdd={onQuickAdd}
+              />
             ))}
           </div>
         </div>

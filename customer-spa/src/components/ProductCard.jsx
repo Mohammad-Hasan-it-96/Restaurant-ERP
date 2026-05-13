@@ -1,15 +1,13 @@
 ﻿import { ImageIcon, PlusIcon } from './Icons';
-import { formatPrice } from '../api/client';
-import { createT } from '../i18n';
+import { formatPrice, localDesc, localName } from '../utils/format';
+import { useI18n } from '../i18n';
 
-export default function ProductCard({ product, onOpenModal, isRtl }) {
-  const t = createT(isRtl);
+export default function ProductCard({ product, onOpenModal, onQuickAdd }) {
+  const { lang, t } = useI18n();
   const p = product;
   const available = !!p.is_available;
-
-  const desc = isRtl
-    ? (p.description_ar || p.description_en || '')
-    : (p.description_en || p.description_ar || '');
+  const displayName = localName(p, lang);
+  const desc = localDesc(p, lang);
 
   return (
     <article
@@ -17,16 +15,18 @@ export default function ProductCard({ product, onOpenModal, isRtl }) {
       onClick={() => onOpenModal(p)}
       role="button"
       tabIndex={0}
-      onKeyDown={e => e.key === 'Enter' && onOpenModal(p)}
+      onKeyDown={(e) => e.key === 'Enter' && onOpenModal(p)}
     >
-      {/* Thumbnail */}
       {p.image ? (
         <img
           className="product-thumb"
           src={p.image}
-          alt={p.name}
+          alt={displayName}
           loading="lazy"
-          onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+          onError={(e) => {
+            e.target.style.display = 'none';
+            e.target.nextSibling.style.display = 'flex';
+          }}
         />
       ) : null}
       <div
@@ -36,14 +36,13 @@ export default function ProductCard({ product, onOpenModal, isRtl }) {
         <ImageIcon size={28} />
       </div>
 
-      {/* Info */}
       <div className="product-info">
-        <div className="product-name">{p.name}</div>
+        <div className="product-name">{displayName}</div>
         {desc ? <div className="product-desc">{desc}</div> : null}
         <div className="product-price-row">
-          <span className="product-price">{formatPrice(p.effective_price, isRtl)}</span>
+          <span className="product-price">{formatPrice(p.effective_price)}</span>
           {p.discount_price ? (
-            <span className="product-price-old">{formatPrice(p.price, isRtl)}</span>
+            <span className="product-price-old">{formatPrice(p.price)}</span>
           ) : null}
           {!available && (
             <span className="unavailable-badge">{t('unavailable')}</span>
@@ -51,11 +50,16 @@ export default function ProductCard({ product, onOpenModal, isRtl }) {
         </div>
       </div>
 
-      {/* Circle add button */}
       <button
+        type="button"
         className="product-add-btn"
         disabled={!available}
-        onClick={e => { e.stopPropagation(); onOpenModal(p); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!available) return;
+          if (onQuickAdd) onQuickAdd(p);
+          else onOpenModal(p);
+        }}
         aria-label={t('addToCart')}
       >
         <PlusIcon size={16} />

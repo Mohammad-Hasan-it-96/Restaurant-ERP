@@ -133,18 +133,34 @@
     {{-- Table --}}
     <div class="card shadow-sm">
         <div class="card-body p-0">
+            @php
+                $sort = request('sort', 'id');
+                $dir  = request('direction', 'desc');
+                $sortUrl  = fn($col) => request()->fullUrlWithQuery(['sort' => $col, 'direction' => ($sort === $col && $dir === 'asc') ? 'desc' : 'asc', 'page' => 1]);
+                $sortIcon = fn($col) => $sort === $col
+                    ? ($dir === 'asc' ? '<i class="bi bi-sort-up-alt text-primary ms-1"></i>' : '<i class="bi bi-sort-down-alt text-primary ms-1"></i>')
+                    : '<i class="bi bi-arrow-down-up text-muted ms-1" style="opacity:.5"></i>';
+            @endphp
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>{{ __('app.order_number') }}</th>
+                            <th>
+                                <a href="{{ $sortUrl('id') }}" class="text-dark text-decoration-none">{{ __('app.order_number') }} {!! $sortIcon('id') !!}</a>
+                            </th>
                             <th>{{ __('app.customer_name') }}</th>
                             <th>{{ __('app.phone') }}</th>
                             <th>{{ __('app.order_type') }}</th>
-                            <th>{{ __('app.subtotal') }}</th>
-                            <th>{{ __('app.status') }}</th>
+                            <th>
+                                <a href="{{ $sortUrl('total') }}" class="text-dark text-decoration-none">{{ __('app.subtotal') }} {!! $sortIcon('total') !!}</a>
+                            </th>
+                            <th>
+                                <a href="{{ $sortUrl('status') }}" class="text-dark text-decoration-none">{{ __('app.status') }} {!! $sortIcon('status') !!}</a>
+                            </th>
                             <th>{{ __('app.payment_status') }}</th>
-                            <th>{{ __('app.created_at') }}</th>
+                            <th>
+                                <a href="{{ $sortUrl('created_at') }}" class="text-dark text-decoration-none">{{ __('app.created_at') }} {!! $sortIcon('created_at') !!}</a>
+                            </th>
                             <th></th>
                         </tr>
                     </thead>

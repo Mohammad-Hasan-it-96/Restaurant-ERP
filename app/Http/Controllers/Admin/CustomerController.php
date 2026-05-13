@@ -13,10 +13,14 @@ class CustomerController extends Controller
      */
     public function index(Request $request)
     {
+        $allowed   = ['created_at', 'full_name', 'orders_count', 'orders_sum_total'];
+        $sortBy    = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'created_at';
+        $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+
         $query = Customer::withCount('orders')
             ->withMax('orders', 'created_at')
             ->withSum('orders', 'total')
-            ->latest();
+            ->orderBy($sortBy, $direction);
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {

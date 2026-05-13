@@ -33,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth'             => Authenticate::class,
             'guest'            => RedirectIfAuthenticated::class,
             'customer.session' => \App\Http\Middleware\EnsureCustomerSession::class,
+            'customer.start'   => \App\Http\Middleware\CustomerSession::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

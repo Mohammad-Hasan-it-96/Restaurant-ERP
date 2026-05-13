@@ -94,19 +94,38 @@
 
     <div class="card shadow">
         <div class="card-body">
+            @php
+                $sort = request('sort', 'created_at');
+                $dir  = request('direction', 'desc');
+                $sortUrl  = fn($col) => request()->fullUrlWithQuery(['sort' => $col, 'direction' => ($sort === $col && $dir === 'asc') ? 'desc' : 'asc', 'page' => 1]);
+                $sortIcon = fn($col) => $sort === $col
+                    ? ($dir === 'asc' ? '<i class="bi bi-sort-up-alt text-warning ms-1"></i>' : '<i class="bi bi-sort-down-alt text-warning ms-1"></i>')
+                    : '<i class="bi bi-arrow-down-up ms-1" style="opacity:.55"></i>';
+            @endphp
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
                     <thead class="bg-primary text-white">
                         <tr>
-                            <th class="ps-4">#</th>
+                            <th class="ps-4 sortable-col" onclick="window.location='{{ $sortUrl('id') }}'" style="cursor:pointer;user-select:none;white-space:nowrap">
+                                # {!! $sortIcon('id') !!}
+                            </th>
                             <th>{{\App\Helpers\Helpers::translate('image')}}</th>
-                            <th>{{\App\Helpers\Helpers::translate('product_name')}}</th>
+                            <th class="sortable-col" onclick="window.location='{{ $sortUrl('name_ar') }}'" style="cursor:pointer;user-select:none;white-space:nowrap">
+                                {{\App\Helpers\Helpers::translate('product_name')}} {!! $sortIcon('name_ar') !!}
+                            </th>
                             <th>{{\App\Helpers\Helpers::translate('category')}}</th>
-                            <th>{{\App\Helpers\Helpers::translate('price')}}</th>
-                            <th>{{\App\Helpers\Helpers::translate('discount_price')}}</th>
+                            <th class="sortable-col" onclick="window.location='{{ $sortUrl('price') }}'" style="cursor:pointer;user-select:none;white-space:nowrap">
+                                {{\App\Helpers\Helpers::translate('price')}} {!! $sortIcon('price') !!}
+                            </th>
+                            <th class="sortable-col" onclick="window.location='{{ $sortUrl('discount_price') }}'" style="cursor:pointer;user-select:none;white-space:nowrap">
+                                {{\App\Helpers\Helpers::translate('discount_price')}} {!! $sortIcon('discount_price') !!}
+                            </th>
                             <th>{{\App\Helpers\Helpers::translate('available')}}</th>
                             <th>{{\App\Helpers\Helpers::translate('featured')}}</th>
                             <th>{{\App\Helpers\Helpers::translate('active')}}</th>
+                            <th class="sortable-col" onclick="window.location='{{ $sortUrl('created_at') }}'" style="cursor:pointer;user-select:none;white-space:nowrap">
+                                {{\App\Helpers\Helpers::translate('created_at')}} {!! $sortIcon('created_at') !!}
+                            </th>
                             <th class="text-end pe-4">{{\App\Helpers\Helpers::translate('actions')}}</th>
                         </tr>
                     </thead>
@@ -161,20 +180,19 @@
                                     <span class="badge bg-danger">{{\App\Helpers\Helpers::translate('inactive')}}</span>
                                 @endif
                             </td>
+                            <td class="small text-muted">{{ $product->created_at?->format('Y-m-d') }}</td>
                             <td class="text-end pe-4">
                                 <div class="d-flex gap-2 justify-content-end">
                                     <a href="{{ route('admin.products.edit', $product->id) }}"
                                        class="btn btn-sm btn-light rounded-circle p-2">
                                         <i class="bi bi-pencil-square text-primary"></i>
                                     </a>
-                                    <form action="{{ route('admin.products.delete', $product->id) }}" method="POST">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-light rounded-circle p-2"
-                                                onclick="return confirm('{{\App\Helpers\Helpers::translate('confirm_delete')}}')">
-                                            <i class="bi bi-trash text-danger"></i>
-                                        </button>
-                                    </form>
+                                    <button type="button"
+                                            class="btn btn-sm btn-light rounded-circle p-2 delete-product"
+                                            data-name="{{ $product->name_ar ?? $product->name }}"
+                                            data-url="{{ route('admin.products.delete', $product->id) }}">
+                                        <i class="bi bi-trash text-danger"></i>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -191,11 +209,75 @@
             </div>
 
             {{-- Pagination --}}
-            <div class="d-flex justify-content-center mt-3">
-                {{ $products->links() }}
+            <div class="d-flex justify-content-between align-items-center mt-3 px-1">
+                <small class="text-muted">
+                    @if($products->total())
+                        {{\App\Helpers\Helpers::translate('showing')}}
+                        {{ $products->firstItem() }}
+                        {{\App\Helpers\Helpers::translate('to')}}
+                        {{ $products->lastItem() }}
+                        {{\App\Helpers\Helpers::translate('of')}}
+                        {{ $products->total() }}
+                        {{\App\Helpers\Helpers::translate('entries')}}
+                    @endif
+                </small>
+                <div>
+                    {{ $products->links('pagination::bootstrap-5') }}
+                </div>
             </div>
         </div>
     </div>
 </div>
 @endsection
+
+{{-- Shared Delete Confirmation Modal --}}
+<div class="modal fade" id="deleteProductModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+            <div class="modal-header" style="border-color: var(--border-color);">
+                <h5 class="modal-title text-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    {{\App\Helpers\Helpers::translate('confirm_delete')}}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="color: var(--text);">
+                <span id="deleteProductMessage"></span>
+            </div>
+            <div class="modal-footer" style="border-color: var(--border-color);">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    {{\App\Helpers\Helpers::translate('cancel')}}
+                </button>
+                <form id="deleteProductForm" method="POST">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>{{\App\Helpers\Helpers::translate('delete')}}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const deleteBtns = document.querySelectorAll('.delete-product');
+    const modal      = new bootstrap.Modal(document.getElementById('deleteProductModal'));
+    const msgEl      = document.getElementById('deleteProductMessage');
+    const formEl     = document.getElementById('deleteProductForm');
+
+    deleteBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const name = this.dataset.name;
+            const url  = this.dataset.url;
+            msgEl.textContent = '{{\App\Helpers\Helpers::translate('delete_confirmation')}}'.replace(':name', name);
+            formEl.action = url;
+            modal.show();
+        });
+    });
+});
+</script>
+@endpush
 

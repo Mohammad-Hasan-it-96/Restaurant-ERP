@@ -1,6 +1,17 @@
-/* ── i18n strings ─────────────────────────────────────────────────────── */
-const strings = {
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from 'react';
+
+/** All UI strings: Arabic and English */
+export const STRINGS = {
   ar: {
+    documentTitle: 'قائمة المطعم',
     menu: 'القائمة',
     cart: 'السلة',
     checkout: 'إتمام الطلب',
@@ -29,10 +40,12 @@ const strings = {
     phoneNumber: 'رقم الهاتف',
     orderType: 'نوع الطلب',
     table: 'على الطاولة',
-    delivery: '��وصيل',
+    delivery: 'توصيل',
     takeaway: 'استلام',
     tableNumber: 'رقم الطاولة',
     address: 'العنوان',
+    previousAddressPrefix: 'العنوان السابق:',
+    useThisAddress: '← استخدمه',
     deliveryType: 'نوع التوصيل',
     immediate: 'فوري',
     scheduled: 'مجدول',
@@ -55,18 +68,41 @@ const strings = {
     reqAddress: 'العنوان مطلوب',
     reqScheduled: 'وقت التسليم مطلوب',
     noProducts: 'لا توجد منتجات',
-    profile: 'ح��ابي',
+    productUnavailableAlert: 'هذا المنتج غير متاح حالياً.',
+    profile: 'حسابي',
     qty: 'الكمية',
     retry: 'إعادة المحاولة',
     failedLoad: 'حدث خطأ في تحميل البيانات.',
     lang: 'EN',
-    reviews: '· 120+ تقييم · 15-20 دق',
     notAvailableNow: 'غير متاح',
     clearCart: 'مسح السلة',
     remove: 'حذف',
     close: 'إغلاق',
+    loadPartialError: 'تعذّر تحميل بعض البيانات.',
+    toggleLanguageAria: 'تبديل اللغة',
+    bellAria: 'الإشعارات',
+    mainNavAria: 'التنقل الرئيسي',
+    times: '×',
+    orderNumberDisplay: 'رقم الطلب',
+    orderUnknown: '---',
+    myOrders: 'طلباتي',
+    noOrdersYet: 'لا توجد طلبات محفوظة على هذا الجهاز.',
+    loading: 'جاري التحميل…',
+    orderLoadError: 'تعذر التحميل',
+    orderTotal: 'الإجمالي',
+    orderStatus_pending: 'قيد الانتظار',
+    orderStatus_accepted: 'تم القبول',
+    orderStatus_preparing: 'جاري التحضير',
+    orderStatus_ready: 'جاهز',
+    orderStatus_delivered: 'تم التوصيل',
+    orderStatus_completed: 'مكتمل',
+    orderStatus_cancelled: 'ملغى',
+    orderStatus_cancelled_by_admin: 'ألغاه المطعم',
+    orderStatus_cancelled_by_customer: 'ألغيته أنت',
+    orderStatus_rejected: 'مرفوض',
   },
   en: {
+    documentTitle: 'Restaurant Menu',
     menu: 'Menu',
     cart: 'Cart',
     checkout: 'Checkout',
@@ -99,6 +135,8 @@ const strings = {
     takeaway: 'Takeaway',
     tableNumber: 'Table Number',
     address: 'Address',
+    previousAddressPrefix: 'Previous address:',
+    useThisAddress: '← Use this',
     deliveryType: 'Delivery Type',
     immediate: 'Immediate',
     scheduled: 'Scheduled',
@@ -121,21 +159,110 @@ const strings = {
     reqAddress: 'Address is required',
     reqScheduled: 'Scheduled time is required',
     noProducts: 'No products found',
+    productUnavailableAlert: 'This product is not available right now.',
     profile: 'Profile',
     qty: 'Qty',
     retry: 'Retry',
     failedLoad: 'Failed to load data.',
     lang: 'ع',
-    reviews: '· 120+ Reviews · 15-20 min',
     notAvailableNow: 'Unavailable',
     clearCart: 'Clear Cart',
     remove: 'Remove',
     close: 'Close',
+    loadPartialError: 'Failed to load some data.',
+    toggleLanguageAria: 'Switch language',
+    bellAria: 'Notifications',
+    mainNavAria: 'Main navigation',
+    times: '×',
+    orderNumberDisplay: 'Order number',
+    orderUnknown: '---',
+    myOrders: 'My orders',
+    noOrdersYet: 'No saved orders on this device yet.',
+    loading: 'Loading…',
+    orderLoadError: 'Could not load',
+    orderTotal: 'Total',
+    orderStatus_pending: 'Pending',
+    orderStatus_accepted: 'Accepted',
+    orderStatus_preparing: 'Preparing',
+    orderStatus_ready: 'Ready',
+    orderStatus_delivered: 'Delivered',
+    orderStatus_completed: 'Completed',
+    orderStatus_cancelled: 'Cancelled',
+    orderStatus_cancelled_by_admin: 'Cancelled by restaurant',
+    orderStatus_cancelled_by_customer: 'Cancelled by you',
+    orderStatus_rejected: 'Rejected',
   },
 };
 
-export function createT(isRtl) {
-  const lang = isRtl ? strings.ar : strings.en;
-  return (key) => lang[key] ?? strings.en[key] ?? key;
+const I18nContext = createContext(null);
+
+/**
+ * Resolves text direction from language code.
+ */
+function dirFromLang(lang) {
+  return lang === 'ar' ? 'rtl' : 'ltr';
 }
 
+/**
+ * Reads initial UI language from storage or the document.
+ */
+export function getInitialLang() {
+  const stored = localStorage.getItem('spa_lang');
+  if (stored === 'ar' || stored === 'en') return stored;
+  const legacyDir = localStorage.getItem('spa_dir');
+  if (legacyDir === 'rtl') return 'ar';
+  if (legacyDir === 'ltr') return 'en';
+  const html = (document.documentElement.lang || 'ar').toLowerCase();
+  return html.startsWith('ar') ? 'ar' : 'en';
+}
+
+/**
+ * Sets Laravel session locale via GET /lang/{locale} then reloads the app.
+ */
+export function switchLanguage(locale) {
+  const next = locale === 'ar' || locale === 'en' ? locale : 'en';
+  localStorage.setItem('spa_lang', next);
+  window.location.assign(`/lang/${next}`);
+}
+
+/**
+ * Provides `lang`, `dir`, and `t(key)` to the React tree.
+ */
+export function I18nProvider({ children }) {
+  const [lang] = useState(getInitialLang);
+
+  useLayoutEffect(() => {
+    const dir = dirFromLang(lang);
+    document.documentElement.lang = lang;
+    document.documentElement.dir = dir;
+    localStorage.setItem('spa_lang', lang);
+    localStorage.setItem('spa_dir', dir);
+  }, [lang]);
+
+  const t = useCallback(
+    (key) => STRINGS[lang]?.[key] ?? STRINGS.en[key] ?? key,
+    [lang]
+  );
+
+  const value = useMemo(
+    () => ({
+      lang,
+      dir: dirFromLang(lang),
+      t,
+    }),
+    [lang, t]
+  );
+
+  return createElement(I18nContext.Provider, { value }, children);
+}
+
+/**
+ * Access i18n context (must be inside I18nProvider).
+ */
+export function useI18n() {
+  const ctx = useContext(I18nContext);
+  if (!ctx) {
+    throw new Error('useI18n must be used within I18nProvider');
+  }
+  return ctx;
+}

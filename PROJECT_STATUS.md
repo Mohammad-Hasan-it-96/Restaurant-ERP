@@ -1,5 +1,5 @@
 # PROJECT_STATUS.md
-> Last updated: May 13, 2026  
+> Last updated: May 14, 2026  
 > Laravel 12 · PHP 8.2 · Bootstrap 5.3 · Vanilla JS  
 
 ---
@@ -127,7 +127,7 @@ A single-restaurant ERP system built with Laravel 12. It consists of:
 |---|---------|-------|
 | 1 | **Order status: `preparing` → `ready` → `delivered`** | ✅ **DONE** — Controller actions, PATCH routes, UI buttons in index + show views all implemented. |
 | 2 | **Payment tracking** | ✅ **DONE** — "Mark as Paid" button + modal (select cash/card/online) on order detail page. Payment status badge added to order list. |
-| 3 | **Customer order notification** | No email/SMS/WhatsApp message sent to customer when order is accepted, rejected, or ready. |
+| 3 | **Customer order notification** | ✅ **DONE** — WhatsApp click-to-send buttons added to the order detail page. For each order status (accepted, rejected, preparing, ready, delivered, completed, cancelled) the admin sees a pre-filled WhatsApp message button that opens `wa.me/{customer_phone}` with a bilingual (AR/EN) message template. |
 | 4 | **Admin statistics / reports** | ✅ **DONE** — Full Reports page with date range filter, revenue cards, bar chart (Chart.js), doughnut chart, top products table, orders-by-status breakdown, paginated order list, and CSV export. |
 
 ### Medium Priority

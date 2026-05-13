@@ -1,22 +1,36 @@
-﻿import { useState } from 'react';
-import { BellIcon, CartIcon, ForkKnifeIcon } from './Icons';
-import { createT } from '../i18n';
+﻿import { BellIcon, CartIcon, ForkKnifeIcon } from './Icons';
+import { formatPrice } from '../utils/format';
+import { switchLanguage, useI18n } from '../i18n';
 
-export default function Header({ settings, cartCount, onCartClick, isRtl, onLangToggle }) {
-  const t = createT(isRtl);
+export default function Header({ settings, cartCount, onCartClick }) {
+  const { lang, t } = useI18n();
   const name = settings?.restaurant_name || t('menu');
-  const isOpen = !!settings?.is_open_now && settings?.is_accepting_orders !== false;
+  const isOpen =
+    !!settings?.is_open_now && settings?.is_accepting_orders !== false;
+
+  const handleLangClick = () => {
+    switchLanguage(lang === 'ar' ? 'en' : 'ar');
+  };
 
   return (
     <header className="header">
       <div className="header-inner">
-        {/* Left: logo + name + status */}
         <div className="header-left">
           <div className="header-logo">
-            {settings?.restaurant_logo
-              ? <img src={settings.restaurant_logo} alt={name} onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
-              : null}
-            <div className="logo-fallback" style={settings?.restaurant_logo ? { display: 'none' } : {}}>
+            {settings?.restaurant_logo ? (
+              <img
+                src={settings.restaurant_logo}
+                alt={name}
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div
+              className="logo-fallback"
+              style={settings?.restaurant_logo ? { display: 'none' } : {}}
+            >
               <ForkKnifeIcon />
             </div>
           </div>
@@ -29,16 +43,24 @@ export default function Header({ settings, cartCount, onCartClick, isRtl, onLang
           </div>
         </div>
 
-        {/* Right: actions */}
         <div className="header-right">
-          <button className="lang-btn" onClick={onLangToggle} aria-label="Toggle language">
+          <button
+            type="button"
+            className="lang-btn"
+            onClick={handleLangClick}
+            aria-label={t('toggleLanguageAria')}
+          >
             {t('lang')}
           </button>
-          <button className="icon-btn" aria-label={t('bell')}>
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label={t('bellAria')}
+          >
             <BellIcon />
           </button>
-          {/* Desktop cart button */}
           <button
+            type="button"
             className="cart-btn-header"
             onClick={onCartClick}
             aria-label={t('cart')}
@@ -46,7 +68,9 @@ export default function Header({ settings, cartCount, onCartClick, isRtl, onLang
             <CartIcon size={18} />
             <span>{t('cart')}</span>
             {cartCount > 0 && (
-              <span className="cart-badge-header">{cartCount}</span>
+              <span className="cart-badge-header">
+                {formatPrice(cartCount)}
+              </span>
             )}
           </button>
         </div>

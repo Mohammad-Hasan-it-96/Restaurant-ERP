@@ -7,6 +7,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': { target: 'http://localhost:8000', changeOrigin: true },
+      '/lang': { target: 'http://localhost:8000', changeOrigin: true },
+      '/language': { target: 'http://localhost:8000', changeOrigin: true },
     },
   },
   build: {

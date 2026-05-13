@@ -30,7 +30,11 @@ class CategoryController extends Controller
             $query->where('parent_id', $request->parent_id);
         }
 
-        $categories = $query->orderBy('sort_order')->orderBy('id')->paginate(15)->withQueryString();
+        $allowed    = ['id', 'name_ar', 'name_en', 'sort_order', 'created_at'];
+        $sortBy     = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'created_at';
+        $direction  = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+
+        $categories = $query->orderBy($sortBy, $direction)->paginate(15)->withQueryString();
 
         // For filter dropdown
         $parentCategories = Category::whereNull('parent_id')->orderBy('sort_order')->get();

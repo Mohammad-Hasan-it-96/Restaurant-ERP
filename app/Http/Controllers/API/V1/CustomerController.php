@@ -13,7 +13,8 @@ class CustomerController extends Controller
     /**
      * GET /api/v1/customer/me
      *
-     * Returns the customer linked to the current session (if any).
+     * Returns the customer linked to the current session (if any):
+     * name, phone, and default_address when set.
      * No auth required — purely session-based (guest flow).
      */
     public function me(): JsonResponse
@@ -33,8 +34,9 @@ class CustomerController extends Controller
         }
 
         return $this->success([
-            'name'  => $customer->full_name,
+            'name' => $customer->full_name,
             'phone' => $customer->phone,
+            'default_address' => $customer->default_address,
         ]);
     }
 }

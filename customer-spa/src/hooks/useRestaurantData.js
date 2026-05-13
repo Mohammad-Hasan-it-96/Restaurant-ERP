@@ -27,7 +27,7 @@ export default function useRestaurantData() {
     ]);
     if (sR.status === 'fulfilled') {
       const s = extractData(sR.value.data) || {};
-      s.restaurant_name = decodeText(s.restaurant_name) || 'Restaurant';
+      s.restaurant_name = decodeText(s.restaurant_name) || '';
       setSettings(s);
     }
     if (cR.status === 'fulfilled') {
@@ -38,18 +38,20 @@ export default function useRestaurantData() {
       })));
     }
     if (pR.status === 'fulfilled') {
-      setAllProducts(extractArray(pR.value.data).map(p => ({
+      const products = extractArray(pR.value.data).map((p) => ({
         ...p,
         id: Number(p.id),
         category_id: p.category_id != null ? Number(p.category_id) : null,
-        effective_price: p.effective_price != null
-          ? Number(p.effective_price) : Number(p.discount_price || p.price || 0),
-        price: Number(p.price || 0),
-      })));
+        price: parseFloat(p.price) || 0,
+        discount_price: p.discount_price ? parseFloat(p.discount_price) : null,
+        effective_price:
+          parseFloat(p.effective_price || p.discount_price || p.price) || 0,
+      }));
+      setAllProducts(products);
     }
     if (zR.status === 'fulfilled') setZones(extractArray(zR.value.data));
     if ([sR, cR, pR, zR].some(r => r.status === 'rejected')) {
-      setError('Failed to load some data.');
+      setError('loadPartialError');
     }
     setLoading(false);
   }
