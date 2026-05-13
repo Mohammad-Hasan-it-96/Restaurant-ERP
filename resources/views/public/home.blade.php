@@ -187,11 +187,13 @@
                 <div class="row g-2">
                     <div class="col-12">
                         <label class="form-label">{{ __('app.full_name') }}</label>
-                        <input name="customer_name" class="form-control" required>
+                        <input id="field-customer_name" name="customer_name" class="form-control" required autocomplete="name">
+                        <div class="invalid-feedback" id="err-customer_name"></div>
                     </div>
                     <div class="col-12">
                         <label class="form-label">{{ __('app.phone') }}</label>
-                        <input name="customer_phone" class="form-control" required>
+                        <input id="field-customer_phone" name="customer_phone" class="form-control" required autocomplete="tel">
+                        <div class="invalid-feedback" id="err-customer_phone"></div>
                     </div>
                     <div class="col-12">
                         <label class="form-label">{{ __('app.order_type') }}</label>
@@ -200,18 +202,21 @@
                             <option value="delivery">{{ __('app.delivery') }}</option>
                             <option value="takeaway">{{ __('app.takeaway') }}</option>
                         </select>
+                        <div class="invalid-feedback" id="err-order_type"></div>
                     </div>
                 </div>
 
                 <div id="tableFields" class="checkout-fields checkout-hidden mt-2">
                     <label class="form-label">{{ __('app.table_number') }}</label>
-                    <input name="table_number" class="form-control" placeholder="{{ __('app.table_number_placeholder') }}">
+                    <input id="field-table_number" name="table_number" class="form-control" placeholder="{{ __('app.table_number_placeholder') }}">
+                    <div class="invalid-feedback" id="err-table_number"></div>
                 </div>
 
                 <div id="deliveryFields" class="checkout-fields checkout-hidden mt-2">
                     <div class="mb-2">
                         <label class="form-label">{{ __('app.address') }}</label>
-                        <textarea name="address" class="form-control" rows="2"></textarea>
+                        <textarea id="field-address" name="address" class="form-control" rows="2"></textarea>
+                        <div class="invalid-feedback" id="err-address"></div>
                     </div>
                     <div class="mb-2">
                         <label class="form-label">{{ __('app.delivery_type') }}</label>
@@ -219,22 +224,26 @@
                             <option value="immediate">{{ __('app.immediate') }}</option>
                             <option value="scheduled">{{ __('app.scheduled') }}</option>
                         </select>
+                        <div class="invalid-feedback" id="err-delivery_type"></div>
                     </div>
                     <div id="scheduledField" class="checkout-fields checkout-hidden mb-2">
                         <label class="form-label">{{ __('app.scheduled_at') }}</label>
-                        <input type="datetime-local" name="scheduled_at" class="form-control">
+                        <input id="field-scheduled_at" type="datetime-local" name="scheduled_at" class="form-control">
+                        <div class="invalid-feedback" id="err-scheduled_at"></div>
                     </div>
                     <div class="mb-2">
                         <label class="form-label">{{ __('app.estimated_delivery_fee') }}</label>
                         <select id="deliveryZone" class="form-select">
                             <option value="">{{ __('app.select') }}</option>
                         </select>
+                        <div class="invalid-feedback" id="err-estimated_delivery_fee"></div>
                     </div>
                 </div>
 
                 <div class="mt-2">
                     <label class="form-label">{{ __('app.customer_note') }}</label>
-                    <textarea name="customer_note" class="form-control" rows="2"></textarea>
+                    <textarea id="field-customer_note" name="customer_note" class="form-control" rows="2"></textarea>
+                    <div class="invalid-feedback" id="err-customer_note"></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -254,7 +263,10 @@
                 <h5 class="modal-title text-success"><i class="bi bi-check-circle me-1"></i>{{ __('app.order_success') }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body text-center">
+            <div class="modal-body text-center py-4">
+                <div class="mb-3">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size:3.5rem;line-height:1;"></i>
+                </div>
                 <p class="mb-2">{{ __('app.order_success_message') }}</p>
                 <div class="success-order-number" id="orderSuccessNumber">---</div>
             </div>
@@ -421,7 +433,8 @@ window.addEventListener('unhandledrejection', function(e) {
         orderSuccessNumber:      document.getElementById('orderSuccessNumber'),
     };
 
-    let activeProduct = null;
+    let activeProduct  = null;
+    let isSubmitting   = false;   // double-submit guard
 
     init();
 
@@ -1290,9 +1303,78 @@ window.addEventListener('unhandledrejection', function(e) {
         } catch (e) { /* ignore */ }
     }
 
+    // ── Checkout helpers ─────────────────────────────────────────────────────
+    /** Maps API validation error keys to element IDs in the checkout form */
+    const FIELD_MAP = {
+        customer_name:          'field-customer_name',
+        customer_phone:         'field-customer_phone',
+        order_type:             'orderType',
+        table_number:           'field-table_number',
+        address:                'field-address',
+        delivery_type:          'deliveryType',
+        scheduled_at:           'field-scheduled_at',
+        estimated_delivery_fee: 'deliveryZone',
+        customer_note:          'field-customer_note',
+    };
+    /** Toggle submit button loading state + disable/enable the modal X button */
+    function setSubmitLoading(loading) {
+        const btnText  = document.getElementById('submitOrderBtnText');
+        const closeBtn = document.querySelector('#checkoutModal .btn-close');
+        el.submitOrderBtn.disabled = loading;
+        if (closeBtn) closeBtn.disabled = loading;
+        if (loading) {
+            btnText.innerHTML =
+                '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>';
+        } else {
+            btnText.textContent = window.i18n.submit_order;
+        }
+    }
+    /** Remove all is-invalid highlights and clear per-field error text */
+    function clearFieldErrors() {
+        Object.values(FIELD_MAP).forEach(function(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('is-invalid');
+        });
+        document.querySelectorAll('#checkoutForm .invalid-feedback').forEach(function(div) {
+            div.textContent = '';
+        });
+    }
+    /**
+     * Highlight invalid fields, show per-field messages, scroll to first error.
+     * Returns array of unmapped error strings (for the global list).
+     */
+    function showFieldErrors(errors) {
+        let firstEl    = null;
+        const unmapped = [];
+        Object.entries(errors).forEach(function([key, msgs]) {
+            const message  = (Array.isArray(msgs) ? msgs : [msgs]).join(' ');
+            const fieldId  = FIELD_MAP[key];
+            if (fieldId) {
+                const fieldEl    = document.getElementById(fieldId);
+                const feedbackEl = document.getElementById('err-' + key);
+                if (fieldEl) {
+                    fieldEl.classList.add('is-invalid');
+                    if (!firstEl) firstEl = fieldEl;
+                }
+                if (feedbackEl) feedbackEl.textContent = message;
+            } else if (key !== 'items') {
+                unmapped.push('• ' + message);
+            }
+        });
+        if (firstEl) {
+            firstEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            try { firstEl.focus(); } catch(e) {}
+        }
+        return unmapped;
+    }
     // ── Checkout Submit ──────────────────────────────────────────────────────
     async function submitCheckout(event) {
         event.preventDefault();
+
+        // Double-submit guard
+        if (isSubmitting) return;
+
+        clearFieldErrors();
         el.checkoutApiErrors.innerHTML = '';
         hideCheckoutAlert();
 
@@ -1337,9 +1419,9 @@ window.addEventListener('unhandledrejection', function(e) {
         console.debug('[order] payload â†’', JSON.stringify(payload, null, 2));
         logEvent('order.submit', payload);
 
-        el.submitOrderBtn.disabled = true;
-        document.getElementById('submitOrderBtnText').innerHTML =
-            `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>${window.i18n.sending}`;
+        // Lock UI
+        isSubmitting = true;
+        setSubmitLoading(true);
 
         try {
             const response    = await fetchJSON(`${apiBase}/orders`, {
@@ -1365,12 +1447,10 @@ window.addEventListener('unhandledrejection', function(e) {
             renderCart();
             el.checkoutForm.reset();
 
-            // ── Re-fill customer info after reset ────────────────────────────
+            // Re-fill name/phone after form.reset() wipes them
             try {
-                const nameInput  = el.checkoutForm.querySelector('[name="customer_name"]');
-                const phoneInput = el.checkoutForm.querySelector('[name="customer_phone"]');
-                if (nameInput)  nameInput.value  = payload.customer_name;
-                if (phoneInput) phoneInput.value = payload.customer_phone;
+                document.getElementById('field-customer_name').value  = payload.customer_name;
+                document.getElementById('field-customer_phone').value = payload.customer_phone;
             } catch (e) { /* ignore */ }
 
             handleOrderTypeUI();
@@ -1387,19 +1467,25 @@ window.addEventListener('unhandledrejection', function(e) {
              logError('order.submit.failed', error.message || 'submit failed', {
                  httpStatus: error.httpStatus ?? null,
              });
-             showCheckoutAlert('danger', error.message || window.i18n.failed_submit_order);
-             if (error.errors && typeof error.errors === 'object') {
-                 console.error('[submitCheckout] validation errors:', error.errors);
-                 el.checkoutApiErrors.innerHTML = Object.values(error.errors)
-                     .flat()
-                     .map(msg => `<div>• ${escapeHtml(msg)}</div>`)
-                     .join('');
-             }
-         } finally {
-             el.submitOrderBtn.disabled = false;
-             document.getElementById('submitOrderBtnText').textContent = window.i18n.submit_order;
-         }
-     }
+            showCheckoutAlert('danger', error.message || window.i18n.failed_submit_order);
+
+            if (error.errors && typeof error.errors === 'object') {
+                console.error('[submitCheckout] validation errors:', error.errors);
+                const unmapped = showFieldErrors(error.errors);
+                if (unmapped.length) {
+                    el.checkoutApiErrors.innerHTML = unmapped
+                        .map(msg => `<div>${escapeHtml(msg)}</div>`)
+                        .join('');
+                }
+            } else {
+                // No field errors -- scroll the alert into view
+                el.checkoutAlert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        } finally {
+            isSubmitting = false;
+            setSubmitLoading(false);
+        }
+    }
 
     function showCheckoutAlert(type, message) {
         el.checkoutAlert.className = `alert alert-${type}`;
