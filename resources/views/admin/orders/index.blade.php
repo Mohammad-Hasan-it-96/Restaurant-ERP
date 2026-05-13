@@ -143,6 +143,7 @@
                             <th>{{ __('app.order_type') }}</th>
                             <th>{{ __('app.subtotal') }}</th>
                             <th>{{ __('app.status') }}</th>
+                            <th>{{ __('app.payment_status') }}</th>
                             <th>{{ __('app.created_at') }}</th>
                             <th></th>
                         </tr>
@@ -162,6 +163,12 @@
                             </td>
                             <td>{{ number_format($order->subtotal, 2) }}</td>
                             <td>@include('admin.orders.partials.status-badge', ['status' => $order->status])</td>
+                            <td>
+                                @php $ps = $order->payment_status ?? 'unpaid'; @endphp
+                                <span class="badge bg-{{ $ps === 'paid' ? 'success' : ($ps === 'refunded' ? 'warning' : 'secondary') }}">
+                                    {{ __('app.' . $ps) }}
+                                </span>
+                            </td>
                             <td class="text-muted small">{{ $order->created_at->format('Y-m-d H:i') }}</td>
                             <td>
                                 <div class="d-flex gap-1 flex-wrap">
@@ -222,7 +229,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-5">
+                            <td colspan="9" class="text-center text-muted py-5">
                                 <i class="bi bi-receipt fs-3 d-block mb-2"></i>
                                 {{ __('app.no_orders_found') }}
                             </td>

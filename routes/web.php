@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\API\DashboardController;
 use App\Http\Controllers\API\LanguageController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
@@ -32,6 +33,10 @@ Route::group(['prefix' => 'auth', 'as' => 'auth.'], function () {
 Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], function () {
     // Dashboard - accessible by all authenticated users
     Route::get('dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
+
+    // Reports & Analytics
+    Route::get('reports',        [ReportController::class, 'index']) ->name('reports');
+    Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');
 
     // Products routes
     Route::group(['prefix' => 'products', 'as' => 'products.'], function () {
@@ -118,6 +123,7 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
             Route::patch('{order}/ready',     [App\Http\Controllers\Admin\OrderController::class, 'markReady']    )->name('ready');
             Route::patch('{order}/delivered', [App\Http\Controllers\Admin\OrderController::class, 'markDelivered'])->name('delivered');
             Route::patch('{order}/completed', [App\Http\Controllers\Admin\OrderController::class, 'markCompleted'])->name('completed');
+            Route::patch('{order}/mark-paid', [App\Http\Controllers\Admin\OrderController::class, 'markPaid']    )->name('mark-paid');
         });
     });
 

@@ -508,6 +508,7 @@ return [
     'product_not_active'          => 'The product ":name" is currently unavailable.',
     'product_not_available'       => 'The product ":name" is out of stock.',
     'restaurant_closed_message'   => 'Sorry, we are currently closed. Please try again later.',
+    'duplicate_order_message'     => 'A similar order was recently submitted. Please wait a moment before trying again.',
 
     // ... rest of the translations ...
 
@@ -554,8 +555,32 @@ return [
     'order_marked_preparing'  => 'Order is now being prepared.',
     'order_marked_ready'      => 'Order is ready.',
     'order_marked_delivered'  => 'Order marked as delivered.',
+    'order_marked_paid'       => 'Order marked as paid.',
     'mark_preparing'          => 'Start Preparing',
     'mark_ready'              => 'Mark as Ready',
     'mark_delivered'          => 'Mark as Delivered',
     'mark_completed'          => 'Mark as Completed',
+    'mark_paid'               => 'Mark as Paid',
+    'payment_method'          => 'Payment Method',
+    'payment_method_cash'     => 'Cash',
+    'payment_method_card'     => 'Card',
+    'payment_method_online'   => 'Online',
+
+    // ── Reports & Analytics ───────────────────────────────────────────────────
+    'reports'              => 'Reports & Analytics',
+    'reports_analytics'    => 'Reports & Analytics',
+    'total_revenue'        => 'Total Revenue',
+    'avg_order_value'      => 'Avg Order Value',
+    'total_delivery_fees'  => 'Total Delivery Fees',
+    'revenue_by_day'       => 'Revenue by Day',
+    'top_products'         => 'Top Products',
+    'qty_sold'             => 'Qty Sold',
+    'rank'                 => 'Rank',
+    'date_from'            => 'From',
+    'date_to'              => 'To',
+    'export_csv'           => 'Export CSV',
+    'apply_filter'         => 'Apply',
+    'all_statuses'         => 'All Statuses',
+    'no_data_for_period'   => 'No data for selected period',
+    'orders_by_type'       => 'Orders by Type',
 ];

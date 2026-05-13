@@ -308,6 +308,13 @@
                         @endif
                     </a>
 
+                    <!-- Reports Link -->
+                    <a href="{{ route('admin.reports') }}"
+                       class="nav-link d-flex align-items-center py-3 px-3 rounded-3 mb-1 {{ request()->routeIs('admin.reports*') ? 'active' : '' }}">
+                        <i class="bi bi-bar-chart-line me-3"></i>
+                        <span>{{ \App\Helpers\Helpers::translate('reports') }}</span>
+                    </a>
+
                     <!-- Customers Link -->
                     <a href="{{ route('admin.customers.index') }}"
                        class="nav-link d-flex align-items-center py-3 px-3 rounded-3 mb-1 {{ request()->routeIs('admin.customers.*') ? 'active' : '' }}">

@@ -50,7 +50,7 @@ class OrderService
                 'customer_phone' => $data['customer_phone'],
             ]);
             throw ValidationException::withMessages([
-                'items' => ['تم إرسال طلب مشابه مؤخراً، يرجى الانتظار لحظة قبل إعادة المحاولة.'],
+                'items' => [__('app.duplicate_order_message')],
             ]);
         }
 
@@ -83,7 +83,7 @@ class OrderService
 
             if ($customer->is_blocked) {
                 throw ValidationException::withMessages([
-                    'phone' => ['هذا الرقم محظور من الطلب'],
+                    'phone' => [__('app.customer_blocked_message')],
                 ]);
             }
 

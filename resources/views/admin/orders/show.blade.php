@@ -263,7 +263,16 @@
                             <span class="badge bg-{{ $ps === 'paid' ? 'success' : ($ps === 'refunded' ? 'warning' : 'secondary') }}">
                                 {{ __('app.' . $ps) }}
                             </span>
+                            @if($ps !== 'paid' && !in_array($order->status, ['rejected', 'cancelled', 'cancelled_by_admin', 'cancelled_by_customer']))
+                            <button class="btn btn-sm btn-outline-success ms-2" data-bs-toggle="modal" data-bs-target="#markPaidModal">
+                                <i class="bi bi-credit-card me-1"></i>{{ __('app.mark_paid') }}
+                            </button>
+                            @endif
                         </dd>
+                        @if($order->payment_method)
+                        <dt class="col-6 text-muted">{{ __('app.payment_method') }}</dt>
+                        <dd class="col-6 text-end">{{ __('app.payment_method_' . $order->payment_method) }}</dd>
+                        @endif
                     </dl>
                 </div>
             </div>

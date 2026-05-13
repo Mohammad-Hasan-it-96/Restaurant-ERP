@@ -125,10 +125,10 @@ A single-restaurant ERP system built with Laravel 12. It consists of:
 ### High Priority
 | # | Feature | Notes |
 |---|---------|-------|
-| 1 | **Order status: `preparing` → `ready` → `delivered`** | Constants defined in `Order` model but NO admin UI buttons or transitions. Workflow jumps `accepted → completed`. |
-| 2 | **Payment tracking** | `payment_status` + `payment_method` columns exist but no UI to mark an order as paid or integrate any gateway. |
+| 1 | **Order status: `preparing` → `ready` → `delivered`** | ✅ **DONE** — Controller actions, PATCH routes, UI buttons in index + show views all implemented. |
+| 2 | **Payment tracking** | ✅ **DONE** — "Mark as Paid" button + modal (select cash/card/online) on order detail page. Payment status badge added to order list. |
 | 3 | **Customer order notification** | No email/SMS/WhatsApp message sent to customer when order is accepted, rejected, or ready. |
-| 4 | **Admin statistics / reports** | Only a 7-day chart. No date range, no revenue breakdown, no export of order data to CSV/PDF. |
+| 4 | **Admin statistics / reports** | ✅ **DONE** — Full Reports page with date range filter, revenue cards, bar chart (Chart.js), doughnut chart, top products table, orders-by-status breakdown, paginated order list, and CSV export. |
 
 ### Medium Priority
 | # | Feature | Notes |
@@ -399,16 +399,17 @@ Restaurant-ERP/
 | # | File | Issue | Status |
 |---|------|-------|--------|
 | 1 | `resources/views/public/home.blade.php` line 1327 | `btnText.innerHTML = <span...>` — HTML string without quotes caused JS parse error → blank page | ✅ **Fixed** |
+| 2 | `app/Services/OrderService.php` | Blocked customer + duplicate order messages were **hardcoded Arabic** | ✅ **Fixed** — now use `__('app.customer_blocked_message')` and `__('app.duplicate_order_message')` |
 
 ### Known Issues (not yet fixed)
 | # | Severity | Location | Issue |
 |---|----------|----------|-------|
-| 2 | Medium | `app/Http/Controllers/Admin/OrderController.php` | Status transitions `preparing`, `ready`, `delivered` defined in model constants but **no controller actions or UI** — the workflow skips directly from `accepted` to `completed`. |
-| 3 | Medium | `app/Services/OrderService.php` line 86 | Blocked customer error message is **hardcoded Arabic**: `'هذا الرقم محظور من الطلب'` — should use a translation key. |
+| 2 | Medium | ~~`app/Http/Controllers/Admin/OrderController.php`~~ | ~~Status transitions `preparing`, `ready`, `delivered` defined in model constants but **no controller actions or UI**~~ ✅ Fixed |
+| 3 | Medium | ~~`app/Services/OrderService.php` line 86~~ | ~~Blocked customer error message is hardcoded Arabic~~ ✅ Fixed |
 | 4 | Low | `app/Http/Middleware/ApiLoggingMiddleware.php` | Middleware exists but is **not registered** in `bootstrap/app.php` or any route group. Either register it or delete it. |
 | 5 | Low | `app/Http/Controllers/API/` (root level) | `RegisterController`, `ProductController` (legacy Passport API) are dead code. Their routes still exist at `/api/register` and `/api/login`. These expose unnecessary surface area. |
 | 6 | Low | `database/migrations/*oauth*` | Five Passport OAuth tables are created but the v1 API uses no Passport auth. Adds migration weight and confusion. |
-| 7 | Low | `resources/views/admin/orders/index.blade.php` | New-order notification banner text (`"طلب جديد! وصل طلب جديد."`) is **hardcoded Arabic**, not behind a translation key. |
-| 8 | Info | `app/Http/Controllers/Public/HomeController.php` | Controller passes **no variables** to `public.home` view. The SPA fetches everything via API, which is intentional. However, any server-side Blade error (e.g. missing DB table) silently renders an empty page with no JS errors visible. |
+| 7 | Low | `resources/views/admin/orders/index.blade.php` | New-order notification banner text is **hardcoded Arabic**, not behind a translation key. |
+| 8 | Info | `app/Http/Controllers/Public/HomeController.php` | Controller passes **no variables** to `public.home` view. The SPA fetches everything via API, which is intentional. However, any server-side Blade error silently renders an empty page with no JS errors visible. |
 | 9 | Info | `routes/api.php` | The three `Route::middleware([StartSession, 'customer.session'])` groups could be merged into one group to reduce duplication. |
 

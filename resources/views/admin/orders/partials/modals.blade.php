@@ -135,6 +135,40 @@
 </div>
 @endif
 
+{{-- ── MARK PAID MODAL ─────────────────────────────────────────────────── --}}
+@php $ps = $order->payment_status ?? 'unpaid'; @endphp
+@if($ps !== 'paid' && !in_array($order->status, ['rejected', 'cancelled', 'cancelled_by_admin', 'cancelled_by_customer']))
+<div class="modal fade" id="markPaidModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <form action="{{ route('admin.orders.mark-paid', $order) }}" method="POST">
+                @csrf @method('PATCH')
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-credit-card text-success me-2"></i>{{ __('app.mark_paid') }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label fw-semibold">{{ __('app.payment_method') }} <span class="text-danger">*</span></label>
+                    <select name="payment_method" class="form-select" required>
+                        <option value="cash">{{ __('app.payment_method_cash') }}</option>
+                        <option value="card">{{ __('app.payment_method_card') }}</option>
+                        <option value="online">{{ __('app.payment_method_online') }}</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ __('app.cancel') }}</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle me-1"></i>{{ __('app.confirm') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+
 @push('scripts')
 <script>
     // Reject: handle custom reason select

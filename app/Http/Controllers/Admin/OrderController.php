@@ -207,6 +207,21 @@ class OrderController extends Controller
         return back()->with('success', __('app.order_completed'));
     }
 
+    // ── Mark Paid ─────────────────────────────────────────────────────────────
+    public function markPaid(Request $request, Order $order)
+    {
+        $request->validate([
+            'payment_method' => 'required|in:cash,card,online',
+        ]);
+
+        $order->update([
+            'payment_status' => Order::PAYMENT_PAID,
+            'payment_method' => $request->input('payment_method'),
+        ]);
+
+        return back()->with('success', __('app.order_marked_paid'));
+    }
+
     // ── Invoice ────────────────────────────────────────────────────────────────
     public function invoice(Order $order)
     {
