@@ -25,18 +25,60 @@
                 <i class="bi bi-x-lg me-1"></i>{{ __('app.reject') }}
             </button>
         @endif
+
         @if($order->status === 'accepted')
-            <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#completeModal">
-                <i class="bi bi-bag-check me-1"></i>{{ __('app.complete') }}
-            </button>
+            <form method="POST" action="{{ route('admin.orders.preparing', $order) }}" class="d-inline">
+                @csrf @method('PATCH')
+                <button type="submit" class="btn btn-warning btn-sm">
+                    <i class="bi bi-fire me-1"></i>{{ __('app.mark_preparing') }}
+                </button>
+            </form>
         @endif
+
+        @if($order->status === 'preparing')
+            <form method="POST" action="{{ route('admin.orders.ready', $order) }}" class="d-inline">
+                @csrf @method('PATCH')
+                <button type="submit" class="btn btn-info btn-sm text-white">
+                    <i class="bi bi-check2-all me-1"></i>{{ __('app.mark_ready') }}
+                </button>
+            </form>
+        @endif
+
+        @if($order->status === 'ready')
+            @if($order->order_type === 'delivery')
+                <form method="POST" action="{{ route('admin.orders.delivered', $order) }}" class="d-inline">
+                    @csrf @method('PATCH')
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-truck me-1"></i>{{ __('app.mark_delivered') }}
+                    </button>
+                </form>
+            @else
+                <form method="POST" action="{{ route('admin.orders.completed', $order) }}" class="d-inline">
+                    @csrf @method('PATCH')
+                    <button type="submit" class="btn btn-success btn-sm">
+                        <i class="bi bi-bag-check me-1"></i>{{ __('app.mark_completed') }}
+                    </button>
+                </form>
+            @endif
+        @endif
+
+        @if($order->status === 'delivered')
+            <form method="POST" action="{{ route('admin.orders.completed', $order) }}" class="d-inline">
+                @csrf @method('PATCH')
+                <button type="submit" class="btn btn-success btn-sm">
+                    <i class="bi bi-bag-check me-1"></i>{{ __('app.mark_completed') }}
+                </button>
+            </form>
+        @endif
+
         @if(!in_array($order->status, ['completed', 'rejected', 'cancelled', 'cancelled_by_admin', 'cancelled_by_customer']))
             <button class="btn btn-outline-dark btn-sm" data-bs-toggle="modal" data-bs-target="#cancelModal">
                 <i class="bi bi-slash-circle me-1"></i>{{ __('app.cancel') }}
             </button>
         @endif
+
         {{-- Print Invoice --}}
-        @if(in_array($order->status, ['accepted', 'completed']))
+        @if(in_array($order->status, ['accepted', 'preparing', 'ready', 'delivered', 'completed']))
         <a href="{{ route('admin.orders.invoice', $order) }}" target="_blank"
            class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-printer me-1"></i>{{ __('app.print_invoice') }}

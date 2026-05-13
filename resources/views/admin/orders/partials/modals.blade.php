@@ -109,7 +109,9 @@
 </div>
 @endif
 
-{{-- ── COMPLETE MODAL ─────────────────────────────────────────── --}}
+{{-- ── COMPLETE MODAL (legacy: admin can still force-complete from accepted) ──
+     Note: the normal workflow now uses inline PATCH forms via the new routes.
+     This modal is kept as a fallback and triggered from the old POST /complete route. --}}
 @if($order->status === 'accepted')
 <div class="modal fade" id="completeModal" tabindex="-1">
     <div class="modal-dialog modal-sm">

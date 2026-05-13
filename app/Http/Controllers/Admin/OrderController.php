@@ -129,10 +129,73 @@ class OrderController extends Controller
         return back()->with('success', __('app.order_cancelled'));
     }
 
-    // ── Complete ───────────────────────────────────────────────────────────────
+    // ── Complete (legacy POST route — still valid from accepted state) ────────
     public function complete(Request $request, Order $order)
     {
+        $allowed = [Order::STATUS_ACCEPTED, Order::STATUS_READY, Order::STATUS_DELIVERED];
+        if (! in_array($order->status, $allowed)) {
+            return back()->with('error', __('app.order_action_not_allowed'));
+        }
+
+        $order->update([
+            'status'       => Order::STATUS_COMPLETED,
+            'completed_at' => now(),
+        ]);
+
+        return back()->with('success', __('app.order_completed'));
+    }
+
+    // ── Mark Preparing (accepted → preparing) ─────────────────────────────────
+    public function markPreparing(Order $order)
+    {
         if ($order->status !== Order::STATUS_ACCEPTED) {
+            return back()->with('error', __('app.order_action_not_allowed'));
+        }
+
+        $order->update(['status' => Order::STATUS_PREPARING]);
+
+        return back()->with('success', __('app.order_marked_preparing'));
+    }
+
+    // ── Mark Ready (preparing → ready) ────────────────────────────────────────
+    public function markReady(Order $order)
+    {
+        if ($order->status !== Order::STATUS_PREPARING) {
+            return back()->with('error', __('app.order_action_not_allowed'));
+        }
+
+        $order->update(['status' => Order::STATUS_READY]);
+
+        return back()->with('success', __('app.order_marked_ready'));
+    }
+
+    // ── Mark Delivered (ready → delivered) — delivery orders only ─────────────
+    public function markDelivered(Order $order)
+    {
+        if ($order->status !== Order::STATUS_READY) {
+            return back()->with('error', __('app.order_action_not_allowed'));
+        }
+
+        if ($order->order_type !== Order::TYPE_DELIVERY) {
+            return back()->with('error', __('app.order_action_not_allowed'));
+        }
+
+        $order->update(['status' => Order::STATUS_DELIVERED]);
+
+        return back()->with('success', __('app.order_marked_delivered'));
+    }
+
+    // ── Mark Completed (ready for table/takeaway OR delivered for delivery) ────
+    public function markCompleted(Order $order)
+    {
+        $allowed = [Order::STATUS_READY, Order::STATUS_DELIVERED];
+        if (! in_array($order->status, $allowed)) {
+            return back()->with('error', __('app.order_action_not_allowed'));
+        }
+
+        // Delivery orders must go through delivered first (unless admin forces it)
+        if ($order->order_type === Order::TYPE_DELIVERY
+            && $order->status === Order::STATUS_READY) {
             return back()->with('error', __('app.order_action_not_allowed'));
         }
 

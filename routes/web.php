@@ -113,6 +113,11 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
             Route::post('{order}/reject',   [App\Http\Controllers\Admin\OrderController::class, 'reject'])->name('reject');
             Route::post('{order}/cancel',   [App\Http\Controllers\Admin\OrderController::class, 'cancel'])->name('cancel');
             Route::post('{order}/complete', [App\Http\Controllers\Admin\OrderController::class, 'complete'])->name('complete');
+            // ── New workflow transitions ──────────────────────────────────────
+            Route::patch('{order}/preparing', [App\Http\Controllers\Admin\OrderController::class, 'markPreparing'])->name('preparing');
+            Route::patch('{order}/ready',     [App\Http\Controllers\Admin\OrderController::class, 'markReady']    )->name('ready');
+            Route::patch('{order}/delivered', [App\Http\Controllers\Admin\OrderController::class, 'markDelivered'])->name('delivered');
+            Route::patch('{order}/completed', [App\Http\Controllers\Admin\OrderController::class, 'markCompleted'])->name('completed');
         });
     });
 

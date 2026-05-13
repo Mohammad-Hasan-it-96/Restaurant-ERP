@@ -547,5 +547,14 @@ return [
     'cart_cleared'                     => 'تم تفريغ السلة.',
     'cart_item_not_found'              => 'المنتج غير موجود في السلة.',
     'product_not_found_or_unavailable' => 'المنتج غير موجود أو غير متاح حالياً.',
-    'server_error'                     => 'حدث خطأ في الخادم، يرجى المحاولة لاحقاً.',
+    'server_error'                     => 'حدث خطأ في الخادم، يُرجى المحاولة لاحقاً.',
+
+    // ── Order workflow status transitions ────────────────────────────────────
+    'order_marked_preparing'  => 'بدأ تحضير الطلب.',
+    'order_marked_ready'      => 'الطلب جاهز.',
+    'order_marked_delivered'  => 'تم توصيل الطلب.',
+    'mark_preparing'          => 'بدء التحضير',
+    'mark_ready'              => 'تحديد كجاهز',
+    'mark_delivered'          => 'تحديد كمُوصَّل',
+    'mark_completed'          => 'إتمام الطلب',
 ];

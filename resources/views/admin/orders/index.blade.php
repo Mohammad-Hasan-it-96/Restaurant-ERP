@@ -72,13 +72,16 @@
     @php
         $currentStatus = request('status', 'all');
         $quickFilters  = [
-            'all'       => ['label' => 'الكل',        'icon' => 'bi-list-ul',      'color' => 'secondary'],
-            'pending'   => ['label' => 'قيد الانتظار','icon' => 'bi-hourglass-split','color' => 'warning'],
-            'accepted'  => ['label' => 'مقبول',       'icon' => 'bi-check-circle', 'color' => 'primary'],
-            'completed' => ['label' => 'مكتمل',       'icon' => 'bi-check2-all',   'color' => 'success'],
+            'all'       => ['label' => 'الكل',          'icon' => 'bi-list-ul',        'color' => 'secondary'],
+            'pending'   => ['label' => 'قيد الانتظار',  'icon' => 'bi-hourglass-split','color' => 'warning'],
+            'accepted'  => ['label' => 'مقبول',         'icon' => 'bi-check-circle',   'color' => 'primary'],
+            'preparing' => ['label' => 'قيد التحضير',   'icon' => 'bi-fire',           'color' => 'warning'],
+            'ready'     => ['label' => 'جاهز',          'icon' => 'bi-check2-circle',  'color' => 'info'],
+            'delivered' => ['label' => 'تم التوصيل',    'icon' => 'bi-truck',          'color' => 'primary'],
+            'completed' => ['label' => 'مكتمل',         'icon' => 'bi-check2-all',     'color' => 'success'],
             'cancelled_by_admin'    => ['label' => 'ملغي (إدارة)',  'icon' => 'bi-x-circle',  'color' => 'dark'],
             'cancelled_by_customer' => ['label' => 'ملغي (عميل)',  'icon' => 'bi-x-octagon', 'color' => 'secondary'],
-            'rejected'  => ['label' => 'مرفوض',       'icon' => 'bi-ban',          'color' => 'danger'],
+            'rejected'  => ['label' => 'مرفوض',         'icon' => 'bi-ban',            'color' => 'danger'],
         ];
     @endphp
     <div class="d-flex gap-2 flex-wrap mb-3">
@@ -161,7 +164,7 @@
                             <td>@include('admin.orders.partials.status-badge', ['status' => $order->status])</td>
                             <td class="text-muted small">{{ $order->created_at->format('Y-m-d H:i') }}</td>
                             <td>
-                                <div class="d-flex gap-1">
+                                <div class="d-flex gap-1 flex-wrap">
                                     <a href="{{ route('admin.orders.show', $order) }}"
                                        class="btn btn-sm btn-outline-primary"
                                        title="{{ __('app.view') }}">
@@ -173,6 +176,47 @@
                                        title="طباعة سريعة">
                                         <i class="bi bi-printer"></i>
                                     </a>
+                                    {{-- Quick workflow transition buttons --}}
+                                    @can('update', $order)
+                                    @if($order->status === 'accepted')
+                                        <form method="POST" action="{{ route('admin.orders.preparing', $order) }}" class="d-inline">
+                                            @csrf @method('PATCH')
+                                            <button type="submit" class="btn btn-sm btn-warning" title="{{ __('app.mark_preparing') }}">
+                                                <i class="bi bi-fire"></i>
+                                            </button>
+                                        </form>
+                                    @elseif($order->status === 'preparing')
+                                        <form method="POST" action="{{ route('admin.orders.ready', $order) }}" class="d-inline">
+                                            @csrf @method('PATCH')
+                                            <button type="submit" class="btn btn-sm btn-info text-white" title="{{ __('app.mark_ready') }}">
+                                                <i class="bi bi-check2-all"></i>
+                                            </button>
+                                        </form>
+                                    @elseif($order->status === 'ready')
+                                        @if($order->order_type === 'delivery')
+                                            <form method="POST" action="{{ route('admin.orders.delivered', $order) }}" class="d-inline">
+                                                @csrf @method('PATCH')
+                                                <button type="submit" class="btn btn-sm btn-primary" title="{{ __('app.mark_delivered') }}">
+                                                    <i class="bi bi-truck"></i>
+                                                </button>
+                                            </form>
+                                        @else
+                                            <form method="POST" action="{{ route('admin.orders.completed', $order) }}" class="d-inline">
+                                                @csrf @method('PATCH')
+                                                <button type="submit" class="btn btn-sm btn-success" title="{{ __('app.mark_completed') }}">
+                                                    <i class="bi bi-bag-check"></i>
+                                                </button>
+                                            </form>
+                                        @endif
+                                    @elseif($order->status === 'delivered')
+                                        <form method="POST" action="{{ route('admin.orders.completed', $order) }}" class="d-inline">
+                                            @csrf @method('PATCH')
+                                            <button type="submit" class="btn btn-sm btn-success" title="{{ __('app.mark_completed') }}">
+                                                <i class="bi bi-bag-check"></i>
+                                            </button>
+                                        </form>
+                                    @endif
+                                    @endcan
                                 </div>
                             </td>
                         </tr>

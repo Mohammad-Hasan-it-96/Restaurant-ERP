@@ -549,4 +549,13 @@ return [
     'cart_item_not_found'              => 'Product not found in cart.',
     'product_not_found_or_unavailable' => 'Product not found or currently unavailable.',
     'server_error'                     => 'A server error occurred, please try again later.',
+
+    // ── Order workflow status transitions ────────────────────────────────────
+    'order_marked_preparing'  => 'Order is now being prepared.',
+    'order_marked_ready'      => 'Order is ready.',
+    'order_marked_delivered'  => 'Order marked as delivered.',
+    'mark_preparing'          => 'Start Preparing',
+    'mark_ready'              => 'Mark as Ready',
+    'mark_delivered'          => 'Mark as Delivered',
+    'mark_completed'          => 'Mark as Completed',
 ];
