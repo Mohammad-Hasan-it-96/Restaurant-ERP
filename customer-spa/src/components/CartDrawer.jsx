@@ -1,0 +1,123 @@
+﻿import { useEffect, useState } from 'react';
+import { CloseIcon, TrashIcon, PlusIcon, MinusIcon, ImageIcon } from './Icons';
+import { formatPrice } from '../api/client';
+import { createT } from '../i18n';
+
+export default function CartDrawer({ items, onClose, onChangeQty, onRemove, onClear, onCheckout, isRtl }) {
+  const t = createT(isRtl);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => { const id = setTimeout(() => setOpen(true), 10); return () => clearTimeout(id); }, []);
+
+  const close = () => {
+    setOpen(false);
+    setTimeout(onClose, 300);
+  };
+
+  const subtotal = items.reduce((s, i) => s + i.product_price * i.quantity, 0);
+  const slideStyle = {
+    transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
+    transform: open
+      ? 'translateX(0)'
+      : isRtl ? 'translateX(-100%)' : 'translateX(100%)',
+  };
+
+  return (
+    <>
+      <div
+        className="cart-overlay"
+        style={{ opacity: open ? 1 : 0, transition: 'opacity 0.3s' }}
+        onClick={close}
+      />
+      <div className="cart-drawer" style={slideStyle}>
+        {/* Header */}
+        <div className="cart-header">
+          <h2 className="cart-title">{t('yourOrder')}</h2>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {items.length > 0 && (
+              <button className="icon-btn" onClick={onClear} title={t('clearCart')}>
+                <TrashIcon size={18} />
+              </button>
+            )}
+            <button className="icon-btn" onClick={close} aria-label={t('close')}>
+              <CloseIcon size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="cart-body">
+          {items.length === 0 ? (
+            <div className="cart-empty">
+              <span className="cart-empty-icon">🛒</span>
+              <p className="cart-empty-text">{t('emptyCart')}</p>
+              <p style={{ fontSize: 13, marginTop: 6, color: 'var(--text-muted)' }}>
+                {t('emptyCartHint')}
+              </p>
+            </div>
+          ) : (
+            items.map(item => (
+              <div key={item.product_id} className="cart-item">
+                {/* Image */}
+                {item.product_image ? (
+                  <img className="cart-item-img" src={item.product_image} alt={item.product_name}
+                       onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }} />
+                ) : null}
+                <div className="cart-item-img-placeholder"
+                     style={item.product_image ? { display:'none' } : {}}>
+                  <ImageIcon size={20} />
+                </div>
+
+                {/* Info */}
+                <div className="cart-item-info">
+                  <div className="cart-item-name">{item.product_name}</div>
+                  <div className="cart-item-price">
+                    {formatPrice(item.product_price, isRtl)} × {item.quantity}
+                  </div>
+                </div>
+
+                {/* Controls */}
+                <div className="cart-item-right">
+                  <span className="cart-item-total">
+                    {formatPrice(item.product_price * item.quantity, isRtl)}
+                  </span>
+                  <div className="cart-item-controls">
+                    <button className="cart-qty-btn"
+                            onClick={() => onChangeQty(item.product_id, -1)}>
+                      <MinusIcon size={12} />
+                    </button>
+                    <span className="cart-qty-val">{item.quantity}</span>
+                    <button className="cart-qty-btn"
+                            onClick={() => onChangeQty(item.product_id, 1)}>
+                      <PlusIcon size={12} />
+                    </button>
+                  </div>
+                  <button className="cart-item-delete"
+                          onClick={() => onRemove(item.product_id)}
+                          aria-label={t('remove')}>
+                    <TrashIcon size={14} />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="cart-footer">
+          <div className="cart-subtotal-row">
+            <span>{t('subtotal')}</span>
+            <strong className="cart-subtotal-amount">{formatPrice(subtotal, isRtl)}</strong>
+          </div>
+          <button
+            className="btn-checkout"
+            disabled={items.length === 0}
+            onClick={() => { onClose(); setTimeout(onCheckout, 100); }}
+          >
+            {t('proceedCheckout')}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
