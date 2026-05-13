@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\V1\CartController;
 use App\Http\Controllers\API\V1\CategoryController;
+use App\Http\Controllers\API\V1\CustomerController;
 use App\Http\Controllers\API\V1\DeliveryZoneController;
 use App\Http\Controllers\API\V1\FrontendLogController;
 use App\Http\Controllers\API\V1\OrderController;
@@ -52,6 +53,14 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         ->withoutMiddleware('throttle:60,1')
         ->middleware('throttle:30,1')
         ->name('logs.frontend');
+
+    // ── Customer session (guest profile) ──────────────────────────────────────
+    Route::middleware([
+            \Illuminate\Session\Middleware\StartSession::class,
+            'customer.session',
+        ])->group(function () {
+        Route::get('customer/me', [CustomerController::class, 'me'])->name('customer.me');
+    });
 
     // ── Cart (session-based, no auth required) ────────────────────────────────
     Route::middleware([

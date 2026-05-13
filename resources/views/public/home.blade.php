@@ -437,17 +437,8 @@ window.addEventListener('unhandledrejection', function(e) {
             }
         }
 
-        // ── Auto-fill customer info ───────────────────────────────────────────
-        try {
-            const savedCustomer = localStorage.getItem('customer_info');
-            if (savedCustomer) {
-                const info = JSON.parse(savedCustomer);
-                const nameInput  = document.querySelector('[name="customer_name"]');
-                const phoneInput = document.querySelector('[name="customer_phone"]');
-                if (nameInput  && info.name)  nameInput.value  = info.name;
-                if (phoneInput && info.phone) phoneInput.value = info.phone;
-            }
-        } catch (e) { /* ignore */ }
+        // ── Auto-fill customer info (server session → localStorage fallback) ───
+        await autofillCustomerInfo();
 
         wireEvents();
         renderLoadingSkeletons();
@@ -1248,6 +1239,58 @@ window.addEventListener('unhandledrejection', function(e) {
     /**
      * Submits checkout form to orders API.
      */
+    // ── Customer Session Auto-fill ───────────────────────────────────────────
+
+    /**
+     * Fill checkout name/phone inputs from a given info object.
+     */
+    function autofillCustomerFields(info) {
+        if (!info) return;
+        const nameInput  = document.querySelector('[name="customer_name"]');
+        const phoneInput = document.querySelector('[name="customer_phone"]');
+        if (nameInput  && info.name  && !nameInput.value)  nameInput.value  = info.name;
+        if (phoneInput && info.phone && !phoneInput.value) phoneInput.value = info.phone;
+    }
+
+    /**
+     * Try to auto-fill customer info:
+     *  1. Fetch GET /api/v1/customer/me  (server session — most authoritative)
+     *  2. Fall back to localStorage 'customer_info'
+     * Saves server data to localStorage so it survives cookie expiry.
+     */
+    async function autofillCustomerInfo() {
+        try {
+            const res = await fetch(`${apiBase}/customer/me`, {
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin',
+            });
+            if (res.ok) {
+                const body = await res.json().catch(() => ({}));
+                const info = body?.data;          // { name, phone } or null
+                if (info && (info.name || info.phone)) {
+                    // Server knows this customer — autofill & update localStorage
+                    autofillCustomerFields(info);
+                    try { localStorage.setItem('customer_info', JSON.stringify(info)); } catch {}
+                    logEvent('customer.autofill', { source: 'server' });
+                    return;
+                }
+            }
+        } catch (e) {
+            // Network error — silently fall through to localStorage
+        }
+
+        // ── Fallback: localStorage ─────────────────────────────────────────
+        try {
+            const saved = localStorage.getItem('customer_info');
+            if (saved) {
+                const info = JSON.parse(saved);
+                autofillCustomerFields(info);
+                logEvent('customer.autofill', { source: 'localStorage' });
+            }
+        } catch (e) { /* ignore */ }
+    }
+
+    // ── Checkout Submit ──────────────────────────────────────────────────────
     async function submitCheckout(event) {
         event.preventDefault();
         el.checkoutApiErrors.innerHTML = '';
