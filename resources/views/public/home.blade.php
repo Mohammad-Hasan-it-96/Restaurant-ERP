@@ -16,29 +16,32 @@
     @endif
     <link rel="stylesheet" href="{{ asset('css/customer-home.css') }}">
 </head>
-<body>
+<body class="app-body">
 
-<nav class="navbar bg-white border-bottom sticky-top customer-header">
-    <div class="container page-shell py-2">
+{{-- ── App Header ──────────────────────────────────────────────────────── --}}
+<header class="app-header sticky-top">
+    <div class="app-header-inner">
         <div class="d-flex align-items-center gap-2">
-            <img id="appLogoMini" class="hero-logo d-none" alt="logo" style="width:44px;height:44px;border-radius:12px;">
-            <div id="navLogoFallback" class="logo-fallback logo-fallback-sm"><i class="bi bi-shop"></i></div>
+            <div class="app-logo-wrap">
+                <img id="appLogoMini" class="app-logo d-none" alt="logo">
+                <div id="navLogoFallback" class="app-logo-fallback"><i class="bi bi-shop"></i></div>
+            </div>
             <div>
-                <div id="restaurantNameNav" class="fw-semibold">{{ __('app.restaurant') }}</div>
-                <small id="statusTextNav" class="text-muted">...</small>
+                <div id="restaurantNameNav" class="app-name">{{ __('app.restaurant') }}</div>
+                <small id="statusTextNav" class="app-status">...</small>
             </div>
         </div>
-
         <div class="d-flex align-items-center gap-2">
             @if($activeLanguages->count() > 0)
             <div class="dropdown">
-                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-translate me-1"></i>{{ strtoupper($currentLocale) }}
+                <button class="icon-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Language">
+                    <i class="bi bi-translate"></i>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                     @foreach($activeLanguages as $language)
                     <li>
-                        <a class="dropdown-item {{ $currentLocale === $language->code ? 'active' : '' }}" href="{{ route('language.change', $language->code) }}">
+                        <a class="dropdown-item {{ $currentLocale === $language->code ? 'active' : '' }}"
+                           href="{{ route('language.change', $language->code) }}">
                             {{ $language->name }}
                         </a>
                     </li>
@@ -46,138 +49,187 @@
                 </ul>
             </div>
             @endif
-
-            <button id="desktopCartBtn" class="btn top-cart-btn position-relative d-none d-md-inline-flex" data-bs-toggle="offcanvas" data-bs-target="#cartCanvas">
-                <i class="bi bi-cart3 me-1"></i>
+            <button class="icon-btn" aria-label="Notifications">
+                <i class="bi bi-bell"></i>
+            </button>
+            {{-- Desktop cart button --}}
+            <button id="desktopCartBtn"
+                    class="btn top-cart-btn position-relative d-none d-md-inline-flex align-items-center gap-1"
+                    data-bs-toggle="offcanvas"
+                    data-bs-target="#cartCanvas">
+                <i class="bi bi-cart3"></i>
                 <span>{{ __('app.cart') }}</span>
                 <span id="cartCountTop" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">0</span>
             </button>
         </div>
     </div>
-</nav>
+</header>
 
-<main class="container page-shell py-3 pb-5">
-
-    <div id="globalError" class="alert alert-danger d-none d-flex align-items-center justify-content-between gap-2">
-        <span id="globalErrorText">{{ __('app.failed_loading_data') }}</span>
-        <button id="retryLoadBtn" class="btn btn-sm btn-light">{{ __('app.retry') }}</button>
+{{-- ── Restaurant Hero Strip ────────────────────────────────────────────── --}}
+<div class="hero-strip">
+    <div class="hero-strip-inner">
+        <img id="heroLogo" class="hero-logo-sm d-none" alt="logo">
+        <div id="heroLogoFallback" class="hero-logo-sm-fallback"><i class="bi bi-shop"></i></div>
+        <div class="hero-strip-text">
+            <h1 id="heroName" class="restaurant-title">{{ __('app.restaurant') }}</h1>
+            <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                <span id="openBadge" class="badge text-bg-secondary">...</span>
+                <span id="todayHours" class="today-hours small text-muted"></span>
+            </div>
+            <div class="d-flex flex-wrap gap-2 mt-2">
+                <a id="phoneLink" class="contact-link d-none" href="#">
+                    <i class="bi bi-telephone-fill"></i><span id="phoneText"></span>
+                </a>
+                <a id="whatsappLink" class="contact-link contact-link-wa d-none" href="#" target="_blank" rel="noopener">
+                    <i class="bi bi-whatsapp"></i><span id="whatsappText"></span>
+                </a>
+            </div>
+        </div>
     </div>
+    <small id="deliveryNote" class="delivery-note text-muted d-block"></small>
+</div>
 
-    <section class="hero-card p-3 p-md-3 mb-3">
-        <div class="row g-3 align-items-center">
-            <div class="col-auto">
-                <img id="heroLogo" class="hero-logo d-none" alt="logo">
-                <div id="heroLogoFallback" class="logo-fallback"><i class="bi bi-shop"></i></div>
-            </div>
-            <div class="col">
-                <h1 id="heroName" class="h4 mb-1">{{ __('app.restaurant') }}</h1>
-                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                    <span id="openBadge" class="badge text-bg-secondary">...</span>
-                    <span id="todayHours" class="small text-muted"></span>
-                </div>
-                <div class="d-flex flex-wrap gap-2">
-                    <a id="phoneLink" class="btn btn-sm btn-outline-secondary d-none" href="#">
-                        <i class="bi bi-telephone me-1"></i><span id="phoneText"></span>
-                    </a>
-                    <a id="whatsappLink" class="btn btn-sm btn-outline-success d-none" href="#" target="_blank" rel="noopener">
-                        <i class="bi bi-whatsapp me-1"></i><span id="whatsappText"></span>
-                    </a>
-                </div>
-                <small id="deliveryNote" class="text-muted d-block mt-2"></small>
-            </div>
-        </div>
-    </section>
+{{-- ── Global Error ─────────────────────────────────────────────────────── --}}
+<div id="globalError" class="global-error-bar d-none">
+    <span id="globalErrorText">{{ __('app.failed_loading_data') }}</span>
+    <button id="retryLoadBtn" class="btn btn-sm btn-light ms-2">{{ __('app.retry') }}</button>
+</div>
 
-    <section id="rootSection" class="section-card p-2 p-md-3 mb-2">
-        <div class="d-flex align-items-center justify-content-between mb-2">
-            <h2 class="h6 mb-0">{{ __('app.main_categories') }}</h2>
-        </div>
-        <div id="rootCategoriesState"></div>
-        <div id="rootCategories" class="chip-scroll d-flex gap-2"></div>
-    </section>
+{{-- ── Search Bar ───────────────────────────────────────────────────────── --}}
+<div class="search-bar-wrap">
+    <div class="search-inner">
+        <i class="bi bi-search search-icon"></i>
+        <input id="productSearch"
+               data-action="search-products"
+               class="search-input"
+               type="search"
+               placeholder="{{ __('app.search_product') }}"
+               autocomplete="off">
+    </div>
+</div>
 
-    <section id="subSection" class="section-card p-2 p-md-3 mb-2 d-none">
-        <h2 class="h6 mb-2">{{ __('app.sub_categories') }}</h2>
-        <div id="subCategoriesState"></div>
-        <div id="subCategories" class="chip-scroll d-flex gap-2"></div>
-    </section>
+{{-- ── Root Category Pills ──────────────────────────────────────────────── --}}
+<section id="rootSection" class="pills-section">
+    <div id="rootCategoriesState"></div>
+    <div id="rootCategories" class="chip-scroll d-flex gap-2"></div>
+</section>
 
-    <section id="featuredSection" class="section-card p-2 p-md-3 mb-2 d-none">
-        <div class="d-flex align-items-center justify-content-between mb-2 gap-2">
-            <h2 class="h6 mb-0">{{ __('app.featured') }}</h2>
-        </div>
-        <div id="featuredState"></div>
-        <div id="featuredProducts" class="row g-3 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4"></div>
-    </section>
+{{-- ── Sub-category Pills ───────────────────────────────────────────────── --}}
+<section id="subSection" class="pills-section d-none">
+    <div id="subCategoriesState"></div>
+    <div id="subCategories" class="chip-scroll d-flex gap-2"></div>
+</section>
 
-    <section id="productsSection" class="section-card p-2 p-md-3 mb-4">
-        <div class="d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
-            <h2 class="h6 mb-0">{{ __('app.products_by_category') }}</h2>
-            <input id="productSearch" data-action="search-products" class="form-control form-control-sm product-search-input" placeholder="{{ __('app.search_product') }}">
-        </div>
-        <div id="productsState"></div>
-        <div id="categoryProducts" class="row g-3 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4"></div>
-    </section>
-</main>
+{{-- ── Featured Products ────────────────────────────────────────────────── --}}
+<section id="featuredSection" class="content-section d-none">
+    <div class="section-header">
+        <h2>{{ __('app.featured') }}</h2>
+    </div>
+    <div id="featuredState" class="px-3"></div>
+    <div id="featuredProducts" class="row g-3 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4"></div>
+</section>
 
-{{-- ── Toast Container ────────────────────────────────────────────────── --}}
+{{-- ── Products List ────────────────────────────────────────────────────── --}}
+<section id="productsSection" class="content-section pb-4">
+    <div id="productsState" class="px-3"></div>
+    <div id="categoryProducts" class="row g-3 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4"></div>
+</section>
+
+{{-- ── Toast Container ──────────────────────────────────────────────────── --}}
 <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index:9999;margin-top:70px"></div>
 
-<button id="mobileCartBtn" class="btn btn-dark floating-cart d-md-none" data-bs-toggle="offcanvas" data-bs-target="#cartCanvas">
-    <i class="bi bi-cart3 me-1"></i>
-    <span id="cartCountMobile">0</span>
-</button>
+{{-- ── Mobile Bottom Navigation ─────────────────────────────────────────── --}}
+<nav class="bottom-nav d-md-none" aria-label="Main navigation">
+    <a href="#" class="bottom-nav-item active">
+        <i class="bi bi-book-open"></i>
+        <span>{{ __('app.menu') }}</span>
+    </a>
+    <button id="mobileCartBtn"
+            class="bottom-nav-cart-btn"
+            data-bs-toggle="offcanvas"
+            data-bs-target="#cartCanvas"
+            aria-label="{{ __('app.cart') }}">
+        <i class="bi bi-cart3 me-1"></i>
+        <span id="cartCountMobile">0</span>
+    </button>
+    <a href="#" class="bottom-nav-item">
+        <i class="bi bi-person"></i>
+        <span>Profile</span>
+    </a>
+</nav>
 
+{{-- ── Product Detail Modal (bottom-sheet style) ───────────────────────── --}}
 <div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 id="productModalTitle" class="modal-title"></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="product-img-wrap rounded mb-3 d-none" id="productModalImageWrap">
-                    <img id="productModalImage" alt="product">
+    <div class="modal-dialog modal-product-sheet">
+        <div class="modal-content product-modal-content">
+
+            {{-- Top image area: always present, image fills it when JS removes d-none --}}
+            <div class="product-modal-top">
+                <div id="productModalImageWrap" class="product-sheet-img-fill d-none">
+                    <img id="productModalImage" alt="product" class="product-sheet-img">
                 </div>
-                <p id="productModalDesc" class="text-muted small mb-3"></p>
-                <div class="d-flex justify-content-between align-items-center">
-                    <span>{{ __('app.price') }}</span>
-                    <div>
-                        <span id="productModalOldPrice" class="price-old me-2 d-none"></span>
-                        <span id="productModalPrice" class="price-now"></span>
+                <button type="button"
+                        class="product-sheet-close btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="{{ __('app.close') }}"></button>
+            </div>
+
+            {{-- Scrollable details --}}
+            <div class="product-sheet-body">
+                <div class="product-sheet-title-row">
+                    <h5 id="productModalTitle" class="product-sheet-title mb-0"></h5>
+                    <div class="text-end flex-shrink-0">
+                        <span id="productModalOldPrice" class="price-old d-none d-block small lh-1 mb-1"></span>
+                        <span id="productModalPrice" class="product-sheet-price"></span>
                     </div>
                 </div>
-                <div id="productModalUnavailable" class="alert alert-secondary py-2 mt-3 d-none">{{ __('app.unavailable') }}</div>
+                <div class="product-sheet-meta">
+                    <i class="bi bi-star-fill text-warning me-1"></i>4.9
+                    <span class="text-muted ms-1">· 120+ Reviews · 15-20 min</span>
+                </div>
+                <p id="productModalDesc" class="product-sheet-desc mb-3"></p>
+                <div id="productModalUnavailable" class="alert alert-secondary py-2 mt-2 d-none">{{ __('app.unavailable') }}</div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ __('app.close') }}</button>
-                <button id="productModalAddBtn" type="button" class="btn btn-primary">{{ __('app.add_to_cart') }}</button>
+
+            {{-- Add to cart footer --}}
+            <div class="product-sheet-footer">
+                <button id="productModalAddBtn" type="button" class="btn-add-sheet">
+                    <i class="bi bi-plus-circle me-2"></i>{{ __('app.add_to_cart') }}
+                </button>
             </div>
+
         </div>
     </div>
 </div>
 
+{{-- ── Cart Offcanvas ───────────────────────────────────────────────────── --}}
 <div class="offcanvas offcanvas-end" tabindex="-1" id="cartCanvas" aria-labelledby="cartCanvasLabel">
-    <div class="offcanvas-header border-bottom">
-        <h5 class="offcanvas-title" id="cartCanvasLabel"><i class="bi bi-cart3 me-2"></i>{{ __('app.cart') }}</h5>
+    <div class="offcanvas-header cart-offcanvas-header">
+        <h5 class="offcanvas-title fw-bold" id="cartCanvasLabel">
+            <i class="bi bi-bag me-2"></i>{{ __('app.cart') }}
+        </h5>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
     </div>
-    <div class="offcanvas-body d-flex flex-column">
-        <div id="cartItems" class="flex-grow-1"></div>
-        <hr>
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="text-muted">{{ __('app.subtotal') }}</span>
-            <strong id="cartSubtotal">0.00</strong>
+    <div class="offcanvas-body cart-offcanvas-body d-flex flex-column p-0">
+        <div id="cartItems" class="cart-items-list flex-grow-1"></div>
+        <div class="cart-offcanvas-footer">
+            <div class="cart-total-row">
+                <span class="text-muted">{{ __('app.subtotal') }}</span>
+                <strong id="cartSubtotal" class="cart-total-amount">0.00</strong>
+            </div>
+            <button id="checkoutOpenBtn" class="btn-checkout-primary">
+                {{ __('app.checkout') }}&ensp;<i class="bi bi-arrow-right"></i>
+            </button>
         </div>
-        <button id="checkoutOpenBtn" class="btn btn-success w-100">{{ __('app.checkout') }}</button>
     </div>
 </div>
 
+{{-- ── Checkout Modal ───────────────────────────────────────────────────── --}}
 <div class="modal fade" id="checkoutModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable">
-        <form id="checkoutForm" class="modal-content">
+        <form id="checkoutForm" class="modal-content checkout-modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">{{ __('app.checkout') }}</h5>
+                <h5 class="modal-title fw-bold">{{ __('app.checkout') }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -186,17 +238,17 @@
 
                 <div class="row g-2">
                     <div class="col-12">
-                        <label class="form-label">{{ __('app.full_name') }}</label>
+                        <label class="form-label fw-semibold small">{{ __('app.full_name') }}</label>
                         <input id="field-customer_name" name="customer_name" class="form-control" required autocomplete="name">
                         <div class="invalid-feedback" id="err-customer_name"></div>
                     </div>
                     <div class="col-12">
-                        <label class="form-label">{{ __('app.phone') }}</label>
+                        <label class="form-label fw-semibold small">{{ __('app.phone') }}</label>
                         <input id="field-customer_phone" name="customer_phone" class="form-control" required autocomplete="tel">
                         <div class="invalid-feedback" id="err-customer_phone"></div>
                     </div>
                     <div class="col-12">
-                        <label class="form-label">{{ __('app.order_type') }}</label>
+                        <label class="form-label fw-semibold small">{{ __('app.order_type') }}</label>
                         <select name="order_type" id="orderType" class="form-select" required>
                             <option value="table">{{ __('app.table') }}</option>
                             <option value="delivery">{{ __('app.delivery') }}</option>
@@ -207,19 +259,19 @@
                 </div>
 
                 <div id="tableFields" class="checkout-fields checkout-hidden mt-2">
-                    <label class="form-label">{{ __('app.table_number') }}</label>
+                    <label class="form-label fw-semibold small">{{ __('app.table_number') }}</label>
                     <input id="field-table_number" name="table_number" class="form-control" placeholder="{{ __('app.table_number_placeholder') }}">
                     <div class="invalid-feedback" id="err-table_number"></div>
                 </div>
 
                 <div id="deliveryFields" class="checkout-fields checkout-hidden mt-2">
                     <div class="mb-2">
-                        <label class="form-label">{{ __('app.address') }}</label>
+                        <label class="form-label fw-semibold small">{{ __('app.address') }}</label>
                         <textarea id="field-address" name="address" class="form-control" rows="2"></textarea>
                         <div class="invalid-feedback" id="err-address"></div>
                     </div>
                     <div class="mb-2">
-                        <label class="form-label">{{ __('app.delivery_type') }}</label>
+                        <label class="form-label fw-semibold small">{{ __('app.delivery_type') }}</label>
                         <select name="delivery_type" id="deliveryType" class="form-select">
                             <option value="immediate">{{ __('app.immediate') }}</option>
                             <option value="scheduled">{{ __('app.scheduled') }}</option>
@@ -227,12 +279,12 @@
                         <div class="invalid-feedback" id="err-delivery_type"></div>
                     </div>
                     <div id="scheduledField" class="checkout-fields checkout-hidden mb-2">
-                        <label class="form-label">{{ __('app.scheduled_at') }}</label>
+                        <label class="form-label fw-semibold small">{{ __('app.scheduled_at') }}</label>
                         <input id="field-scheduled_at" type="datetime-local" name="scheduled_at" class="form-control">
                         <div class="invalid-feedback" id="err-scheduled_at"></div>
                     </div>
                     <div class="mb-2">
-                        <label class="form-label">{{ __('app.estimated_delivery_fee') }}</label>
+                        <label class="form-label fw-semibold small">{{ __('app.estimated_delivery_fee') }}</label>
                         <select id="deliveryZone" class="form-select">
                             <option value="">{{ __('app.select') }}</option>
                         </select>
@@ -240,15 +292,17 @@
                     </div>
                 </div>
 
-                <div class="mt-2">
-                    <label class="form-label">{{ __('app.customer_note') }}</label>
+                <div class="mt-3">
+                    <label class="form-label fw-semibold small">
+                        <i class="bi bi-pencil-square me-1 text-muted"></i>{{ __('app.customer_note') }}
+                    </label>
                     <textarea id="field-customer_note" name="customer_note" class="form-control" rows="2"></textarea>
                     <div class="invalid-feedback" id="err-customer_note"></div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ __('app.close') }}</button>
-                <button id="submitOrderBtn" type="submit" class="btn btn-primary">
+                <button id="submitOrderBtn" type="submit" class="btn btn-primary px-4">
                     <span id="submitOrderBtnText">{{ __('app.submit_order') }}</span>
                 </button>
             </div>
@@ -256,22 +310,21 @@
     </div>
 </div>
 
+{{-- ── Order Success Modal ───────────────────────────────────────────────── --}}
 <div class="modal fade" id="orderSuccessModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title text-success"><i class="bi bi-check-circle me-1"></i>{{ __('app.order_success') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-content success-modal-content">
+            <div class="modal-header border-0 pb-0">
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body text-center py-4">
-                <div class="mb-3">
-                    <i class="bi bi-check-circle-fill text-success" style="font-size:3.5rem;line-height:1;"></i>
-                </div>
-                <p class="mb-2">{{ __('app.order_success_message') }}</p>
+            <div class="modal-body text-center py-3 px-4">
+                <i class="bi bi-check-circle-fill text-success mb-3" style="font-size:4rem;display:block;"></i>
+                <h4 class="fw-bold mb-2">{{ __('app.order_success') }}</h4>
+                <p class="text-muted mb-3">{{ __('app.order_success_message') }}</p>
                 <div class="success-order-number" id="orderSuccessNumber">---</div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">{{ __('app.ok') }}</button>
+            <div class="modal-footer border-0 justify-content-center pb-4">
+                <button type="button" class="btn btn-primary px-5" data-bs-dismiss="modal">{{ __('app.ok') }}</button>
             </div>
         </div>
     </div>
