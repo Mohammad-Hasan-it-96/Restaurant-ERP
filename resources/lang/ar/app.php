@@ -111,6 +111,9 @@ return [
     'products_association' => 'سيتم ربط جميع المنتجات بحسابك.',
     'excel_file' => 'ملف إكسل',
     'upload_and_import' => 'رفع واستيراد',
+    'import_success_count' => 'تم استيراد :count منتج بنجاح.',
+    'import_skipped_count' => 'تم تخطي :count صف.',
+    'import_file_error'    => 'تعذّر قراءة الملف',
     // Languages management
     'languages_management' => 'إدارة اللغات',
     'manage_languages' => 'إدارة لغات النظام',

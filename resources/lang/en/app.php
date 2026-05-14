@@ -132,6 +132,9 @@ return [
     'products_association' => 'All products will be associated with your account.',
     'excel_file' => 'Excel File',
     'upload_and_import' => 'Upload and Import',
+    'import_success_count' => ':count product(s) imported successfully.',
+    'import_skipped_count' => ':count row(s) skipped.',
+    'import_file_error'    => 'Could not read the file',
     // Languages management
     'languages_management' => 'Languages Management',
     'manage_languages' => 'Manage your system languages',

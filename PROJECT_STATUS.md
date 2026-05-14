@@ -10,8 +10,7 @@ A single-restaurant ERP system built with Laravel 12. It consists of:
 
 - **Admin panel** (server-rendered Blade + Bootstrap 5) at `/admin`
 - **Customer-facing SPA** (React 18, Vite-built, deployed to `public/spa/`) served at `/`
-- **REST API v1** at `/api/v1/*` consumed by the customer SPA
-- **Legacy API** at `/api/*` (Passport-based — dead code, still present, see §8)
+- **REST API v1** at `/api/v1/*` — 14 clean routes, all legacy Passport code removed
 
 The `HomeController` serves `public/spa/index.html` when built, or falls back to the legacy `resources/views/public/home.blade.php` (1 639-line vanilla JS page) if the React build is absent.
 
@@ -31,9 +30,9 @@ The `HomeController` serves `public/spa/index.html` when built, or falls back to
 - [x] Price + optional `discount_price` (effective price accessor on model)
 - [x] `is_active`, `is_available`, `is_featured`, `sort_order` toggles
 - [x] Product image upload to storage
-- [x] Excel import (`phpoffice/phpspreadsheet`) + export + download template
 - [x] Filter by category + search in admin list; sortable columns
 - [x] Public API: `GET /api/v1/products` (filters: `category_id`, `featured`, `search`, pagination)
+- [ ] **⚠️ BROKEN**: Excel export / import / download template — `Admin\ProductController` delegates these three actions to `App\Http\Controllers\API\ProductController` (lines 188, 198, 203), which was **deleted** during Passport cleanup. Visiting `/admin/products/export`, `/admin/products/template`, or posting to `/admin/products/import` throws a fatal `BindingResolutionException` at runtime.
 
 ### Categories
 - [x] Full CRUD (admin + moderator)
@@ -55,11 +54,13 @@ The `HomeController` serves `public/spa/index.html` when built, or falls back to
 - [x] All three types: `table`, `delivery` (immediate + scheduled), `takeaway`
 - [x] Full status workflow: `pending` → `accepted` → `preparing` → `ready` → `delivered` → `completed`
 - [x] Also: `rejected`, `cancelled_by_admin`, `cancelled_by_customer`
-- [x] Admin: accept (with optional delivery fee override), reject (with reason), cancel, complete
-- [x] Admin: `Preparing` → `Ready` → `Delivered` → `Completed` status buttons with transition guards
+- [x] **Accept modal — delivery orders**: shows customer address, all active delivery zones (name + fee as read-only reference table), manual delivery fee input
+- [x] **Accept modal — dine-in / takeaway**: simple confirmation only (no fee input, no zones table)
+- [x] Admin: reject (with reason preset/custom), cancel, force-complete
+- [x] Admin: `Preparing` → `Ready` → `Delivered` → `Completed` PATCH status buttons with transition guards
 - [x] Admin: **Mark as Paid** button with payment method selection (cash / card / online)
 - [x] Admin: payment status badge in order list
-- [x] Admin: invoice/print view per order
+- [x] Admin: **invoice/print view** per order — standalone 80 mm thermal receipt page with full `@media print` CSS
 - [x] Admin: **WhatsApp notification buttons** — pre-filled bilingual (AR/EN) message per status opens `wa.me/{phone}` in new tab
 - [x] Unique order number: `ORD-YYYYMMDD-NNNN`
 - [x] Duplicate-order guard: same phone + items + type within 5 s blocked via Cache
@@ -71,6 +72,7 @@ The `HomeController` serves `public/spa/index.html` when built, or falls back to
 ### Session Isolation
 - [x] `CustomerSession` middleware overrides `session.cookie` to `customer_spa_session`
 - [x] Admin panel uses `restaurant_session` cookie (set via `SESSION_COOKIE` in `.env`)
+- [x] **Three former `CustomerSession` route groups merged into one** in `api.php`
 - [x] Placing an order no longer corrupts or invalidates the admin's authenticated session
 
 ### Cart
@@ -81,6 +83,7 @@ The `HomeController` serves `public/spa/index.html` when built, or falls back to
 ### Delivery Zones
 - [x] Full CRUD in admin (sortable columns)
 - [x] `GET /api/v1/delivery-zones`; `estimated_fee` shown in checkout
+- [x] Active zones shown as reference table inside the Accept Order modal (delivery orders only)
 
 ### System Config
 - [x] Key-value config store with grouping (`system_configs` table); 24 h cached reads
@@ -120,6 +123,15 @@ The `HomeController` serves `public/spa/index.html` when built, or falls back to
 ### Admin Navbar & Sidebar
 - [x] Navbar: restaurant logo (or icon fallback) + locale-aware restaurant name from `system_configs`
 - [x] Sidebar: user profile (avatar, name, email, role badge); pending-orders badge on Orders link
+- [x] Restaurant branding shown **once** (navbar only) — removed duplicate from sidebar
+
+### Invoice / Thermal Print
+- [x] `admin/orders/{order}/invoice` — standalone page (not in `layouts/app`)
+- [x] Full thermal receipt CSS: `@page { size: 80mm auto; margin: 0 }`, monospace 11–14 px, dashed `hr` dividers, centered logo header, black-on-white, all backgrounds/shadows stripped for print
+- [x] Print button calls `window.print()`; "← Back" link hidden when printing via `.no-print`
+
+### API Logging
+- [x] `ApiLoggingMiddleware` **wired up** — appended to all API requests via `bootstrap/app.php` (`$middleware->api(append: [ApiLoggingMiddleware::class])`)
 
 ### Reports
 - [x] Date range filter, revenue cards, bar chart, doughnut, top products table, orders-by-status, paginated list, CSV export
@@ -136,36 +148,44 @@ The `HomeController` serves `public/spa/index.html` when built, or falls back to
 
 ---
 
-## 3. WHAT'S MISSING / TODO
+## 3. KNOWN BUGS
+
+| # | Severity | Issue | File |
+|---|----------|-------|------|
+| 1 | **🔴 Critical** | **Excel export / import / template broken** — `Admin\ProductController::export()`, `downloadTemplate()`, `processImport()` call `app(\App\Http\Controllers\API\ProductController::class)` (lines 188, 198, 203), but that class was deleted during Passport cleanup. Visiting any of the three routes throws `BindingResolutionException`. **Fix**: move the Excel logic into a `ProductExcelService` and update the three delegating methods. | `app/Http/Controllers/Admin/ProductController.php` |
+| 2 | Low | New-order notification banner text in `orders/index.blade.php` is hardcoded Arabic, not behind a translation key. | `resources/views/admin/orders/index.blade.php` |
+| 3 | Low | `resources/views/public/home.blade.php` is a 1 639-line legacy vanilla JS SPA, served only as fallback. Safe to delete once React SPA is confirmed always present in production. | `resources/views/public/home.blade.php` |
+
+---
+
+## 4. WHAT'S MISSING / TODO
 
 ### High Priority
 | # | Feature | Notes |
 |---|---------|-------|
-| 1 | **Legacy API / Passport cleanup** | `POST /api/register`, `POST /api/login`, `GET/PUT/DELETE /api/products` + `RegisterController` + legacy `ProductController` + 5 `oauth_*` tables are all dead code. Active attack surface. **→ Remove.** |
-| 2 | **Automated tests** | `Feature/` + `Unit/` directories exist but empty. Need coverage for: place order, cancel order, cart mutations, `isOpenAt()`, `CustomerSession` isolation. |
-| 3 | **WhatsApp auto-send** | Admin clicks a pre-filled link manually. No auto-dispatch on order arrival. Could use CallMeBot or Twilio. |
-| 4 | **WebSocket / real-time push** | Admin polls every 10 s. No true push (Laravel Echo / Pusher / Soketi). |
+| 1 | **Fix Excel import/export** | Move `processImport`, `export`, `downloadTemplate` logic out of the deleted `API\ProductController` into a new `ProductExcelService`; update the 3 delegating methods in `Admin\ProductController` |
+| 2 | **Automated tests** | Feature tests: place order, cancel order, cart mutations, `isOpenAt()`, `CustomerSession` isolation |
 
 ### Medium Priority
 | # | Feature | Notes |
 |---|---------|-------|
-| 5 | **Thermal / POS print layout** | Invoice view exists; needs `@media print` CSS for 58/80 mm receipt printers. |
-| 6 | **Product modifiers / add-ons** | No sizes, variants, extra toppings, combos. |
-| 7 | **Inventory / stock tracking** | `quantity` column exists; stock check skipped in `OrderService`. |
-| 8 | **Takeaway scheduled pickup** | Only `delivery` supports `scheduled_at`. Takeaway is always immediate. |
+| 3 | **WhatsApp auto-send** | Admin clicks a pre-filled link manually. No auto-dispatch on order arrival. Could use CallMeBot or Twilio. |
+| 4 | **WebSocket / real-time push** | Admin polls every 10 s. No true push (Laravel Echo / Pusher / Soketi). |
+| 5 | **Product modifiers / add-ons** | No sizes, variants, extra toppings, combos. |
+| 6 | **Inventory / stock tracking** | `quantity` column exists on `products`; stock check is skipped in `OrderService`. |
+| 7 | **Takeaway scheduled pickup** | Only `delivery` supports `scheduled_at`. Takeaway is always immediate. |
 
 ### Low Priority
 | # | Feature | Notes |
 |---|---------|-------|
-| 9 | **`ApiLoggingMiddleware` orphan** | Exists but registered nowhere — wire it up or delete it. |
-| 10 | **SPA build automation** | `public/spa/` must be manually rebuilt after JS changes (`cd customer-spa && npm run build`). No CI/CD hook. |
-| 11 | **Delete legacy `public/home.blade.php`** | 1 639-line vanilla JS fallback. Once React SPA is stable in production, this can be removed. |
-| 12 | **Multi-image per product** | Only one `image` field. |
-| 13 | **Table management** | Table number is free text; no floor plan or reservation. |
+| 8 | **SPA build automation** | `public/spa/` must be manually rebuilt after JS changes (`cd customer-spa && npm run build`). No CI/CD hook. |
+| 9 | **Delete legacy `public/home.blade.php`** | 1 639-line vanilla JS fallback. Delete once React SPA is confirmed stable in production. |
+| 10 | **Multi-image per product** | Only one `image` field. |
+| 11 | **Table management** | Table number is free text; no floor plan or reservation. |
 
 ---
 
-## 4. FILE STRUCTURE
+## 5. FILE STRUCTURE
 
 ```
 Restaurant-ERP/
@@ -177,14 +197,17 @@ Restaurant-ERP/
 │   │   │   │   ├── ConfigController.php
 │   │   │   │   ├── CustomerController.php
 │   │   │   │   ├── DeliveryZoneController.php
-│   │   │   │   ├── OrderController.php
-│   │   │   │   ├── ProductController.php
+│   │   │   │   ├── OrderController.php         ← full workflow; passes $deliveryZones to show view
+│   │   │   │   ├── ProductController.php        ← ⚠️ export/import/template delegate to deleted class
 │   │   │   │   └── ReportController.php
 │   │   │   ├── API/
-│   │   │   │   ├── DashboardController.php   ← serves admin dashboard view
-│   │   │   │   ├── ProductController.php     ← ⚠️ legacy (Passport)
-│   │   │   │   ├── RegisterController.php    ← ⚠️ legacy (Passport)
+│   │   │   │   ├── BaseController.php
+│   │   │   │   ├── DashboardController.php      ← admin dashboard + locale-aware branding
+│   │   │   │   ├── LanguageController.php
+│   │   │   │   ├── ProfileController.php
+│   │   │   │   ├── UserController.php
 │   │   │   │   └── V1/
+│   │   │   │       ├── ApiResponse.php          ← trait: success() / error() helpers
 │   │   │   │       ├── CartController.php
 │   │   │   │       ├── CategoryController.php
 │   │   │   │       ├── CustomerController.php
@@ -193,72 +216,95 @@ Restaurant-ERP/
 │   │   │   │       ├── OrderController.php
 │   │   │   │       ├── ProductController.php
 │   │   │   │       └── PublicSettingsController.php
-│   │   │   └── Public/HomeController.php     ← serves public/spa/index.html (or blade fallback)
+│   │   │   ├── AuthController.php
+│   │   │   └── Public/HomeController.php        ← serves public/spa/index.html (or blade fallback)
 │   │   └── Middleware/
 │   │       ├── AdminMiddleware.php
-│   │       ├── ApiLoggingMiddleware.php       ← ⚠️ not registered anywhere
-│   │       ├── CustomerSession.php           ← isolates SPA session from admin session
+│   │       ├── ApiLoggingMiddleware.php          ← ✅ registered in bootstrap/app.php
+│   │       ├── Authenticate.php
+│   │       ├── CustomerSession.php              ← isolates SPA session from admin session
 │   │       ├── EnsureCustomerSession.php
 │   │       ├── ModeratorMiddleware.php
+│   │       ├── RedirectIfAuthenticated.php
 │   │       └── SetLocale.php
+│   ├── Models/
+│   │   ├── Category.php
+│   │   ├── Customer.php
+│   │   ├── DeliveryZone.php                     ← active() scope
+│   │   ├── Language.php
+│   │   ├── Order.php                            ← STATUS_* / TYPE_* / PAYMENT_* constants
+│   │   ├── OrderItem.php
+│   │   ├── Product.php                          ← effectivePrice, displayName accessors
+│   │   ├── SystemConfig.php
+│   │   └── User.php
+│   ├── Policies/ProductPolicy.php
+│   ├── Providers/AppServiceProvider.php, AuthServiceProvider.php
 │   └── Services/
 │       ├── CartService.php
 │       ├── OrderService.php
 │       └── SystemConfigService.php
-├── customer-spa/                             ← React 18 + Vite SPA
+├── bootstrap/app.php                            ← ApiLoggingMiddleware appended to api group
+├── customer-spa/                                ← React 18 + Vite SPA
 │   ├── src/
 │   │   ├── App.jsx
-│   │   ├── i18n.js                           ← AR+EN strings, switchLanguage()
+│   │   ├── i18n.js                              ← AR+EN strings, switchLanguage()
 │   │   ├── components/
-│   │   │   ├── Header.jsx                    ← locale-aware restaurant name + logo
-│   │   │   └── … (12 other components)
+│   │   │   ├── Header.jsx                       ← locale-aware name: en→name_en, ar→name_ar
+│   │   │   └── … (other components)
 │   │   ├── hooks/
 │   │   │   ├── useCart.js
-│   │   │   └── useRestaurantData.js
+│   │   │   └── useRestaurantData.js             ← decodes restaurant_name + restaurant_name_en
 │   │   └── utils/format.js, myOrders.js
-│   └── vite.config.js                        ← builds to ../public/spa/
+│   └── vite.config.js                           ← builds to ../public/spa/
 ├── database/
-│   ├── migrations/                           ← 25 migrations, all ran
-│   └── seeders/
-│       └── SystemConfigSeeder.php            ← single source of truth for all configs
+│   ├── migrations/                              ← 25 migrations, all ran
+│   └── seeders/SystemConfigSeeder.php           ← single source of truth for all config keys
 ├── resources/
-│   ├── lang/ar/ + en/
+│   ├── lang/ar/app.php + en/app.php             ← full bilingual translation files
 │   └── views/
-│       ├── admin/configs/ (index, group)      ← rich config edit UI
-│       ├── admin/orders/  (index, show, invoice, partials/)
-│       ├── layouts/app.blade.php             ← navbar + sidebar with restaurant branding
-│       ├── public/home.blade.php             ← ⚠️ legacy 1639-line vanilla JS fallback
+│       ├── admin/configs/ (index, group)
+│       ├── admin/orders/
+│       │   ├── index.blade.php
+│       │   ├── show.blade.php
+│       │   ├── invoice.blade.php                ← standalone 80 mm thermal receipt page
+│       │   └── partials/
+│       │       ├── modals.blade.php             ← accept (delivery vs dine-in), reject, cancel, mark-paid
+│       │       ├── status-badge.blade.php
+│       │       └── whatsapp-notify.blade.php
+│       ├── layouts/app.blade.php                ← navbar (branding) + sidebar (user profile)
+│       ├── public/home.blade.php                ← ⚠️ legacy 1 639-line vanilla JS fallback
 │       └── dashboard.blade.php
-├── routes/api.php, web.php
+├── routes/
+│   ├── api.php                                  ← 14 clean v1 routes; single CustomerSession group
+│   └── web.php                                  ← 62 admin + public + auth routes
 └── public/
-    ├── spa/                                  ← built React SPA
+    ├── spa/                                     ← built React SPA
     └── sounds/notification.wav
 ```
 
 ---
 
-## 5. DATABASE STATUS
+## 6. DATABASE STATUS
 
 | Table | Key Columns / Notes |
 |-------|---------------------|
 | `users` | id, name, email, password, role (admin/moderator), profile_picture |
 | `languages` | id, name, code, flag_path, status, is_default, direction |
 | `products` | id, name_ar, name_en, description_ar/en, price, discount_price, image, category_id, is_available, is_featured, is_active, sort_order, quantity |
-| `system_configs` | id, key, value, group — 12 active keys (see §6) |
+| `system_configs` | id, key, value, group — 12 active keys (see §7) |
 | `categories` | id, name_ar, name_en, image, parent_id, sort_order, is_active |
 | `customers` | id, full_name, phone (unique), default_address, is_blocked, blocked_reason |
 | `delivery_zones` | id, area_name, estimated_fee, sort_order, is_active |
-| `orders` | id, order_number, customer_id, order_type, address, delivery_type, scheduled_at, status, subtotal, delivery_fee, total, payment_status, payment_method, rejection_reason |
+| `orders` | id, order_number, customer_id, order_type, table_number, address, delivery_type, scheduled_at, status, subtotal, estimated_delivery_fee, delivery_fee, discount, total, payment_status, payment_method, customer_note, rejection_reason, accepted_at, completed_at, cancelled_at |
 | `order_items` | id, order_id, product_id, product_name, product_price, quantity, total |
-| `oauth_*` (5 tables) | ⚠️ **Unused** — Passport dead code; safe to drop |
 | `cache`, `jobs` | Standard Laravel tables |
 
-**Total: 16 tables** (5 unused `oauth_*`)  
+**Total: 11 active tables** — 5 `oauth_*` tables dropped via migration `2026_05_14_134844_drop_oauth_tables`  
 **All 25 migrations: ran** — no pending migrations.
 
 ---
 
-## 6. SYSTEM CONFIG KEYS
+## 7. SYSTEM CONFIG KEYS
 
 | Group | Key | Type | Notes |
 |-------|-----|------|-------|
@@ -277,14 +323,7 @@ Restaurant-ERP/
 
 ---
 
-## 7. API ENDPOINTS
-
-### ⚠️ Legacy — remove
-| Method | Path | Notes |
-|--------|------|-------|
-| POST | `/api/register` | Passport — dead |
-| POST | `/api/login` | Passport — dead |
-| * | `/api/products` | Passport — dead |
+## 8. API ENDPOINTS
 
 ### Public V1 (throttle: 60/min)
 | Method | Path | Description |
@@ -295,57 +334,50 @@ Restaurant-ERP/
 | GET | `/api/v1/delivery-zones` | Active zones |
 | POST | `/api/v1/logs/frontend` | Client error logging (30/min) |
 
-### CustomerSession middleware group
+### CustomerSession middleware group (isolated `customer_spa_session` cookie)
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/v1/orders` | Place order (10/min) |
+| POST | `/api/v1/orders` | Place order (extra strict: 10/min) |
 | GET | `/api/v1/orders/{number}` | Track order |
 | POST | `/api/v1/orders/{number}/cancel` | Cancel order |
 | GET | `/api/v1/customer/me` | Guest profile auto-fill |
-| GET/POST | `/api/v1/cart/*` | Cart CRUD |
+| GET | `/api/v1/cart` | Get cart |
+| POST | `/api/v1/cart/add` | Add to cart |
+| POST | `/api/v1/cart/update` | Update quantity |
+| POST | `/api/v1/cart/remove` | Remove item |
+| POST | `/api/v1/cart/clear` | Clear cart |
 
 ### Admin Web Routes (`auth` middleware)
 | Path | Role | Description |
 |------|------|-------------|
-| `/admin/dashboard` | any | Dashboard |
-| `/admin/products/*` | moderator | Product CRUD + import/export |
+| `/admin/dashboard` | any | Dashboard + stats |
+| `/admin/products/*` | moderator | CRUD (**export/import: ⚠️ broken**) |
 | `/admin/categories/*` | moderator | Category CRUD |
-| `/admin/orders/*` | any/mod | Full order workflow + WhatsApp |
-| `/admin/customers/*` | any | Customer list + block |
+| `/admin/orders/*` | any/mod | Full workflow + WhatsApp + invoice |
+| `/admin/customers/*` | any | Customer list + block/unblock |
 | `/admin/delivery-zones/*` | moderator | Zone CRUD |
-| `/admin/configs/*` | admin | System config group edit |
+| `/admin/configs/*` | admin | System config edit |
 | `/admin/reports` | any | Reports + CSV export |
 | `/admin/users/*` | admin | Staff management |
+| `/admin/languages/*` | moderator | Language management |
 | `/admin/profile/*` | any | Own profile |
-
----
-
-## 8. KNOWN ISSUES
-
-| # | Severity | Issue |
-|---|----------|-------|
-| 1 | **High** | Legacy Passport routes (`/api/register`, `/api/login`, `/api/products`) still active — dead code and unnecessary attack surface. `RegisterController`, legacy `ProductController`, and 5 `oauth_*` tables all need removing. |
-| 2 | Medium | Three separate `Route::middleware([CustomerSession, 'customer.session'])` groups in `api.php` (orders, customer/me, cart) should be merged into one. |
-| 3 | Medium | `ApiLoggingMiddleware` exists but is registered nowhere. Wire it up to the v1 group or delete it. |
-| 4 | Low | New-order notification banner text in `orders/index.blade.php` is hardcoded Arabic — not behind a translation key. |
-| 5 | Low | `resources/views/public/home.blade.php` is a 1 639-line legacy vanilla JS SPA used only as a fallback. Delete once React SPA is confirmed stable in production. |
-| 6 | Low | No `@media print` CSS on the invoice view — unusable on 58/80 mm thermal printers. |
 
 ---
 
 ## 9. NEXT ACTIONS (prioritised)
 
-### Do now (clean up debt)
-1. **Remove legacy Passport code** — delete `RegisterController`, legacy `ProductController` (in `API/`), the 3 dead routes in `api.php`, and write a migration to `dropIfExists` the 5 `oauth_*` tables
-2. **Merge the 3 `CustomerSession` route groups** in `api.php` into one group
-3. **Register or delete `ApiLoggingMiddleware`**
+### Fix now (critical bug)
+1. **Fix Excel export / import / template** — `Admin\ProductController` delegates these 3 actions to the deleted `App\Http\Controllers\API\ProductController`. Options:
+   - Create `App\Services\ProductExcelService` with the full Spreadsheet logic and inject it into `Admin\ProductController`
+   - Or inline the logic directly into the 3 methods in `Admin\ProductController`
 
 ### Soon (new features)
-4. **Automated tests** — Feature tests for place order, cancel order, cart CRUD, `isOpenAt()`, session isolation
-5. **Thermal print CSS** — `@media print` stylesheet in `orders/invoice.blade.php` for receipt printers
-6. **WhatsApp auto-send** — Auto-open or background-send a WhatsApp message on new order (CallMeBot / Twilio)
+2. **Automated tests** — Feature tests for: place order, cancel order, cart CRUD, `isOpenAt()`, session isolation, accept delivery vs dine-in modal behaviour
+3. **WhatsApp auto-send** — Auto-dispatch on new order arrival (CallMeBot / Twilio / meta API)
+4. **WebSocket push** — Replace 10 s poll with Laravel Echo + Pusher/Soketi
 
 ### When ready (polish)
-7. **Delete `public/home.blade.php`** once React SPA is confirmed always present
-8. **SPA build automation** — Add deploy script: `cd customer-spa && npm ci && npm run build`
-9. **Product modifiers** — `product_options` JSON column + UI for sizes/extras
+5. **Delete `public/home.blade.php`** once React SPA is confirmed always present in production
+6. **SPA build automation** — Add deploy script: `cd customer-spa && npm ci && npm run build`
+7. **Product modifiers** — `product_options` JSON column + UI for sizes/extras
+8. **Inventory/stock** — Enable `quantity` column check in `OrderService` when placing orders

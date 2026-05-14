@@ -8,7 +8,12 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class ProductController extends Controller
@@ -180,27 +185,234 @@ class ProductController extends Controller
             ->with('success', __('app.product_deleted'));
     }
 
-    /* ── Keep legacy methods for Excel import/export ──────────────── */
-
-    public function export(Request $request)
-    {
-        // Delegate to the API controller which has the full Excel logic
-        return app(\App\Http\Controllers\API\ProductController::class)->export($request);
-    }
+    /* ── Excel Import / Export ───────────────────────────────────── */
 
     public function import()
     {
         return view('admin.products.import');
     }
 
+    public function export(Request $request)
+    {
+        $products = Product::with('category')->orderBy('sort_order')->orderBy('id')->get();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet       = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Products');
+
+        // ── Headers ───────────────────────────────────────────────
+        $headers = [
+            'A' => 'name_ar',
+            'B' => 'name_en',
+            'C' => 'description_ar',
+            'D' => 'description_en',
+            'E' => 'price',
+            'F' => 'discount_price',
+            'G' => 'category_id',
+            'H' => 'is_available',
+            'I' => 'is_featured',
+            'J' => 'is_active',
+            'K' => 'sort_order',
+        ];
+
+        foreach ($headers as $col => $label) {
+            $sheet->setCellValue("{$col}1", $label);
+        }
+
+        // Style the header row
+        $headerStyle = [
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ];
+        $sheet->getStyle('A1:K1')->applyFromArray($headerStyle);
+
+        // Auto-width
+        foreach (array_keys($headers) as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // ── Data rows ─────────────────────────────────────────────
+        $row = 2;
+        foreach ($products as $product) {
+            $sheet->setCellValue("A{$row}", $product->name_ar);
+            $sheet->setCellValue("B{$row}", $product->name_en);
+            $sheet->setCellValue("C{$row}", $product->description_ar);
+            $sheet->setCellValue("D{$row}", $product->description_en);
+            $sheet->setCellValue("E{$row}", $product->price);
+            $sheet->setCellValue("F{$row}", $product->discount_price);
+            $sheet->setCellValue("G{$row}", $product->category_id);
+            $sheet->setCellValue("H{$row}", $product->is_available ? 1 : 0);
+            $sheet->setCellValue("I{$row}", $product->is_featured  ? 1 : 0);
+            $sheet->setCellValue("J{$row}", $product->is_active    ? 1 : 0);
+            $sheet->setCellValue("K{$row}", $product->sort_order);
+            $row++;
+        }
+
+        $filename = 'products_export_' . now()->format('Y-m-d') . '.xlsx';
+
+        return $this->streamXlsx($spreadsheet, $filename);
+    }
+
+    /* ── Download Template ───────────────────────────────────────── */
+
     public function downloadTemplate()
     {
-        return app(\App\Http\Controllers\API\ProductController::class)->downloadTemplate();
+        $spreadsheet = new Spreadsheet();
+        $sheet       = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Products Import Template');
+
+        $headers = [
+            'A' => 'name_ar',
+            'B' => 'name_en',
+            'C' => 'description_ar',
+            'D' => 'description_en',
+            'E' => 'price',
+            'F' => 'discount_price',
+            'G' => 'category_id',
+            'H' => 'is_available',
+            'I' => 'is_featured',
+            'J' => 'is_active',
+            'K' => 'sort_order',
+        ];
+
+        foreach ($headers as $col => $label) {
+            $sheet->setCellValue("{$col}1", $label);
+        }
+
+        $headerStyle = [
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ];
+        $sheet->getStyle('A1:K1')->applyFromArray($headerStyle);
+
+        // Example row
+        $sheet->setCellValue('A2', 'برجر كلاسيك');
+        $sheet->setCellValue('B2', 'Classic Burger');
+        $sheet->setCellValue('C2', 'وصف المنتج بالعربية');
+        $sheet->setCellValue('D2', 'Product description in English');
+        $sheet->setCellValue('E2', '25.00');
+        $sheet->setCellValue('F2', '');               // optional
+        $sheet->setCellValue('G2', '');               // optional category_id
+        $sheet->setCellValue('H2', '1');              // 1=available, 0=not
+        $sheet->setCellValue('I2', '0');              // 1=featured
+        $sheet->setCellValue('J2', '1');              // 1=active
+        $sheet->setCellValue('K2', '0');              // sort order
+
+        // Style example row
+        $sheet->getStyle('A2:K2')->applyFromArray([
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F0FDF4']],
+        ]);
+
+        foreach (array_keys($headers) as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        return $this->streamXlsx($spreadsheet, 'products_import_template.xlsx');
     }
+
+    /* ── Process Import ──────────────────────────────────────────── */
 
     public function processImport(Request $request)
     {
-        return app(\App\Http\Controllers\API\ProductController::class)->processImport($request);
+        $request->validate([
+            'excel_file' => 'required|file|mimes:xlsx,xls|max:2048',
+        ]);
+
+        try {
+            $path        = $request->file('excel_file')->getRealPath();
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($path);
+            $sheet       = $spreadsheet->getActiveSheet();
+            $rows        = $sheet->toArray(null, true, true, true);  // assoc by column letter
+        } catch (\Throwable $e) {
+            Log::error('Product import - could not read file', ['error' => $e->getMessage()]);
+            return back()->with('error', __('app.import_file_error') . ': ' . $e->getMessage());
+        }
+
+        $imported = 0;
+        $skipped  = 0;
+        $errors   = [];
+
+        foreach ($rows as $lineNo => $row) {
+            // Skip header row
+            if ($lineNo === 1) {
+                continue;
+            }
+
+            $nameAr = trim((string) ($row['A'] ?? ''));
+
+            // Skip completely empty rows
+            if ($nameAr === '') {
+                $skipped++;
+                continue;
+            }
+
+            $price = (float) ($row['E'] ?? 0);
+            if ($price <= 0) {
+                $errors[] = "Row {$lineNo}: name_ar='{$nameAr}' skipped — price must be > 0";
+                $skipped++;
+                continue;
+            }
+
+            $categoryId = (int) ($row['G'] ?? 0) ?: null;
+
+            try {
+                Product::updateOrCreate(
+                    ['name_ar' => $nameAr],
+                    [
+                        'name'           => $nameAr,
+                        'name_en'        => trim((string) ($row['B'] ?? '')) ?: null,
+                        'description_ar' => trim((string) ($row['C'] ?? '')) ?: null,
+                        'description_en' => trim((string) ($row['D'] ?? '')) ?: null,
+                        'price'          => $price,
+                        'discount_price' => $row['F'] !== '' && $row['F'] !== null ? (float) $row['F'] : null,
+                        'category_id'    => $categoryId,
+                        'is_available'   => (bool) ($row['H'] ?? 1),
+                        'is_featured'    => (bool) ($row['I'] ?? 0),
+                        'is_active'      => (bool) ($row['J'] ?? 1),
+                        'sort_order'     => (int)  ($row['K'] ?? 0),
+                        'quantity'       => 0,
+                        'user_id'        => Auth::id(),
+                    ]
+                );
+                $imported++;
+            } catch (\Throwable $e) {
+                Log::error("Product import - row {$lineNo} failed", ['error' => $e->getMessage()]);
+                $errors[] = "Row {$lineNo}: '{$nameAr}' — " . $e->getMessage();
+            }
+        }
+
+        $message = __('app.import_success_count', ['count' => $imported]);
+        if ($skipped) {
+            $message .= ' ' . __('app.import_skipped_count', ['count' => $skipped]);
+        }
+        if (! empty($errors)) {
+            return back()
+                ->with('success', $message)
+                ->with('error', implode('<br>', $errors));
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /* ── Shared XLSX stream helper ───────────────────────────────── */
+
+    private function streamXlsx(Spreadsheet $spreadsheet, string $filename): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $writer = new Xlsx($spreadsheet);
+
+        return response()->streamDownload(
+            function () use ($writer) {
+                $writer->save('php://output');
+            },
+            $filename,
+            [
+                'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Cache-Control'       => 'max-age=0',
+                'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            ]
+        );
     }
 }
 
