@@ -4,7 +4,15 @@ import { switchLanguage, useI18n } from '../i18n';
 
 export default function Header({ settings, cartCount, onCartClick }) {
   const { lang, t } = useI18n();
-  const name = settings?.restaurant_name || t('menu');
+
+  // Pick locale-aware restaurant name:
+  // English → prefer restaurant_name_en, fall back to Arabic name
+  // Arabic  → prefer restaurant_name (Arabic), fall back to English name
+  const nameAr = settings?.restaurant_name    || '';
+  const nameEn = settings?.restaurant_name_en || '';
+  const name = lang === 'en'
+    ? (nameEn || nameAr || t('menu'))
+    : (nameAr || nameEn || t('menu'));
   const isOpen =
     !!settings?.is_open_now && settings?.is_accepting_orders !== false;
 

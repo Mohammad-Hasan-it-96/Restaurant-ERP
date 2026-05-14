@@ -27,7 +27,8 @@ export default function useRestaurantData() {
     ]);
     if (sR.status === 'fulfilled') {
       const s = extractData(sR.value.data) || {};
-      s.restaurant_name = decodeText(s.restaurant_name) || '';
+      s.restaurant_name    = decodeText(s.restaurant_name)    || '';
+      s.restaurant_name_en = decodeText(s.restaurant_name_en) || '';
       setSettings(s);
     }
     if (cR.status === 'fulfilled') {

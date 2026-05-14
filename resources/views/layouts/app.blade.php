@@ -175,11 +175,30 @@
     <!-- Header -->
     <nav class="navbar navbar-expand-lg shadow-sm fixed-top" style="background-color: var(--card-bg); border-bottom: 1px solid var(--border-color);">
         <div class="container-fluid">
+            @php
+                $navLocale  = strtolower(session('locale', config('app.locale', 'ar')));
+                $navLogo    = \App\Models\SystemConfig::get('restaurant_logo');
+                $navNameAr  = \App\Models\SystemConfig::get('restaurant_name_ar') ?: \App\Models\SystemConfig::get('site_name') ?: config('app.name');
+                $navNameEn  = \App\Models\SystemConfig::get('restaurant_name_en', '');
+                $navName    = $navLocale === 'en'
+                    ? ($navNameEn ?: $navNameAr)
+                    : $navNameAr;
+            @endphp
             <a class="navbar-brand d-flex align-items-center gap-2" href="{{ route('admin.dashboard') }}">
-                <div class="d-flex align-items-center justify-content-center rounded-circle" style="width: 40px; height: 40px; background-color: var(--primary); color: white;">
-                    <i class="bi bi-shop"></i>
-                </div>
-                <span class="fw-bold" style="color: var(--text);">{{ \App\Helpers\Helpers::translate('app_name') }}</span>
+                @if($navLogo)
+                    <img src="{{ asset('storage/' . ltrim($navLogo, '/')) }}"
+                         alt="{{ $navName }}"
+                         style="width:36px;height:36px;object-fit:contain;border-radius:8px;"
+                         onerror="this.style.display='none';document.getElementById('navBrandIcon').style.display='flex'">
+                    <div id="navBrandIcon" style="display:none;width:36px;height:36px;border-radius:50%;background-color:var(--primary);color:#fff;align-items:center;justify-content:center;">
+                        <i class="bi bi-shop"></i>
+                    </div>
+                @else
+                    <div style="width:36px;height:36px;border-radius:50%;background-color:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;">
+                        <i class="bi bi-shop"></i>
+                    </div>
+                @endif
+                <span class="fw-bold d-none d-sm-inline" style="color: var(--text);">{{ $navName }}</span>
             </a>
 
             <div class="d-flex align-items-center gap-3">
@@ -264,7 +283,7 @@
             <div class="text-center py-4">
                 @if(Auth::user()->profile_picture)
                     <div class="mx-auto mb-3">
-                        <img src="{{ asset('storage/' . Auth::user()->profile_picture) }}" alt="{{ Auth::user()->name }}" class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover;">
+                        <img src="{{ asset('storage/' . Auth::user()->profile_picture) }}" alt="{{ Auth::user()->name }}" class="rounded-circle" style="width: 72px; height: 72px; object-fit: cover;">
                     </div>
                 @else
                     <div class="avatar-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
@@ -473,41 +492,13 @@
                                     <i class="bi bi-list me-2"></i>
                                     <span>{{ \App\Helpers\Helpers::translate('all_configs') }}</span>
                                 </a>
+                                <a href="{{ route('admin.configs.group', 'restaurant') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->is('admin/configs/group/restaurant') ? 'active' : '' }}">
+                                    <i class="bi bi-shop me-2"></i>
+                                    <span>{{ \App\Helpers\Helpers::translate('restaurant') }}</span>
+                                </a>
                                 <a href="{{ route('admin.configs.group', 'general') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->is('admin/configs/group/general') ? 'active' : '' }}">
                                     <i class="bi bi-sliders me-2"></i>
                                     <span>{{ \App\Helpers\Helpers::translate('general') }}</span>
-                                </a>
-                                <a href="{{ route('admin.configs.group', 'email') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->is('admin/configs/group/email') ? 'active' : '' }}">
-                                    <i class="bi bi-envelope me-2"></i>
-                                    <span>{{ \App\Helpers\Helpers::translate('email') }}</span>
-                                </a>
-                                <a href="{{ route('admin.configs.group', 'social') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->is('admin/configs/group/social') ? 'active' : '' }}">
-                                    <i class="bi bi-share me-2"></i>
-                                    <span>{{ \App\Helpers\Helpers::translate('social') }}</span>
-                                </a>
-                                <a href="{{ route('admin.configs.group', 'support') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->is('admin/configs/group/support') ? 'active' : '' }}">
-                                    <i class="bi bi-headset me-2"></i>
-                                    <span>{{ \App\Helpers\Helpers::translate('support') }}</span>
-                                </a>
-                                <a href="{{ route('admin.configs.group', 'ui') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->is('admin/configs/group/ui') ? 'active' : '' }}">
-                                    <i class="bi bi-palette me-2"></i>
-                                    <span>{{ \App\Helpers\Helpers::translate('ui') }}</span>
-                                </a>
-                                <a href="{{ route('admin.configs.group', 'analytics') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->is('admin/configs/group/analytics') ? 'active' : '' }}">
-                                    <i class="bi bi-graph-up me-2"></i>
-                                    <span>{{ \App\Helpers\Helpers::translate('analytics') }}</span>
-                                </a>
-                                <a href="{{ route('admin.configs.group', 'api') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->is('admin/configs/group/api') ? 'active' : '' }}">
-                                    <i class="bi bi-braces me-2"></i>
-                                    <span>{{ \App\Helpers\Helpers::translate('api') }}</span>
-                                </a>
-                                <a href="{{ route('admin.configs.group', 'security') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->is('admin/configs/group/security') ? 'active' : '' }}">
-                                    <i class="bi bi-shield-lock me-2"></i>
-                                    <span>{{ \App\Helpers\Helpers::translate('security') }}</span>
-                                </a>
-                                <a href="{{ route('admin.configs.group', 'ecommerce') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->is('admin/configs/group/ecommerce') ? 'active' : '' }}">
-                                    <i class="bi bi-cart me-2"></i>
-                                    <span>{{ \App\Helpers\Helpers::translate('ecommerce') }}</span>
                                 </a>
                             </div>
                         </div>

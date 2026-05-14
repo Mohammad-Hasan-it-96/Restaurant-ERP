@@ -16,14 +16,15 @@ class DatabaseSeeder extends Seeder
         // User::factory(10)->create();
 
         User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+            'name' => 'Super Admin',
+            'email' => 'admin@Alghadeer.com',
+            'password' => bcrypt('password'), // Change this to a secure password in production
+            'role' => 'admin',
         ]);
 
         // Call the Seeders
         $this->call([
             SystemConfigSeeder::class,
-            RestaurantConfigSeeder::class,
             LanguageSeeder::class,
             CategorySeeder::class,
             ProductSeeder::class,

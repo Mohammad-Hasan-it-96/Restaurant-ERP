@@ -5,15 +5,42 @@
 @section('content')
 <div class="container-fluid py-4">
 
-    {{-- Header --}}
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-        <h2 class="fw-bold mb-0">
-            <i class="bi bi-speedometer2 me-2 text-primary"></i>
-            {{ \App\Helpers\Helpers::translate('dashboard') }}
-        </h2>
-        <a href="{{ route('admin.orders.index') }}" class="btn btn-outline-primary btn-sm">
-            <i class="bi bi-receipt me-1"></i>{{ \App\Helpers\Helpers::translate('view_all') }}
-        </a>
+    {{-- ── Restaurant Branding Banner ─────────────────────────────────────── --}}
+    <div class="card border-0 shadow-sm mb-4" style="background:linear-gradient(135deg,var(--primary) 0%,#7c3aed 100%);color:#fff;">
+        <div class="card-body d-flex align-items-center gap-4 py-3">
+            {{-- Logo --}}
+            @if($restaurantLogo)
+                <img src="{{ asset('storage/' . ltrim($restaurantLogo, '/')) }}"
+                     alt="{{ $restaurantName }}"
+                     style="width:72px;height:72px;object-fit:contain;border-radius:12px;
+                            background:rgba(255,255,255,.15);padding:6px;flex-shrink:0;"
+                     onerror="this.style.display='none'">
+            @else
+                <div style="width:72px;height:72px;border-radius:12px;background:rgba(255,255,255,.2);
+                            display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-shop" style="font-size:2rem;"></i>
+                </div>
+            @endif
+            {{-- Names --}}
+            <div>
+                <h4 class="fw-bold mb-0" style="letter-spacing:-.3px;">{{ $restaurantName }}</h4>
+                @php
+                    $subtitle = app()->getLocale() === 'en' ? $restaurantNameAr : $restaurantNameEn;
+                @endphp
+                @if($subtitle && $subtitle !== $restaurantName)
+                    <p class="mb-0 opacity-75 small">{{ $subtitle }}</p>
+                @endif
+                <p class="mb-0 mt-1 opacity-75 small">
+                    <i class="bi bi-speedometer2 me-1"></i>{{ \App\Helpers\Helpers::translate('dashboard') }}
+                </p>
+            </div>
+            {{-- Action button --}}
+            <div class="ms-auto">
+                <a href="{{ route('admin.orders.index') }}" class="btn btn-light btn-sm opacity-90">
+                    <i class="bi bi-receipt me-1"></i>{{ \App\Helpers\Helpers::translate('view_all') }}
+                </a>
+            </div>
+        </div>
     </div>
 
     {{-- ── Stats Cards ──────────────────────────────────────────────────── --}}

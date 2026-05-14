@@ -148,7 +148,8 @@ class SystemConfigService
     public function getPublicSettings(): array
     {
         return [
-            'restaurant_name'      => $this->get('restaurant_name', ''),
+            'restaurant_name'      => $this->getFirstText(['restaurant_name_ar', 'restaurant_name', 'site_name'], config('app.name', '')),
+            'restaurant_name_en'   => $this->getFirstText(['restaurant_name_en'], ''),
             'restaurant_logo'      => $this->get('restaurant_logo'),
             'restaurant_phone'     => $this->get('restaurant_phone'),
             'restaurant_whatsapp'  => $this->get('restaurant_whatsapp'),

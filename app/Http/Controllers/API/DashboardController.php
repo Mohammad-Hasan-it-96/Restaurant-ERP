@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Models\Customer;
 use App\Models\Order;
+use App\Services\SystemConfigService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -41,6 +42,17 @@ class DashboardController extends BaseController
             ->limit(8)
             ->get();
 
+        // ── Restaurant branding (locale-aware) ──────────────────────────────
+        $cfgSvc  = app(SystemConfigService::class);
+        $locale  = session('locale', config('app.locale', 'ar'));
+        $restaurantNameAr = $cfgSvc->getText('restaurant_name_ar', '');
+        $restaurantNameEn = $cfgSvc->getText('restaurant_name_en', '');
+        // Primary display name follows current admin locale
+        $restaurantName   = $locale === 'en'
+            ? ($restaurantNameEn ?: $restaurantNameAr ?: config('app.name'))
+            : ($restaurantNameAr ?: config('app.name'));
+        $restaurantLogo   = $cfgSvc->get('restaurant_logo');
+
         return view('dashboard', compact(
             'ordersToday',
             'salesToday',
@@ -49,6 +61,10 @@ class DashboardController extends BaseController
             'weekLabels',
             'weekCounts',
             'recentOrders',
+            'restaurantName',
+            'restaurantNameAr',
+            'restaurantNameEn',
+            'restaurantLogo',
         ));
     }
 

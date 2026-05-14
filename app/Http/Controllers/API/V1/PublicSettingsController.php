@@ -21,8 +21,9 @@ class PublicSettingsController extends Controller
         $logoPath = $this->config->getFirstText(['restaurant_logo', 'site_logo'], '');
 
         $payload = [
-            // Prefer restaurant keys; fallback to dashboard general/support keys when empty.
-            'restaurant_name'      => $this->config->getFirstText(['restaurant_name', 'site_name'], config('app.name')),
+            // Prefer restaurant keys; fallback to general when empty.
+            'restaurant_name'      => $this->config->getFirstText(['restaurant_name_ar', 'restaurant_name', 'site_name'], config('app.name')),
+            'restaurant_name_en'   => $this->config->getFirstText(['restaurant_name_en'], ''),
             'restaurant_logo'      => $logoPath !== '' ? asset('storage/' . ltrim($logoPath, '/')) : null,
             'restaurant_phone'     => $this->config->getFirstText(['restaurant_phone', 'support_phone'], ''),
             'restaurant_whatsapp'  => $this->config->getFirstText(['restaurant_whatsapp'], ''),

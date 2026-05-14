@@ -8,53 +8,54 @@ use Illuminate\Database\Seeder;
 class SystemConfigSeeder extends Seeder
 {
     /**
-     * Run the database seeds.
-     *
-     * @return void
+     * Seed all system configurations for the restaurant ERP.
+     * Safe to re-run (updateOrCreate).
      */
-    public function run()
+    public function run(): void
     {
+        // ── Opening hours (all days 00:00–23:59 by default) ──────────────
+        $openingHours = json_encode([
+            'saturday'  => ['is_open' => true, 'from' => '08:00', 'to' => '00:00'],
+            'sunday'    => ['is_open' => true, 'from' => '08:00', 'to' => '00:00'],
+            'monday'    => ['is_open' => true, 'from' => '08:00', 'to' => '00:00'],
+            'tuesday'   => ['is_open' => true, 'from' => '08:00', 'to' => '00:00'],
+            'wednesday' => ['is_open' => true, 'from' => '08:00', 'to' => '00:00'],
+            'thursday'  => ['is_open' => true, 'from' => '08:00', 'to' => '00:00'],
+            'friday'    => ['is_open' => true, 'from' => '08:00', 'to' => '00:00'],
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
+        // ── Rejection reasons (Arabic) ────────────────────────────────────
+        $rejectionReasons = json_encode([
+            'خارج نطاق التوصيل',
+            'المنتج غير متوفر',
+            'ضغط طلبات حالياً',
+            'بيانات الزبون غير صحيحة',
+            'سبب آخر',
+        ], JSON_UNESCAPED_UNICODE);
+
         $configs = [
-            // General settings
-            ['key' => 'site_name', 'value' => 'MuscleHub', 'group' => 'general'],
-            ['key' => 'site_description', 'value' => 'Laravel Muscle Hub Application', 'group' => 'general'],
-            ['key' => 'site_logo', 'value' => 'logo.png', 'group' => 'general'],
-            ['key' => 'site_favicon', 'value' => 'favicon.ico', 'group' => 'general'],
-            ['key' => 'site_email', 'value' => 'contact@musclehub.com', 'group' => 'general'],
-            ['key' => 'maintenance_mode', 'value' => 'off', 'group' => 'general'],
-            // Email settings
-            ['key' => 'mail_from_address', 'value' => 'info@musclehub.com', 'group' => 'email'],
-            ['key' => 'mail_from_name', 'value' => 'MuscleHub', 'group' => 'email'],
-            // Social media links
-            ['key' => 'facebook_url', 'value' => 'https://facebook.com/musclehub', 'group' => 'social'],
-            ['key' => 'twitter_url', 'value' => 'https://twitter.com/musclehub', 'group' => 'social'],
-            ['key' => 'instagram_url', 'value' => 'https://instagram.com/musclehub', 'group' => 'social'],
-            // Support information
-            ['key' => 'support_phone', 'value' => '+1234567890', 'group' => 'support'],
-            ['key' => 'support_telegram', 'value' => 'https://t.me/musclehub_support', 'group' => 'support'],
-            // Dashboard and UI settings
-            ['key' => 'active_dashboard', 'value' => 'blade', 'group' => 'ui'],
-            ['key' => 'home_banner_text', 'value' => 'Welcome to MuscleHub - Your Fitness Partner', 'group' => 'ui'],
-            ['key' => 'custom_css', 'value' => '', 'group' => 'ui'],
-            ['key' => 'custom_js', 'value' => '', 'group' => 'ui'],
-            // Analytics and tracking
-            ['key' => 'analytics_enabled', 'value' => 'false', 'group' => 'analytics'],
-            ['key' => 'google_analytics_id', 'value' => '', 'group' => 'analytics'],
-            // API and integrations
-            ['key' => 'notification_api_token', 'value' => '', 'group' => 'api'],
-            ['key' => 'firebase_server_key', 'value' => '', 'group' => 'api'],
-            ['key' => 'pusher_app_id', 'value' => '', 'group' => 'api'],
-            ['key' => 'pusher_app_key', 'value' => '', 'group' => 'api'],
-            ['key' => 'pusher_app_secret', 'value' => '', 'group' => 'api'],
-            // Security settings
-            ['key' => 'min_password_length', 'value' => '8', 'group' => 'security'],
-            ['key' => 'require_password_confirmation', 'value' => 'true', 'group' => 'security'],
-            ['key' => 'two_factor_enabled', 'value' => 'false', 'group' => 'security'],
-            // E-commerce settings
-            ['key' => 'allow_guest_checkout', 'value' => 'false', 'group' => 'ecommerce'],
-            ['key' => 'default_currency', 'value' => 'USD', 'group' => 'ecommerce'],
-            ['key' => 'tax_rate', 'value' => '0', 'group' => 'ecommerce'],
-            ['key' => 'shipping_fee', 'value' => '0', 'group' => 'ecommerce'],
+
+            // ── General ───────────────────────────────────────────────────────
+            ['group' => 'general', 'key' => 'site_name',           'value' => 'ملحمة ومعجنات الغدير'],
+            ['group' => 'general', 'key' => 'restaurant_name_ar',  'value' => 'ملحمة ومعجنات الغدير'],
+            ['group' => 'general', 'key' => 'restaurant_name_en',  'value' => 'Al-ghadeer Butchery & Bakery'],
+
+            // ── Restaurant – identity ──────────────────────────────────────────
+            ['group' => 'restaurant', 'key' => 'restaurant_logo',      'value' => null],
+            ['group' => 'restaurant', 'key' => 'restaurant_phone',     'value' => '0983820430'],
+            ['group' => 'restaurant', 'key' => 'restaurant_whatsapp',  'value' => '+963983820430'],
+
+            // ── Restaurant – order control ────────────────────────────────
+            ['group' => 'restaurant', 'key' => 'is_accepting_orders',            'value' => 'true'],
+            ['group' => 'restaurant', 'key' => 'customer_cancel_before_minutes', 'value' => '60'],
+            ['group' => 'restaurant', 'key' => 'order_closed_message',
+             'value' => 'المطعم يستقبل التصفح حالياً، لكن الطلبات مغلقة خارج أوقات العمل.'],
+            ['group' => 'restaurant', 'key' => 'delivery_note',
+             'value' => 'أسعار التوصيل تقريبية ويحدد الموظف السعر النهائي بعد مراجعة الطلب.'],
+
+            // ── Restaurant – scheduling ───────────────────────────────────
+            ['group' => 'restaurant', 'key' => 'opening_hours',     'value' => $openingHours],
+            ['group' => 'restaurant', 'key' => 'rejection_reasons', 'value' => $rejectionReasons],
         ];
 
         foreach ($configs as $config) {
