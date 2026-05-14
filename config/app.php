@@ -149,7 +149,6 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         //        Intervention\Image\ImageServiceProvider::class,,
         //        \App\Providers\PaymentConfigProvider::class,
-        Laravel\Passport\PassportServiceProvider::class
     ],
 
     /*
