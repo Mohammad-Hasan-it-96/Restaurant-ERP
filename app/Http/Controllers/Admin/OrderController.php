@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\DeliveryZone;
 use App\Models\Order;
 use App\Services\SystemConfigService;
 use Illuminate\Http\Request;
@@ -65,8 +66,11 @@ class OrderController extends Controller
         $rejectionReasons   = $this->config->getRejectionReasons();
         $restaurantName     = $this->config->getText('restaurant_name', config('app.name'));
         $restaurantWhatsapp = $this->config->getText('restaurant_whatsapp');
+        $deliveryZones      = DeliveryZone::active()->get();
 
-        return view('admin.orders.show', compact('order', 'rejectionReasons', 'restaurantName', 'restaurantWhatsapp'));
+        return view('admin.orders.show', compact(
+            'order', 'rejectionReasons', 'restaurantName', 'restaurantWhatsapp', 'deliveryZones'
+        ));
     }
 
     // ── Accept ─────────────────────────────────────────────────────────────────

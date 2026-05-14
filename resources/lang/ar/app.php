@@ -420,6 +420,7 @@ return [
     'accept'                      => 'قبول',
     'accept_order'                => 'قبول الطلب',
     'accept_order_hint'           => 'أدخل رسوم التوصيل إذا كانت مطبقة. سيتم تحديث الإجمالي.',
+    'accept_order_confirm'        => 'هل أنت متأكد من قبول هذا الطلب؟',
     'reject'                      => 'رفض',
     'reject_order'                => 'رفض الطلب',
     'complete'                    => 'إتمام',

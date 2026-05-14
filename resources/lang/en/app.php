@@ -441,6 +441,7 @@ return [
     'accept'                      => 'Accept',
     'accept_order'                => 'Accept Order',
     'accept_order_hint'           => 'Enter the delivery fee (if applicable). The total will be updated accordingly.',
+    'accept_order_confirm'        => 'Are you sure you want to accept this order?',
     'reject'                      => 'Reject',
     'reject_order'                => 'Reject Order',
     'complete'                    => 'Complete',

@@ -12,15 +12,62 @@
             <form action="{{ route('admin.orders.accept', $order) }}" method="POST">
                 @csrf
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-check-circle text-primary me-2"></i>{{ __('app.accept_order') }}</h5>
+                    <h5 class="modal-title">
+                        <i class="bi bi-check-circle text-primary me-2"></i>{{ __('app.accept_order') }}
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
+
+                @if($order->order_type === 'delivery')
+                {{-- ══ DELIVERY ORDER: show address + zones reference + fee input ══ --}}
                 <div class="modal-body">
-                    <p class="text-muted">{{ __('app.accept_order_hint') }}</p>
+
+                    {{-- Customer address --}}
+                    @if($order->address)
+                    <div class="alert alert-light border d-flex align-items-start gap-2 py-2 mb-3">
+                        <i class="bi bi-geo-alt-fill text-primary mt-1 flex-shrink-0"></i>
+                        <div>
+                            <div class="fw-semibold small text-muted mb-0">{{ __('app.address') }}</div>
+                            <div>{{ $order->address }}</div>
+                        </div>
+                    </div>
+                    @endif
+
+                    {{-- Delivery zones reference list --}}
+                    @if($deliveryZones->isNotEmpty())
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">{{ __('app.delivery_fee') }}</label>
+                        <p class="fw-semibold small mb-1">
+                            <i class="bi bi-map me-1 text-primary"></i>{{ __('app.delivery_zones') }}
+                        </p>
+                        <div class="table-responsive rounded border">
+                            <table class="table table-sm table-striped mb-0 small">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>{{ __('app.area_name') }}</th>
+                                        <th class="text-end">{{ __('app.price') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($deliveryZones as $zone)
+                                    <tr>
+                                        <td>{{ $zone->area_name }}</td>
+                                        <td class="text-end fw-semibold">
+                                            {{ number_format($zone->estimated_fee, 2) }}
+                                            <span class="text-muted fw-normal">{{ __('app.currency') }}</span>
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    @endif
+
+                    {{-- Manual fee input --}}
+                    <div class="mb-1">
+                        <label class="form-label fw-semibold" for="deliveryFeeInput">{{ __('app.delivery_fee') }}</label>
                         <div class="input-group">
-                            <input type="number" name="delivery_fee" class="form-control"
+                            <input type="number" id="deliveryFeeInput" name="delivery_fee" class="form-control"
                                    min="0" step="0.01"
                                    value="{{ $order->estimated_delivery_fee ?? 0 }}"
                                    placeholder="0.00">
@@ -29,8 +76,18 @@
                         <div class="form-text">{{ __('app.delivery_fee_hint') }}</div>
                     </div>
                 </div>
+
+                @else
+                {{-- ══ DINE-IN / TAKEAWAY: simple confirmation ══ --}}
+                <div class="modal-body">
+                    <p class="mb-0">{{ __('app.accept_order_confirm') }}</p>
+                </div>
+                @endif
+
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ __('app.cancel') }}</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        {{ __('app.cancel') }}
+                    </button>
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-check-lg me-1"></i>{{ __('app.accept') }}
                     </button>
@@ -171,6 +228,7 @@
 
 @push('scripts')
 <script>
+
     // Reject: handle custom reason select
     const rejectSelect = document.getElementById('rejectSelect');
     const rejectCustom = document.getElementById('rejectCustomInput');
