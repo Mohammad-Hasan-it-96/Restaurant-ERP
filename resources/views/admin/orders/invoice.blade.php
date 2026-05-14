@@ -84,12 +84,16 @@
             color: #444;
         }
 
-        /* ── Print button (screen only) ──────────────────────────────── */
+        /* ── Screen-only controls ───────────────────────────────────── */
         .no-print {
             text-align: center;
             margin-bottom: 5mm;
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
         }
-        .no-print button {
+        .no-print button, .no-print a {
             padding: 6px 20px;
             font-size: 13px;
             cursor: pointer;
@@ -97,23 +101,164 @@
             color: #fff;
             border: none;
             border-radius: 4px;
+            text-decoration: none;
+            display: inline-block;
         }
+        .no-print a { background: #555; }
 
-        /* ── Print media ─────────────────────────────────────────────── */
+        /* ══════════════════════════════════════════════════════════════
+           THERMAL RECEIPT PRINT STYLES  —  80mm paper
+           ══════════════════════════════════════════════════════════════ */
         @media print {
-            body { width: 80mm; margin: 0; padding: 4mm 3mm; }
-            .no-print { display: none !important; }
-            @page { size: 80mm auto; margin: 0; }
+
+            /* ── Page setup ─────────────────────────────────────────── */
+            @page {
+                size: 80mm auto;   /* width fixed, height grows with content */
+                margin: 0;
+            }
+
+            /* ── Hide everything that must not print ────────────────── */
+            .no-print,
+            nav, header, footer,
+            .navbar, .sidebar, .sidebar-item,
+            .main-content > :not(.invoice-wrap),
+            .btn, .alert, .breadcrumb,
+            .dropdown, .language-selector { display: none !important; }
+
+            /* ── Root layout ─────────────────────────────────────────── */
+            html, body {
+                width: 80mm !important;
+                max-width: 80mm !important;
+                margin: 0 !important;
+                padding: 4mm 3mm !important;
+                font-family: 'Courier New', Courier, monospace !important;
+                font-size: 11px !important;
+                color: #000 !important;
+                background: #fff !important;
+            }
+
+            /* ── Strip all decorative styles ────────────────────────── */
+            * {
+                background: transparent !important;
+                background-color: transparent !important;
+                color: #000 !important;
+                box-shadow: none !important;
+                text-shadow: none !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            /* ── Restaurant header ───────────────────────────────────── */
+            .invoice-header {
+                text-align: center !important;
+                margin-bottom: 3mm !important;
+            }
+            .invoice-header img {
+                max-width: 80px !important;
+                max-height: 60px !important;
+                width: auto !important;
+                display: block !important;
+                margin: 0 auto 2mm auto !important;
+                object-fit: contain !important;
+            }
+            .invoice-header h1 {
+                text-align: center !important;
+                font-size: 13px !important;
+                font-weight: bold !important;
+                margin-bottom: 1mm !important;
+            }
+            .invoice-header p {
+                text-align: center !important;
+                font-size: 11px !important;
+            }
+
+            /* ── Section dividers ────────────────────────────────────── */
+            hr, .divider {
+                border: none !important;
+                border-top: 1px dashed #000 !important;
+                margin: 3mm 0 !important;
+                height: 0 !important;
+            }
+
+            /* ── Info key-value rows (dl) ────────────────────────────── */
+            dl { width: 100% !important; }
+            dl dt, dl dd {
+                display: inline-block !important;
+                vertical-align: top !important;
+                font-size: 11px !important;
+                line-height: 1.6 !important;
+                border: none !important;
+            }
+            dl dt { width: 42% !important; font-weight: bold !important; }
+            dl dd { width: 56% !important; word-break: break-word !important; }
+
+            /* ── Items table ─────────────────────────────────────────── */
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                border: none !important;
+                margin: 2mm 0 !important;
+            }
+            th, td {
+                border: none !important;
+                padding: 2px 0 !important;
+                font-size: 11px !important;
+                line-height: 1.5 !important;
+                background: transparent !important;
+            }
+            /* Header row: solid lines above and below */
+            thead tr {
+                border-top: 1px solid #000 !important;
+                border-bottom: 1px solid #000 !important;
+            }
+            thead tr th {
+                padding: 1mm 0 !important;
+                font-weight: bold !important;
+            }
+            /* First tfoot row: dashed separator */
+            tfoot tr:first-child td {
+                border-top: 1px dashed #000 !important;
+                padding-top: 2mm !important;
+            }
+            /* Grand total row: solid line + bold */
+            tfoot .total-row td {
+                font-weight: bold !important;
+                font-size: 12px !important;
+                border-top: 1px solid #000 !important;
+                padding-top: 2mm !important;
+            }
+
+            /* ── Strong / bold helpers ───────────────────────────────── */
+            strong, b { font-weight: bold !important; }
+
+            /* ── Typography helpers ──────────────────────────────────── */
+            h1 { font-size: 15px !important; }
+            h2 { font-size: 13px !important; }
+            p, td, th, dd, dt { font-size: 11px !important; }
+
+            /* ── Thank-you footer ────────────────────────────────────── */
+            .invoice-footer {
+                text-align: center !important;
+                margin-top: 12px !important;
+                font-size: 10px !important;
+            }
+
+            /* ── Avoid orphan rows across page breaks ────────────────── */
+            tr { page-break-inside: avoid; }
+            .invoice-footer { page-break-inside: avoid; }
         }
     </style>
 </head>
 <body>
 
-    {{-- Print button (hidden on print) --}}
+    {{-- Screen-only controls (hidden on print) --}}
     <div class="no-print">
         <button onclick="window.print()">
             🖨 {{ __('app.print') }}
         </button>
+        <a href="{{ route('admin.orders.show', $order) }}">
+            ← {{ __('app.back') }}
+        </a>
     </div>
 
     {{-- ── Restaurant header ── --}}
