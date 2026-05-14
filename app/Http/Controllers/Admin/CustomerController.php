@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 class CustomerController extends Controller
 {
     /**
-     * List all customers with search + pagination.
+     * List all customers with search (name / phone) + sortable pagination.
      */
     public function index(Request $request)
     {
@@ -18,14 +18,14 @@ class CustomerController extends Controller
         $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
 
         $query = Customer::withCount('orders')
-            ->withMax('orders', 'created_at')
+            ->withMax('orders', 'created_at')   // → orders_max_created_at  (last_order_at)
             ->withSum('orders', 'total')
             ->orderBy($sortBy, $direction);
 
-        if ($search = $request->input('search')) {
+        if ($search = trim((string) $request->input('search'))) {
             $query->where(function ($q) use ($search) {
                 $q->where('full_name', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%");
+                  ->orWhere('phone',   'like', "%{$search}%");
             });
         }
 
@@ -35,49 +35,67 @@ class CustomerController extends Controller
     }
 
     /**
-     * Show a single customer with their orders.
+     * Show a single customer with their paginated orders.
      */
     public function show(Customer $customer)
     {
-        $orders = $customer->orders()
-            ->latest()
-            ->paginate(10);
-
+        $orders      = $customer->orders()->latest()->paginate(10);
         $ordersCount = $customer->orders()->count();
         $totalSpent  = (float) $customer->orders()->sum('total');
         $lastOrder   = $customer->orders()->latest()->first();
 
-        return view('admin.customers.show', compact('customer', 'orders', 'ordersCount', 'totalSpent', 'lastOrder'));
+        return view('admin.customers.show',
+            compact('customer', 'orders', 'ordersCount', 'totalSpent', 'lastOrder'));
     }
 
     /**
-     * Block a customer.
+     * Block a customer (optionally store a reason).
      */
-    public function block(Customer $customer)
+    public function block(Request $request, Customer $customer)
     {
-        $customer->update(['is_blocked' => true]);
+        $request->validate([
+            'blocked_reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $customer->update([
+            'is_blocked'     => true,
+            'blocked_reason' => $request->input('blocked_reason') ?: null,
+        ]);
 
         return back()->with('success', __('app.customer_blocked_success'));
     }
 
     /**
-     * Unblock a customer.
+     * Unblock a customer and clear the stored reason.
      */
     public function unblock(Customer $customer)
     {
-        $customer->update(['is_blocked' => false]);
+        $customer->update([
+            'is_blocked'     => false,
+            'blocked_reason' => null,
+        ]);
 
         return back()->with('success', __('app.customer_unblocked_success'));
     }
 
     /**
-     * Toggle the blocked status of a customer (legacy – kept for backward compat).
+     * Toggle the blocked status of a customer.
+     * When blocking via toggle an optional `blocked_reason` param is accepted.
      */
-    public function toggleBlock(Customer $customer)
+    public function toggleBlock(Request $request, Customer $customer)
     {
-        $customer->update(['is_blocked' => ! $customer->is_blocked]);
+        $request->validate([
+            'blocked_reason' => ['nullable', 'string', 'max:500'],
+        ]);
 
-        $msg = $customer->is_blocked
+        $nowBlocked = ! $customer->is_blocked;
+
+        $customer->update([
+            'is_blocked'     => $nowBlocked,
+            'blocked_reason' => $nowBlocked ? ($request->input('blocked_reason') ?: null) : null,
+        ]);
+
+        $msg = $nowBlocked
             ? __('app.customer_blocked_success')
             : __('app.customer_unblocked_success');
 

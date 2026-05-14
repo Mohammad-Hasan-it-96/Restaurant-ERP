@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Models\Customer;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Services\SystemConfigService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -42,6 +43,19 @@ class DashboardController extends BaseController
             ->limit(8)
             ->get();
 
+        // ── Top 5 customers by orders count ─────────────────────────────────
+        $topCustomers = Customer::withCount('orders')
+            ->orderByDesc('orders_count')
+            ->limit(5)
+            ->get();
+
+        // ── Top 5 products by quantity sold ─────────────────────────────────
+        $topProducts = OrderItem::select('product_name', DB::raw('SUM(quantity) as total_sold'))
+            ->groupBy('product_name')
+            ->orderByDesc('total_sold')
+            ->limit(5)
+            ->get();
+
         // ── Restaurant branding (locale-aware) ──────────────────────────────
         $cfgSvc  = app(SystemConfigService::class);
         $locale  = session('locale', config('app.locale', 'ar'));
@@ -61,6 +75,8 @@ class DashboardController extends BaseController
             'weekLabels',
             'weekCounts',
             'recentOrders',
+            'topCustomers',
+            'topProducts',
             'restaurantName',
             'restaurantNameAr',
             'restaurantNameEn',

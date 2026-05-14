@@ -169,6 +169,97 @@
 
     </div>
 
+    {{-- ── Top Customers & Top Products ──────────────────────────────────── --}}
+    <div class="row g-4 mb-4">
+
+        {{-- Top 5 Customers --}}
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-semibold mb-0">
+                        <i class="bi bi-trophy me-2 text-warning"></i>{{ __('app.top_customers') }}
+                    </h6>
+                    <a href="{{ route('admin.customers.index', ['sort' => 'orders_count', 'direction' => 'desc']) }}"
+                       class="btn btn-sm btn-link text-decoration-none p-0">
+                        {{ __('app.view_all') }}
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        @forelse($topCustomers as $i => $customer)
+                        <li class="list-group-item d-flex align-items-center gap-3 py-2 px-3">
+                            <span class="fw-bold text-muted" style="min-width:1.4rem;">{{ $i + 1 }}</span>
+                            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                                 style="width:34px;height:34px;background:rgba(79,70,229,.1);">
+                                <i class="bi bi-person-fill" style="color:var(--primary)"></i>
+                            </div>
+                            <div class="flex-grow-1 text-truncate">
+                                <a href="{{ route('admin.customers.show', $customer) }}"
+                                   class="text-decoration-none fw-semibold text-body text-truncate d-block">
+                                    {{ $customer->full_name }}
+                                </a>
+                            </div>
+                            <span class="badge bg-primary rounded-pill">
+                                {{ $customer->orders_count }} {{ __('app.orders') }}
+                            </span>
+                        </li>
+                        @empty
+                        <li class="list-group-item text-center text-muted py-4">
+                            <i class="bi bi-people fs-3 d-block mb-2"></i>
+                            {{ __('app.no_data') }}
+                        </li>
+                        @endforelse
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        {{-- Top 5 Products --}}
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-semibold mb-0">
+                        <i class="bi bi-fire me-2 text-danger"></i>{{ __('app.top_products') }}
+                    </h6>
+                    <a href="{{ route('admin.products.index') }}"
+                       class="btn btn-sm btn-link text-decoration-none p-0">
+                        {{ __('app.view_all') }}
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    @php
+                        $maxSold = $topProducts->first()?->total_sold ?: 1;
+                    @endphp
+                    <ul class="list-group list-group-flush">
+                        @forelse($topProducts as $i => $product)
+                        @php $pct = round(($product->total_sold / $maxSold) * 100); @endphp
+                        <li class="list-group-item py-2 px-3">
+                            <div class="d-flex align-items-center gap-3 mb-1">
+                                <span class="fw-bold text-muted" style="min-width:1.4rem;">{{ $i + 1 }}</span>
+                                <span class="fw-semibold text-truncate flex-grow-1">{{ $product->product_name }}</span>
+                                <span class="badge bg-success rounded-pill text-nowrap">
+                                    {{ $product->total_sold }} {{ __('app.sold') }}
+                                </span>
+                            </div>
+                            <div class="ps-4">
+                                <div class="progress" style="height:5px;">
+                                    <div class="progress-bar bg-success" style="width:{{ $pct }}%"></div>
+                                </div>
+                            </div>
+                        </li>
+                        @empty
+                        <li class="list-group-item text-center text-muted py-4">
+                            <i class="bi bi-box-seam fs-3 d-block mb-2"></i>
+                            {{ __('app.no_data') }}
+                        </li>
+                        @endforelse
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
     {{-- ── Recent Orders ────────────────────────────────────────────────── --}}
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-transparent border-0 pt-3 d-flex justify-content-between align-items-center">
