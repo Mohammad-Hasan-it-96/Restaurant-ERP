@@ -216,3 +216,54 @@
 </div>
 @endsection
 
+{{-- ── Delete Confirmation Modal ───────────────────────────────────────── --}}
+<div class="modal fade" id="deleteCategoryModal" tabindex="-1" aria-labelledby="deleteCategoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title text-danger" id="deleteCategoryModalLabel">
+                    <i class="bi bi-exclamation-triangle me-2"></i>{{ __('app.confirm_delete') }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-4 text-center">
+                <i class="bi bi-trash3 text-danger mb-3 d-block" style="font-size:3rem;"></i>
+                <p class="mb-0" id="deleteCategoryMessage" style="color: var(--text);"></p>
+            </div>
+            <div class="modal-footer border-0 pt-0 justify-content-center gap-2">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                    {{ __('app.cancel') }}
+                </button>
+                <form id="deleteCategoryForm" method="POST">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger px-4">
+                        <i class="bi bi-trash me-1"></i>{{ __('app.delete') }}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const modal   = new bootstrap.Modal(document.getElementById('deleteCategoryModal'));
+    const msgEl   = document.getElementById('deleteCategoryMessage');
+    const formEl  = document.getElementById('deleteCategoryForm');
+    const confirm = '{{ __('app.delete_confirmation') }}';
+
+    document.querySelectorAll('.delete-category').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const name = this.dataset.name;
+            const url  = this.dataset.url;
+            msgEl.textContent = confirm.replace(':name', name);
+            formEl.action = url;
+            modal.show();
+        });
+    });
+});
+</script>
+@endpush
+

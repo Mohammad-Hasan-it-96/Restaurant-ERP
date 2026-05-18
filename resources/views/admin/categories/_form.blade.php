@@ -76,6 +76,7 @@
                    role="switch"
                    name="is_active"
                    id="is_active"
+                   value="1"
                    {{ old('is_active', $category->is_active ?? true) ? 'checked' : '' }}>
             <label class="form-check-label fw-semibold" for="is_active">
                 {{ \App\Helpers\Helpers::translate('active') }}
