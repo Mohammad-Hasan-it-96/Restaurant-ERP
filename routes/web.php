@@ -46,6 +46,7 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
         Route::get('import', [AdminProductController::class, 'import'])->name('import');
         Route::get('template', [AdminProductController::class, 'downloadTemplate'])->name('template');
         Route::post('import', [AdminProductController::class, 'processImport'])->name('import.process');
+        Route::post('{product}/toggle-availability', [AdminProductController::class, 'toggleAvailability'])->name('toggle-availability');
 
         Route::middleware(['moderator'])->group(function () {
             Route::get('create', [AdminProductController::class, 'create'])->name('create');

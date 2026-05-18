@@ -163,9 +163,16 @@ class ProductController extends Controller
 
         $product->update($validated);
 
-        return redirect()
-            ->route('admin.products.index')
+        return redirect()->back()
             ->with('success', __('app.product_updated'));
+    }
+
+    public function toggleAvailability(Product $product)
+    {
+        $product->update(['is_available' => ! $product->is_available]);
+
+        return redirect()->back()
+            ->with('success', __('app.product_availability_updated'));
     }
 
     public function destroy($id)

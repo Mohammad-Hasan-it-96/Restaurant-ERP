@@ -162,11 +162,19 @@
                                 @endif
                             </td>
                             <td>
-                                @if($product->is_available)
-                                    <span class="badge bg-success">{{\App\Helpers\Helpers::translate('yes')}}</span>
-                                @else
-                                    <span class="badge bg-secondary">{{\App\Helpers\Helpers::translate('no')}}</span>
-                                @endif
+                                <button type="button"
+                                        class="btn btn-sm toggle-availability {{ $product->is_available ? 'btn-success' : 'btn-outline-secondary' }}"
+                                        data-id="{{ $product->id }}"
+                                        data-name="{{ $product->name_ar ?? $product->name }}"
+                                        data-available="{{ $product->is_available ? '1' : '0' }}"
+                                        data-url="{{ route('admin.products.toggle-availability', $product->id) }}"
+                                        title="{{ $product->is_available ? __('app.available') : __('app.unavailable') }}">
+                                    @if($product->is_available)
+                                        <i class="bi bi-check-circle me-1"></i>{{ \App\Helpers\Helpers::translate('yes') }}
+                                    @else
+                                        <i class="bi bi-x-circle me-1"></i>{{ \App\Helpers\Helpers::translate('no') }}
+                                    @endif
+                                </button>
                             </td>
                             <td>
                                 @if($product->is_featured)
@@ -236,6 +244,36 @@
 </div>
 @endsection
 
+{{-- Toggle Availability Confirmation Modal --}}
+<div class="modal fade" id="toggleAvailabilityModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title" id="toggleAvailabilityTitle">
+                    <i class="bi bi-arrow-repeat me-2 text-primary"></i>
+                    {{\App\Helpers\Helpers::translate('confirm')}}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <i class="bi bi-toggle-on text-primary mb-3 d-block" id="toggleAvailabilityIcon" style="font-size:3rem;"></i>
+                <p class="mb-0" id="toggleAvailabilityMessage" style="color: var(--text);"></p>
+            </div>
+            <div class="modal-footer border-0 pt-0 justify-content-center gap-2">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                    {{\App\Helpers\Helpers::translate('cancel')}}
+                </button>
+                <form id="toggleAvailabilityForm" method="POST">
+                    @csrf
+                    <button type="submit" class="btn btn-primary px-4" id="toggleAvailabilityBtn">
+                        <i class="bi bi-check-lg me-1"></i>{{\App\Helpers\Helpers::translate('confirm')}}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- Shared Delete Confirmation Modal --}}
 <div class="modal fade" id="deleteProductModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -269,8 +307,10 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+
+    // ── Delete product ────────────────────────────────────────────────────
     const deleteBtns = document.querySelectorAll('.delete-product');
-    const modal      = new bootstrap.Modal(document.getElementById('deleteProductModal'));
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteProductModal'));
     const msgEl      = document.getElementById('deleteProductMessage');
     const formEl     = document.getElementById('deleteProductForm');
 
@@ -280,9 +320,42 @@ document.addEventListener('DOMContentLoaded', function () {
             const url  = this.dataset.url;
             msgEl.textContent = '{{\App\Helpers\Helpers::translate('delete_confirmation')}}'.replace(':name', name);
             formEl.action = url;
-            modal.show();
+            deleteModal.show();
         });
     });
+
+    // ── Toggle availability ───────────────────────────────────────────────
+    const toggleBtns     = document.querySelectorAll('.toggle-availability');
+    const toggleModal    = new bootstrap.Modal(document.getElementById('toggleAvailabilityModal'));
+    const toggleMsgEl    = document.getElementById('toggleAvailabilityMessage');
+    const toggleIconEl   = document.getElementById('toggleAvailabilityIcon');
+    const toggleFormEl   = document.getElementById('toggleAvailabilityForm');
+
+    const msgMakeAvailable   = @json(__('app.confirm_make_available'));
+    const msgMakeUnavailable = @json(__('app.confirm_make_unavailable'));
+
+    toggleBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const url       = this.dataset.url;
+            const name      = this.dataset.name;
+            const available = this.dataset.available === '1';
+
+            toggleFormEl.action = url;
+
+            if (available) {
+                toggleMsgEl.textContent  = msgMakeUnavailable.replace(':name', name);
+                toggleIconEl.className   = 'bi bi-toggle-off text-secondary mb-3 d-block';
+                toggleIconEl.style.fontSize = '3rem';
+            } else {
+                toggleMsgEl.textContent  = msgMakeAvailable.replace(':name', name);
+                toggleIconEl.className   = 'bi bi-toggle-on text-success mb-3 d-block';
+                toggleIconEl.style.fontSize = '3rem';
+            }
+
+            toggleModal.show();
+        });
+    });
+
 });
 </script>
 @endpush
