@@ -12,8 +12,6 @@
     from { border-left-color: #f59e0b; }
     to   { border-left-color: #ef4444; }
 }
-#autoRefreshBadge { cursor: pointer; transition: opacity .3s; }
-#autoRefreshBadge.paused { opacity: .5; }
 .quick-filter-btn.active-filter { box-shadow: 0 0 0 3px rgba(79,70,229,.35); }
 </style>
 @endpush
@@ -31,17 +29,6 @@
             <i class="bi bi-receipt me-2 text-primary"></i>
             {{ __('app.orders_management') }}
         </h2>
-        <div class="d-flex align-items-center gap-2">
-            <span id="lastRefreshText" class="text-muted small"></span>
-            <button id="testSoundBtn" class="btn btn-sm btn-outline-secondary"
-                    title="اختبار صوت التنبيه">
-                <i class="bi bi-volume-up"></i>
-            </button>
-            <button id="autoRefreshBadge" class="badge bg-success border-0 fs-6 px-3 py-2"
-                    title="اضغط لإيقاف/تشغيل التحديث التلقائي">
-                <i class="bi bi-arrow-repeat me-1"></i>تحديث تلقائي
-            </button>
-        </div>
     </div>
 
     {{-- New Order Banner --}}
@@ -193,12 +180,14 @@
                                        title="{{ __('app.view') }}">
                                         <i class="bi bi-eye"></i>
                                     </a>
+                                    @if(in_array($order->status, ['accepted', 'completed']))
                                     <a href="{{ route('admin.orders.invoice', $order) }}"
                                        target="_blank"
                                        class="btn btn-sm btn-outline-secondary"
                                        title="طباعة سريعة">
                                         <i class="bi bi-printer"></i>
                                     </a>
+                                    @endif
                                     {{-- Quick workflow transition buttons --}}
                                     @can('update', $order)
                                     @if($order->status === 'accepted')
@@ -271,28 +260,20 @@
     const page        = document.getElementById('ordersPage');
     const pollUrl     = page.dataset.pollUrl;
     let   latestId    = parseInt(page.dataset.latestId) || 0;
-    let   autoRunning = true;
-    let   intervalId  = null;
 
     const banner      = document.getElementById('newOrderBanner');
-    const badge       = document.getElementById('autoRefreshBadge');
-    const lastRefText = document.getElementById('lastRefreshText');
     const refreshBtn  = document.getElementById('refreshNowBtn');
 
     /* ── Notification sound (public/sounds/notification.wav) ───────────── */
     const SOUND_URL = '{{ asset('sounds/notification.wav') }}';
-
-    // Pre-load so first play is instant
     const notifAudio = new Audio(SOUND_URL);
-    notifAudio.volume = 1.0;   // full volume
+    notifAudio.volume = 1.0;
     notifAudio.preload = 'auto';
 
     function beep() {
         try {
-            // Clone the audio node so overlapping plays work
             const s = notifAudio.cloneNode();
             s.volume = 1.0;
-            // Play twice with a short gap for extra attention
             s.play().catch(() => {});
             setTimeout(() => {
                 const s2 = notifAudio.cloneNode();
@@ -311,17 +292,11 @@
             if (!res.ok) return;
             const data = await res.json();
 
-            // Update last-refresh timestamp
-            const now = new Date();
-            lastRefText.textContent = 'آخر تحديث: ' + now.toLocaleTimeString('ar-SA');
-
-            // New order arrived?
             if (data.latest_id > latestId) {
                 latestId = data.latest_id;
                 beep();
                 banner.classList.remove('d-none');
 
-                // Flash the tab title
                 let original = document.title;
                 let blink = 0;
                 const titleInterval = setInterval(() => {
@@ -332,37 +307,13 @@
         } catch (e) { /* network error — silent */ }
     }
 
-    /* ── Start / Stop ─────────────────────────────────────────────────────── */
-    function startPolling() {
-        if (intervalId) clearInterval(intervalId);
-        intervalId    = setInterval(poll, 10000);
-        autoRunning   = true;
-        badge.classList.remove('paused');
-        badge.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>تحديث تلقائي';
-    }
-
-    function stopPolling() {
-        clearInterval(intervalId);
-        intervalId    = null;
-        autoRunning   = false;
-        badge.classList.add('paused');
-        badge.innerHTML = '<i class="bi bi-pause-circle me-1"></i>موقوف';
-    }
-
-    /* ── Test sound button ───────────────────────────────────────────────── */
-    const testBtn = document.getElementById('testSoundBtn');
-    if (testBtn) testBtn.addEventListener('click', () => beep());
-
-    badge.addEventListener('click', () => autoRunning ? stopPolling() : startPolling());
-
     /* ── "تحديث الآن" button ─────────────────────────────────────────────── */
     if (refreshBtn) {
         refreshBtn.addEventListener('click', () => window.location.reload());
     }
 
     /* ── Boot ────────────────────────────────────────────────────────────── */
-    startPolling();
-    // Run once immediately after 2 s so the timestamp shows quickly
+    setInterval(poll, 10000);
     setTimeout(poll, 2000);
 })();
 </script>
