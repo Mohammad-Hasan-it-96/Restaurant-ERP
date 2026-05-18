@@ -74,14 +74,23 @@ export default function ProductModal({ product, onAdd, onClose }) {
           <div className="product-sheet-title-row">
             <h2 className="product-sheet-title">{displayName}</h2>
             <div className="product-sheet-price-col">
-              {p.discount_price && (
-                <span className="product-sheet-old-price">
-                  {formatPrice(p.price)}
+              {p.discount_price ? (
+                <>
+                  <span className="product-sheet-old-price">
+                    {formatPrice(p.price)}
+                  </span>
+                  <span className="product-sheet-price">
+                    {formatPrice(p.effective_price)}
+                  </span>
+                  <span className="product-sheet-discount-badge">
+                    -{Math.round(((p.price - p.discount_price) / p.price) * 100)}%
+                  </span>
+                </>
+              ) : (
+                <span className="product-sheet-price">
+                  {formatPrice(p.effective_price)}
                 </span>
               )}
-              <span className="product-sheet-price">
-                {formatPrice(p.effective_price)}
-              </span>
             </div>
           </div>
 

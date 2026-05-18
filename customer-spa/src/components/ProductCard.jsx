@@ -42,7 +42,12 @@ export default function ProductCard({ product, onOpenModal, onQuickAdd }) {
         <div className="product-price-row">
           <span className="product-price">{formatPrice(p.effective_price)}</span>
           {p.discount_price ? (
-            <span className="product-price-old">{formatPrice(p.price)}</span>
+            <>
+              <span className="product-price-old">{formatPrice(p.price)}</span>
+              <span className="product-discount-badge">
+                -{Math.round(((p.price - p.discount_price) / p.price) * 100)}%
+              </span>
+            </>
           ) : null}
           {!available && (
             <span className="unavailable-badge">{t('unavailable')}</span>
