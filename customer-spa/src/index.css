@@ -265,6 +265,15 @@ button{font-family:inherit;cursor:pointer}
 .order-status-badge.status-success{background:#dcfce7;color:#166534}
 .order-status-badge.status-danger{background:#fee2e2;color:#991b1b}
 
+/* ── My Profile page ────────────────────────────────────────────────── */
+.profile-page{padding:0 0 16px}
+.profile-section{padding:16px}
+.profile-section .section-header{margin-bottom:16px}
+.profile-section .section-header h2{font-size:18px;font-weight:700}
+.profile-form{display:flex;flex-direction:column;gap:0}
+.profile-skeleton{padding:4px 0}
+.api-success{background:#dcfce7;color:#166534;padding:10px 14px;border-radius:var(--radius-md);font-size:13px;margin-bottom:14px}
+
 /* ── Utilities ──────────────────────────────────────────────────────── */
 .skeleton{background:linear-gradient(90deg,#ede8e3 25%,#e5dfda 50%,#ede8e3 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:var(--radius-md)}
 .skeleton-card{height:104px;border-radius:var(--radius-lg)}

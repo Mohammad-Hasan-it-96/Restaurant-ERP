@@ -39,8 +39,10 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         Route::get ('orders/{order_number}',        [OrderController::class, 'show'])  ->name('orders.show');
         Route::post('orders/{order_number}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
 
-        // Guest profile auto-fill
-        Route::get('customer/me', [CustomerController::class, 'me'])->name('customer.me');
+        // Guest profile auto-fill & update
+        Route::get ('customer/me',     [CustomerController::class, 'me'])    ->name('customer.me');
+        Route::get ('customer/orders', [CustomerController::class, 'orders'])->name('customer.orders');
+        Route::post('customer/update', [CustomerController::class, 'update'])->name('customer.update');
 
         // Cart
         Route::get ('cart',        [CartController::class, 'index'])  ->name('cart.index');

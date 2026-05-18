@@ -13,7 +13,7 @@ import ProductModal from './components/ProductModal';
 import CartDrawer from './components/CartDrawer';
 import CheckoutModal from './components/CheckoutModal';
 import OrderSuccess from './components/OrderSuccess';
-import OrderHistory from './components/OrderHistory';
+import MyProfile from './components/MyProfile';
 import BottomNav from './components/BottomNav';
 
 export default function App() {
@@ -176,15 +176,15 @@ export default function App() {
               </>
             )}
           </>
-        ) : (
-          <OrderHistory />
-        )}
+        ) : activePage === 'profile' ? (
+          <MyProfile />
+        ) : null}
       </main>
 
       <BottomNav
         activePage={activePage}
         onMenuClick={() => setActivePage('menu')}
-        onProfileClick={() => setActivePage('orders')}
+        onProfileClick={() => setActivePage('profile')}
         cartCount={cart.cartCount}
         cartTotal={cart.cartTotal}
         onCartClick={() => setShowCart(true)}

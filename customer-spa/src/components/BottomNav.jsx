@@ -38,7 +38,7 @@ export default function BottomNav({
 
       <button
         type="button"
-        className={`bottom-nav-item${activePage === 'orders' ? ' active' : ''}`}
+        className={`bottom-nav-item${activePage === 'profile' ? ' active' : ''}`}
         onClick={onProfileClick}
       >
         <PersonIcon size={22} />

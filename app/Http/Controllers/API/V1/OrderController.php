@@ -9,7 +9,9 @@ use App\Models\Order;
 use App\Services\OrderService;
 use App\Services\SystemConfigService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
@@ -51,17 +53,31 @@ class OrderController extends Controller
     /**
      * GET /api/v1/orders/{order_number}
      */
-    public function show(string $orderNumber): JsonResponse
+    public function show($orderNumber, Request $request)
     {
-        $order = Order::where('order_number', $orderNumber)->first();
+        $customer = $request->attributes->get('customer');
 
-        if (! $order) {
+        Log::debug('order.access', [
+            'order_number' => $orderNumber,
+            'customer_id'  => $customer->id ?? null,
+        ]);
+
+        if (!$customer) {
+            return $this->error('Unauthorized', 403);
+        }
+
+        $order = Order::query()->where('order_number', $orderNumber)->first();
+
+        if (!$order) {
             return $this->error(__('app.order_not_found'), 404);
         }
 
-        $order->load('items');
+        // Return 404 (not 403) to avoid leaking order existence
+        if ($order->customer_id !== $customer->id) {
+            return $this->error(__('app.order_not_found'), 404);
+        }
 
-        return $this->success(new OrderResource($order));
+        return $this->success(new OrderResource($order->load('items')));
     }
 
     /**

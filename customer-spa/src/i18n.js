@@ -191,6 +191,10 @@ export const STRINGS = {
     orderStatus_cancelled_by_admin: 'Cancelled by restaurant',
     orderStatus_cancelled_by_customer: 'Cancelled by you',
     orderStatus_rejected: 'Rejected',
+    myAccount: 'My Account',
+    saveProfile: 'Save Changes',
+    saving: 'Saving...',
+    profileSaved: '✓ Profile saved successfully',
   },
 };
 

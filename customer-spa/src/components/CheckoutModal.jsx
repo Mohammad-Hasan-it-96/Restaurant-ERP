@@ -2,6 +2,7 @@
 import { CloseIcon } from './Icons';
 import api, { extractData, decodeApiText } from '../api/client';
 import { appendMyOrderNumber } from '../utils/myOrders';
+import { readStoredCustomerInfo, writeStoredCustomerInfo } from '../utils/customerInfo';
 import { formatPrice } from '../utils/format';
 import { useI18n } from '../i18n';
 
@@ -35,23 +36,6 @@ export default function CheckoutModal({
     return () => clearTimeout(id);
   }, []);
 
-  /**
-   * Reads name, phone, and optional delivery address from localStorage.
-   */
-  function readStoredCustomerInfo() {
-    try {
-      const raw = localStorage.getItem('customer_info');
-      if (!raw) return { name: '', phone: '', address: '' };
-      const o = JSON.parse(raw);
-      return {
-        name: String(o?.name ?? '').trim(),
-        phone: String(o?.phone ?? '').trim(),
-        address: String(o?.address ?? '').trim(),
-      };
-    } catch {
-      return { name: '', phone: '', address: '' };
-    }
-  }
 
   /**
    * On open: load from GET /customer/me when session has a customer; otherwise
@@ -139,18 +123,7 @@ export default function CheckoutModal({
       const storedInfo = readStoredCustomerInfo();
       const addressToStore =
         orderType === 'delivery' ? address.trim() : storedInfo.address;
-      try {
-        localStorage.setItem(
-          'customer_info',
-          JSON.stringify({
-            name: name.trim(),
-            phone: phone.trim(),
-            address: addressToStore,
-          })
-        );
-      } catch {
-        /* ignore */
-      }
+      writeStoredCustomerInfo({ name: name.trim(), phone: phone.trim(), address: addressToStore });
       const orderNo = data.order_number || data.id || t('orderUnknown');
       appendMyOrderNumber(orderNo);
       onSuccess(orderNo);

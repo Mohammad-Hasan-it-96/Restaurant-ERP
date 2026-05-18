@@ -1,12 +1,8 @@
 import { useState, useEffect } from 'react';
 import api, { extractData, decodeApiText } from '../api/client';
 import { formatPrice } from '../utils/format';
-import { readMyOrderNumbers } from '../utils/myOrders';
 import { useI18n } from '../i18n';
 
-/**
- * Maps API status to a CSS modifier class for the badge.
- */
 function statusBadgeModifier(status) {
   if (!status) return 'muted';
   if (
@@ -14,82 +10,79 @@ function statusBadgeModifier(status) {
     status === 'cancelled_by_admin' ||
     status === 'cancelled_by_customer' ||
     status === 'rejected'
-  ) {
-    return 'danger';
-  }
+  ) return 'danger';
   if (status === 'completed' || status === 'delivered') return 'success';
   if (status === 'ready') return 'ready';
   if (status === 'accepted' || status === 'preparing') return 'progress';
   return 'pending';
 }
 
-export default function OrderHistory() {
+/**
+ * @param {{ orders?: Array|null }} props
+ *   orders – pre-fetched list from /me API (optional).
+ *            If provided, rendered directly without further API calls.
+ *            If null/undefined, calls GET /customer/orders automatically.
+ */
+export default function OrderHistory({ orders: prefetchedOrders = null }) {
   const { t, lang } = useI18n();
-  const [rows, setRows] = useState(() =>
-    readMyOrderNumbers().map((number) => ({
-      number,
-      loading: true,
-      order: null,
-      error: null,
-    }))
-  );
+  const [rows, setRows] = useState([]);
+  const [fetching, setFetching] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    const numbers = readMyOrderNumbers();
-    if (!numbers.length) {
-      setRows([]);
+    // If caller passed orders from /me, use them directly
+    if (prefetchedOrders !== null) {
+      setRows(
+        prefetchedOrders.map((o) => ({
+          number: o.order_number,
+          loading: false,
+          order: o,
+          error: null,
+        }))
+      );
       return;
     }
-    setRows(
-      numbers.map((number) => ({
-        number,
-        loading: true,
-        order: null,
-        error: null,
-      }))
+
+    // Otherwise fetch from /customer/orders
+    let cancelled = false;
+    setFetching(true);
+
+    api.get('/customer/orders')
+      .then((res) => {
+        if (cancelled) return;
+        const data = res.data?.data;
+        const list = Array.isArray(data) ? data : [];
+        setRows(
+          list.map((o) => ({
+            number: o.order_number,
+            loading: false,
+            order: o,
+            error: null,
+          }))
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setRows([]);
+      })
+      .finally(() => { if (!cancelled) setFetching(false); });
+
+    return () => { cancelled = true; };
+  }, [prefetchedOrders]);
+
+  if (fetching) {
+    return (
+      <section className="order-history-section">
+        <div className="section-header">
+          <h2>{t('myOrders')}</h2>
+        </div>
+        <div className="skeleton" style={{ height: 80, marginBottom: 10 }} />
+        <div className="skeleton" style={{ height: 80 }} />
+      </section>
     );
-
-    (async () => {
-      const results = await Promise.all(
-        numbers.map(async (number) => {
-          try {
-            const res = await api.get(
-              `/orders/${encodeURIComponent(number)}`
-            );
-            const order = extractData(res.data);
-            return {
-              number,
-              loading: false,
-              order,
-              error: null,
-            };
-          } catch (err) {
-            const raw =
-              err.response?.data?.message || err.message || t('failedLoad');
-            return {
-              number,
-              loading: false,
-              order: null,
-              error: decodeApiText(String(raw), t('failedLoad')),
-            };
-          }
-        })
-      );
-      if (!cancelled) setRows(results);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [t]);
+  }
 
   if (rows.length === 0) {
     return (
-      <section
-        className="order-history-section"
-        aria-labelledby="order-history-heading"
-      >
+      <section className="order-history-section" aria-labelledby="order-history-heading">
         <div className="section-header">
           <h2 id="order-history-heading">{t('myOrders')}</h2>
         </div>
@@ -99,10 +92,7 @@ export default function OrderHistory() {
   }
 
   return (
-    <section
-      className="order-history-section"
-      aria-labelledby="order-history-heading"
-    >
+    <section className="order-history-section" aria-labelledby="order-history-heading">
       <div className="section-header">
         <h2 id="order-history-heading">{t('myOrders')}</h2>
       </div>
@@ -114,17 +104,11 @@ export default function OrderHistory() {
                 {t('orderNumberDisplay')}: {number}
               </span>
               {loading ? (
-                <span className="order-status-badge status-muted">
-                  {t('loading')}
-                </span>
+                <span className="order-status-badge status-muted">{t('loading')}</span>
               ) : error ? (
-                <span className="order-status-badge status-danger">
-                  {t('orderLoadError')}
-                </span>
+                <span className="order-status-badge status-danger">{t('orderLoadError')}</span>
               ) : order ? (
-                <span
-                  className={`order-status-badge status-${statusBadgeModifier(order.status)}`}
-                >
+                <span className={`order-status-badge status-${statusBadgeModifier(order.status)}`}>
                   {t(`orderStatus_${order.status}`) || order.status}
                 </span>
               ) : null}
