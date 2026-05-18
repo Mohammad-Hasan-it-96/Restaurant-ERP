@@ -327,12 +327,14 @@
                         @endif
                     </a>
 
-                    <!-- Reports Link -->
+                    <!-- Reports Link (admin only) -->
+                    @if(Auth::user()->role === 'admin')
                     <a href="{{ route('admin.reports') }}"
                        class="nav-link d-flex align-items-center py-3 px-3 rounded-3 mb-1 {{ request()->routeIs('admin.reports*') ? 'active' : '' }}">
                         <i class="bi bi-bar-chart-line me-3"></i>
                         <span>{{ \App\Helpers\Helpers::translate('reports') }}</span>
                     </a>
+                    @endif
 
                     <!-- Customers Link -->
                     <a href="{{ route('admin.customers.index') }}"
@@ -357,7 +359,7 @@
                                     <i class="bi bi-list me-2"></i>
                                     <span>{{ \App\Helpers\Helpers::translate('list') }}</span>
                                 </a>
-                                @if(Auth::user()->role === 'admin' || Auth::user()->role === 'moderator')
+                                @if(Auth::user()->role === 'admin')
                                 <a href="{{ route('admin.categories.create') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->routeIs('admin.categories.create') ? 'active' : '' }}">
                                     <i class="bi bi-plus-circle me-2"></i>
                                     <span>{{ \App\Helpers\Helpers::translate('add_new') }}</span>
@@ -383,7 +385,7 @@
                                     <i class="bi bi-list me-2"></i>
                                     <span>{{ \App\Helpers\Helpers::translate('list') }}</span>
                                 </a>
-                                @if(Auth::user()->role === 'admin' || Auth::user()->role === 'moderator')
+                                @if(Auth::user()->role === 'admin')
                                 <a href="{{ route('admin.delivery-zones.create') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->routeIs('admin.delivery-zones.create') ? 'active' : '' }}">
                                     <i class="bi bi-plus-circle me-2"></i>
                                     <span>{{ \App\Helpers\Helpers::translate('add_new') }}</span>
@@ -409,7 +411,7 @@
                                     <i class="bi bi-list me-2"></i>
                                     <span>{{ \App\Helpers\Helpers::translate('list') }}</span>
                                 </a>
-                                @if(Auth::user()->role === 'admin' || Auth::user()->role === 'moderator')
+                                @if(Auth::user()->role === 'admin')
                                 <a href="{{ route('admin.products.create') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->routeIs('admin.products.create') ? 'active' : '' }}">
                                     <i class="bi bi-plus-circle me-2"></i>
                                     <span>{{ \App\Helpers\Helpers::translate('add_new') }}</span>
@@ -465,7 +467,7 @@
                                     <i class="bi bi-list me-2"></i>
                                     <span>{{ \App\Helpers\Helpers::translate('list') }}</span>
                                 </a>
-                                @if(Auth::user()->role === 'admin' || Auth::user()->role === 'moderator')
+                                @if(Auth::user()->role === 'admin')
                                 <a href="{{ route('admin.languages.create') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->routeIs('admin.languages.create') ? 'active' : '' }}">
                                     <i class="bi bi-plus-circle me-2"></i>
                                     <span>{{ \App\Helpers\Helpers::translate('add_new') }}</span>

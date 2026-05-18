@@ -7,9 +7,11 @@
     <div class="d-flex justify-content-between mb-4">
         <h3>{{\App\Helpers\Helpers::translate('product_management')}}</h3>
         <div>
+            @if(Auth::user()->role === 'admin')
             <a href="{{ route('admin.products.create') }}" class="btn btn-primary me-2">
                 <i class="bi bi-plus-lg me-2"></i>{{\App\Helpers\Helpers::translate('add_product')}}
             </a>
+            @endif
             <div class="btn-group">
                 <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="bi bi-file-excel me-1"></i> {{\App\Helpers\Helpers::translate('excel')}}
@@ -36,14 +38,14 @@
                                 </a>
                             </li>
                         @endforeach
+                        <li><hr class="dropdown-divider"></li>
+                        <li class="dropdown-header">{{\App\Helpers\Helpers::translate('import')}}</li>
+                        <li>
+                            <a class="dropdown-item" href="{{ route('admin.products.import') }}">
+                                <i class="bi bi-file-earmark-arrow-up me-2"></i> {{\App\Helpers\Helpers::translate('import_products')}}
+                            </a>
+                        </li>
                     @endif
-                    <li><hr class="dropdown-divider"></li>
-                    <li class="dropdown-header">{{\App\Helpers\Helpers::translate('import')}}</li>
-                    <li>
-                        <a class="dropdown-item" href="{{ route('admin.products.import') }}">
-                            <i class="bi bi-file-earmark-arrow-up me-2"></i> {{\App\Helpers\Helpers::translate('import_products')}}
-                        </a>
-                    </li>
                 </ul>
             </div>
         </div>
@@ -183,6 +185,7 @@
                             <td class="small text-muted">{{ $product->created_at?->format('Y-m-d') }}</td>
                             <td class="text-end pe-4">
                                 <div class="d-flex gap-2 justify-content-end">
+                                    @if(Auth::user()->role === 'admin')
                                     <a href="{{ route('admin.products.edit', $product->id) }}"
                                        class="btn btn-sm btn-light rounded-circle p-2">
                                         <i class="bi bi-pencil-square text-primary"></i>
@@ -193,6 +196,9 @@
                                             data-url="{{ route('admin.products.delete', $product->id) }}">
                                         <i class="bi bi-trash text-danger"></i>
                                     </button>
+                                    @else
+                                    <span class="text-muted small">—</span>
+                                    @endif
                                 </div>
                             </td>
                         </tr>

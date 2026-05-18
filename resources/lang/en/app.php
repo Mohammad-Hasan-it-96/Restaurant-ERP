@@ -519,7 +519,7 @@ return [
     // Dashboard – real data
     'orders_today'          => 'Orders Today',
     'top_customers'         => 'Top Customers',
-    'top_products'          => 'Top Selling Products',
+    'top_products'  => 'Top Selling Products',
     'sold'                  => 'sold',
     'no_data'               => 'No data available',
     'sales_today'           => 'Sales Today',
@@ -613,7 +613,6 @@ return [
     'avg_order_value'      => 'Avg Order Value',
     'total_delivery_fees'  => 'Total Delivery Fees',
     'revenue_by_day'       => 'Revenue by Day',
-    'top_products'         => 'Top Products',
     'qty_sold'             => 'Qty Sold',
     'rank'                 => 'Rank',
     'date_from'            => 'From',

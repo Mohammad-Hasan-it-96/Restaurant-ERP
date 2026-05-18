@@ -43,7 +43,8 @@
         </div>
     </div>
 
-    {{-- ── Stats Cards ──────────────────────────────────────────────────── --}}
+    {{-- ── Stats Cards (admin only) ────────────────────────────────────── --}}
+    @if(auth()->user()->isAdmin())
     <div class="row g-4 mb-4">
 
         {{-- Orders Today --}}
@@ -127,9 +128,11 @@
             </div>
         </div>
 
-    </div>
+    </div>{{-- end stats row --}}
+    @endif
 
-    {{-- ── Charts Row ───────────────────────────────────────────────────── --}}
+    {{-- ── Charts Row (admin only) ─────────────────────────────────────── --}}
+    @if(auth()->user()->isAdmin())
     <div class="row g-4 mb-4">
 
         {{-- Weekly Orders Chart --}}
@@ -157,19 +160,20 @@
                 </div>
                 <div class="card-body d-flex flex-column justify-content-center">
                     @php
-                        use App\Models\Order;
-                        $typeTable    = Order::where('order_type', Order::TYPE_TABLE)->count();
-                        $typeDelivery = Order::where('order_type', Order::TYPE_DELIVERY)->count();
-                        $typeTakeaway = Order::where('order_type', Order::TYPE_TAKEAWAY)->count();
+                        $typeTable    = \App\Models\Order::where('order_type', \App\Models\Order::TYPE_TABLE)->count();
+                        $typeDelivery = \App\Models\Order::where('order_type', \App\Models\Order::TYPE_DELIVERY)->count();
+                        $typeTakeaway = \App\Models\Order::where('order_type', \App\Models\Order::TYPE_TAKEAWAY)->count();
                     @endphp
                     <canvas id="orderTypeChart" height="220"></canvas>
                 </div>
             </div>
         </div>
 
-    </div>
+    </div>{{-- end charts row --}}
+    @endif
 
-    {{-- ── Top Customers & Top Products ──────────────────────────────────── --}}
+    {{-- ── Top Customers & Top Products (admin only) ─────────────────────── --}}
+    @if(auth()->user()->isAdmin())
     <div class="row g-4 mb-4">
 
         {{-- Top 5 Customers --}}
@@ -258,7 +262,8 @@
             </div>
         </div>
 
-    </div>
+    </div>{{-- end top row --}}
+    @endif
 
     {{-- ── Recent Orders ────────────────────────────────────────────────── --}}
     <div class="card border-0 shadow-sm">
@@ -278,7 +283,9 @@
                             <th>{{ __('app.order_number') }}</th>
                             <th>{{ __('app.customer') }}</th>
                             <th>{{ __('app.order_type') }}</th>
+                            @if(auth()->user()->isAdmin())
                             <th>{{ __('app.total') }}</th>
+                            @endif
                             <th>{{ __('app.status') }}</th>
                             <th>{{ __('app.date') }}</th>
                             <th></th>
@@ -305,7 +312,9 @@
                                 <i class="bi {{ $typeIcons[$order->order_type] ?? 'bi-question' }} me-1"></i>
                                 {{ __('app.' . $order->order_type) }}
                             </td>
+                            @if(auth()->user()->isAdmin())
                             <td>{{ number_format($order->total, 2) }}</td>
+                            @endif
                             <td><span class="badge bg-{{ $color }}">{{ __('app.' . $order->status) }}</span></td>
                             <td class="text-muted small">{{ $order->created_at->format('Y-m-d H:i') }}</td>
                             <td>
@@ -313,11 +322,17 @@
                                    class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-eye"></i>
                                 </a>
+                                <a href="{{ route('admin.orders.invoice', $order) }}"
+                                   target="_blank"
+                                   class="btn btn-sm btn-outline-secondary"
+                                   title="طباعة سريعة">
+                                    <i class="bi bi-printer"></i>
+                                </a>
                             </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
+                            <td colspan="{{ auth()->user()->isAdmin() ? 7 : 6 }}" class="text-center text-muted py-4">
                                 <i class="bi bi-receipt fs-3 d-block mb-2"></i>
                                 {{ __('app.no_orders_found') }}
                             </td>
@@ -332,6 +347,7 @@
 </div>
 @endsection
 
+@if(auth()->user()->isAdmin())
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
@@ -412,3 +428,4 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 @endpush
+@endif

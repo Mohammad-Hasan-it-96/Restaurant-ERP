@@ -33,7 +33,6 @@ return [
     // Dashboard – real data
     'orders_today'          => 'طلبات اليوم',
     'top_customers'         => 'أفضل العملاء',
-    'top_products'          => 'أكثر المنتجات مبيعاً',
     'sold'                  => 'مباع',
     'no_data'               => 'لا توجد بيانات',
     'sales_today'           => 'مبيعات اليوم',

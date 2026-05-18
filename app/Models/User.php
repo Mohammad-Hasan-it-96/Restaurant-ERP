@@ -57,6 +57,16 @@ class User extends Authenticatable
         return $this->role === $role;
     }
 
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    public function isModerator(): bool
+    {
+        return $this->role === 'moderator';
+    }
+
     /**
      * Get the profile picture URL
      *

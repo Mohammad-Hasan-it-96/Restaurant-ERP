@@ -9,9 +9,11 @@
             <h2 class="fw-bold mb-0">{{\App\Helpers\Helpers::translate('languages_management')}}</h2>
             <p class="text-muted">{{\App\Helpers\Helpers::translate('manage_languages')}}</p>
         </div>
+        @if(Auth::user()->role === 'admin')
         <a href="{{ route('admin.languages.create') }}" class="btn btn-primary">
             <i class="bi bi-plus-lg me-2"></i>{{\App\Helpers\Helpers::translate('add_language')}}
         </a>
+        @endif
     </div>
 
     @if(session('success'))
@@ -106,13 +108,14 @@
                             <td>{{ $language->created_at->format('M d, Y') }}</td>
                             <td>
                                 <div class="d-flex justify-content-end gap-2 pe-4">
+                                    @if(Auth::user()->role === 'admin')
                                     <a href="{{ route('admin.languages.edit', $language->id) }}" class="btn btn-sm btn-outline-primary" title="{{\App\Helpers\Helpers::translate('edit')}}">
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                     @if(!$language->is_default)
-                                    <button type="button" class="btn btn-sm btn-outline-danger delete-language" 
-                                            title="{{\App\Helpers\Helpers::translate('delete')}}" 
-                                            data-id="{{ $language->id }}" 
+                                    <button type="button" class="btn btn-sm btn-outline-danger delete-language"
+                                            title="{{\App\Helpers\Helpers::translate('delete')}}"
+                                            data-id="{{ $language->id }}"
                                             data-name="{{ $language->name }}">
                                         <i class="bi bi-trash"></i>
                                     </button>
@@ -120,6 +123,9 @@
                                     <button type="button" class="btn btn-sm btn-outline-danger" disabled title="{{\App\Helpers\Helpers::translate('cannot_delete_default')}}">
                                         <i class="bi bi-trash"></i>
                                     </button>
+                                    @endif
+                                    @else
+                                    <span class="text-muted small">—</span>
                                     @endif
                                 </div>
                             </td>
