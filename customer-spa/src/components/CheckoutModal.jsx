@@ -6,71 +6,67 @@ import { readStoredCustomerInfo, writeStoredCustomerInfo } from '../utils/custom
 import { formatPrice } from '../utils/format';
 import { useI18n } from '../i18n';
 
-export default function CheckoutModal({
-  zones,
-  cartItems,
-  cartTotal,
-  onSuccess,
-  onClose,
-}) {
+// ── Defined OUTSIDE component so React never remounts inputs on re-render ──
+function Field({ id, label, error, children }) {
+  return (
+    <div className="form-group">
+      <label className="form-label" htmlFor={id}>{label}</label>
+      {children}
+      {error && <div className="form-error">{error}</div>}
+    </div>
+  );
+}
+
+export default function CheckoutModal({ zones, cartItems, cartTotal, onSuccess, onClose }) {
   const { t } = useI18n();
 
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [orderType, setOrderType] = useState('table');
-  const [tableNum, setTableNum] = useState('');
-  const [address, setAddress] = useState('');
-  const [savedAddress, setSavedAddress] = useState('');
-  const [showAddressSuggestion, setShowAddressSuggestion] = useState(true);
-  const [dlvType, setDlvType] = useState('immediate');
-  const [scheduled, setScheduled] = useState('');
-  const [zone, setZone] = useState('');
-  const [note, setNote] = useState('');
-  const [errors, setErrors] = useState({});
-  const [apiError, setApiError] = useState('');
+  const [name,       setName]       = useState('');
+  const [phone,      setPhone]      = useState('');
+  const [orderType,  setOrderType]  = useState('table');
+  const [tableNum,   setTableNum]   = useState('');
+  const [address,    setAddress]    = useState('');
+  const [savedAddress, setSavedAddress]             = useState('');
+  const [showAddressSuggestion, setShowAddressSuggestion] = useState(false);
+  const [dlvType,    setDlvType]    = useState('immediate');
+  const [scheduled,  setScheduled]  = useState('');
+  const [note,       setNote]       = useState('');
+  const [errors,     setErrors]     = useState({});
+  const [apiError,   setApiError]   = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [visible, setVisible] = useState(false);
+  const [visible,    setVisible]    = useState(false);
 
+  // Slide-in animation
   useEffect(() => {
     const id = setTimeout(() => setVisible(true), 10);
     return () => clearTimeout(id);
   }, []);
 
-
-  /**
-   * On open: load from GET /customer/me when session has a customer; otherwise
-   * fill gaps from localStorage key `customer_info`.
-   */
+  // Load customer info from API (session) → fallback to localStorage
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      let apiName = '';
-      let apiPhone = '';
-      let apiDefaultAddress = '';
+      let apiName = '', apiPhone = '', apiDefaultAddress = '';
       try {
         const res = await api.get('/customer/me');
-        const info = extractData(res.data);
-        if (info && typeof info === 'object' && !Array.isArray(info)) {
-          apiName = String(info.name ?? '').trim();
-          apiPhone = String(info.phone ?? '').trim();
+        const info = res.data?.data;
+        if (info && !Array.isArray(info)) {
+          apiName           = String(info.name            ?? '').trim();
+          apiPhone          = String(info.phone           ?? '').trim();
           apiDefaultAddress = String(info.default_address ?? '').trim();
         }
-      } catch {
-        /* network or server error — use storage below */
-      }
+      } catch { /* ignore */ }
+
       const stored = readStoredCustomerInfo();
-      const resolvedSavedAddress =
-        apiDefaultAddress || String(stored.address ?? '').trim();
+      const resolvedAddr = apiDefaultAddress || String(stored.address ?? '').trim();
+
       if (!cancelled) {
-        setName(apiName || stored.name);
-        setPhone(apiPhone || stored.phone);
-        setSavedAddress(resolvedSavedAddress);
-        setShowAddressSuggestion(!!resolvedSavedAddress);
+        setName(apiName || stored.name || '');
+        setPhone(apiPhone || stored.phone || '');
+        setSavedAddress(resolvedAddr);
+        setShowAddressSuggestion(!!resolvedAddr);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   const close = () => {
@@ -80,56 +76,47 @@ export default function CheckoutModal({
 
   function validate() {
     const e = {};
-    if (!name.trim()) e.name = t('reqName');
-    if (!phone.trim()) e.phone = t('reqPhone');
-    if (orderType === 'table' && !tableNum.trim()) e.tableNum = t('reqTable');
-    if (orderType === 'delivery') {
-      if (!address.trim()) e.address = t('reqAddress');
-      if (dlvType === 'scheduled' && !scheduled) e.scheduled = t('reqScheduled');
-    }
+    if (!name.trim())    e.name    = t('reqName');
+    if (!phone.trim())   e.phone   = t('reqPhone');
+    if (orderType === 'table'    && !tableNum.trim()) e.tableNum  = t('reqTable');
+    if (orderType === 'delivery' && !address.trim())  e.address   = t('reqAddress');
+    if (orderType === 'delivery' && dlvType === 'scheduled' && !scheduled)
+      e.scheduled = t('reqScheduled');
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
   async function handleSubmit(ev) {
     ev.preventDefault();
-    if (!cartItems?.length) {
-      setApiError(t('emptyCart'));
-      return;
-    }
+    if (!cartItems?.length) { setApiError(t('emptyCart')); return; }
     if (!validate()) return;
     setSubmitting(true);
     setApiError('');
     try {
       const payload = {
-        customer_name: name.trim(),
+        customer_name:  name.trim(),
         customer_phone: phone.trim(),
-        order_type: orderType,
-        table_number: orderType === 'table' ? tableNum.trim() : null,
-        address: orderType === 'delivery' ? address.trim() : null,
-        delivery_type: orderType === 'delivery' ? dlvType : null,
-        scheduled_at:
-          orderType === 'delivery' && dlvType === 'scheduled' ? scheduled : null,
-        estimated_delivery_fee:
-          orderType === 'delivery' && zone ? Number(zone) : null,
-        customer_note: note.trim() || null,
-        items: cartItems.map((i) => ({
-          product_id: i.product_id,
-          quantity: i.quantity,
-        })),
+        order_type:     orderType,
+        table_number:   orderType === 'table'    ? tableNum.trim() : null,
+        address:        orderType === 'delivery' ? address.trim()  : null,
+        delivery_type:  orderType === 'delivery' ? dlvType         : null,
+        scheduled_at:   orderType === 'delivery' && dlvType === 'scheduled' ? scheduled : null,
+        customer_note:  note.trim() || null,
+        items: cartItems.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
       };
-      const res = await api.post('/orders', payload);
-      const data = extractData(res.data) || res.data || {};
-      const storedInfo = readStoredCustomerInfo();
-      const addressToStore =
-        orderType === 'delivery' ? address.trim() : storedInfo.address;
-      writeStoredCustomerInfo({ name: name.trim(), phone: phone.trim(), address: addressToStore });
+      const res    = await api.post('/orders', payload);
+      const data   = extractData(res.data) || res.data || {};
+      const stored = readStoredCustomerInfo();
+      writeStoredCustomerInfo({
+        name:    name.trim(),
+        phone:   phone.trim(),
+        address: orderType === 'delivery' ? address.trim() : stored.address,
+      });
       const orderNo = data.order_number || data.id || t('orderUnknown');
       appendMyOrderNumber(orderNo);
       onSuccess(orderNo);
     } catch (err) {
-      const rawMsg =
-        err.response?.data?.message || err.message || t('failedLoad');
+      const rawMsg = err.response?.data?.message || err.message || t('failedLoad');
       setApiError(decodeApiText(String(rawMsg), t('failedLoad')));
       if (err.response?.data?.errors) {
         const se = {};
@@ -144,40 +131,23 @@ export default function CheckoutModal({
     }
   }
 
-  const Field = ({ id, label, error, children }) => (
-    <div className="form-group">
-      <label className="form-label" htmlFor={id}>
-        {label}
-      </label>
-      {children}
-      {error && <div className="form-error">{error}</div>}
-    </div>
-  );
-
   return (
     <div
       className="checkout-overlay"
       style={{ opacity: visible ? 1 : 0, transition: 'opacity 0.25s' }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) close();
-      }}
+      onClick={(e) => { if (e.target === e.currentTarget) close(); }}
     >
       <form
         className="checkout-sheet"
         style={{
-          transform: visible ? 'translateY(0)' : 'translateY(100%)',
+          transform:  visible ? 'translateY(0)' : 'translateY(100%)',
           transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
         }}
         onSubmit={handleSubmit}
       >
         <div className="checkout-header">
           <h2 className="checkout-title">{t('orderDetails')}</h2>
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={close}
-            aria-label={t('close')}
-          >
+          <button type="button" className="icon-btn" onClick={close} aria-label={t('close')}>
             <CloseIcon />
           </button>
         </div>
@@ -202,6 +172,7 @@ export default function CheckoutModal({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               type="tel"
+              dir="ltr"
               autoComplete="tel"
             />
           </Field>
@@ -236,23 +207,19 @@ export default function CheckoutModal({
 
           {orderType === 'delivery' && (
             <div className="conditional-section">
-              {savedAddress.trim() &&
-                !address.trim() &&
-                showAddressSuggestion && (
-                  <button
-                    type="button"
-                    className="address-suggestion-chip"
-                    onClick={() => {
-                      setAddress(savedAddress);
-                      setShowAddressSuggestion(false);
-                    }}
-                    aria-label={`${t('previousAddressPrefix')} ${savedAddress} ${t('useThisAddress')}`}
-                  >
-                    {t('previousAddressPrefix')}{' '}
-                    <span className="address-suggestion-text">{savedAddress}</span>{' '}
-                    {t('useThisAddress')}
-                  </button>
-                )}
+              {showAddressSuggestion && savedAddress && !address && (
+                <button
+                  type="button"
+                  className="address-suggestion-chip"
+                  onClick={() => { setAddress(savedAddress); setShowAddressSuggestion(false); }}
+                  aria-label={`${t('previousAddressPrefix')} ${savedAddress} ${t('useThisAddress')}`}
+                >
+                  {t('previousAddressPrefix')}{' '}
+                  <span className="address-suggestion-text">{savedAddress}</span>{' '}
+                  {t('useThisAddress')}
+                </button>
+              )}
+
               <Field id="address" label={t('address')} error={errors.address}>
                 <textarea
                   id="address"
@@ -260,12 +227,12 @@ export default function CheckoutModal({
                   rows={2}
                   value={address}
                   onChange={(e) => {
-                    const v = e.target.value;
-                    setAddress(v);
-                    if (v !== '') setShowAddressSuggestion(false);
+                    setAddress(e.target.value);
+                    if (e.target.value) setShowAddressSuggestion(false);
                   }}
                 />
               </Field>
+
               <Field id="dlvType" label={t('deliveryType')} error={null}>
                 <select
                   id="dlvType"
@@ -277,12 +244,9 @@ export default function CheckoutModal({
                   <option value="scheduled">{t('scheduled')}</option>
                 </select>
               </Field>
+
               {dlvType === 'scheduled' && (
-                <Field
-                  id="scheduled"
-                  label={t('scheduledAt')}
-                  error={errors.scheduled}
-                >
+                <Field id="scheduled" label={t('scheduledAt')} error={errors.scheduled}>
                   <input
                     id="scheduled"
                     type="datetime-local"
@@ -292,26 +256,6 @@ export default function CheckoutModal({
                   />
                 </Field>
               )}
-              <Field id="zone" label={t('deliveryZone')} error={null}>
-                <select
-                  id="zone"
-                  className="form-select"
-                  value={zone}
-                  onChange={(e) => setZone(e.target.value)}
-                >
-                  <option value="">
-                    {zones.length ? t('selectZone') : t('noZones')}
-                  </option>
-                  {zones.map((z) => (
-                    <option
-                      key={z.id || z.area_name}
-                      value={z.estimated_fee}
-                    >
-                      {z.area_name} ({formatPrice(z.estimated_fee)})
-                    </option>
-                  ))}
-                </select>
-              </Field>
             </div>
           )}
 
@@ -328,26 +272,12 @@ export default function CheckoutModal({
         </div>
 
         <div className="checkout-footer">
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginBottom: 12,
-              fontSize: 14,
-            }}
-          >
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, fontSize: 14 }}>
             <span>{t('subtotal')}</span>
             <strong style={{ fontSize: 18 }}>{formatPrice(cartTotal)}</strong>
           </div>
           <button type="submit" className="btn-submit" disabled={submitting}>
-            {submitting ? (
-              <>
-                <span className="spinner" />
-                {t('sending')}
-              </>
-            ) : (
-              t('placeOrder')
-            )}
+            {submitting ? (<><span className="spinner" />{t('sending')}</>) : t('placeOrder')}
           </button>
         </div>
       </form>
