@@ -159,6 +159,8 @@ class OrderService
             $order = Order::create([
                 'order_number'          => $orderNumber,
                 'customer_id'           => $customer->id,
+                'customer_name'         => $data['customer_name']  ?? $customer->full_name,
+                'phone'                 => $data['customer_phone'] ?? $customer->phone,
                 'source'                => 'website',
                 'order_type'            => $data['order_type'],
                 'table_number'          => $data['table_number']   ?? null,

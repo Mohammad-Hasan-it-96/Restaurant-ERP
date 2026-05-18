@@ -168,8 +168,8 @@
                         @forelse($orders as $order)
                         <tr>
                             <td class="fw-semibold">{{ $order->order_number }}</td>
-                            <td>{{ $order->customer->full_name ?? '—' }}</td>
-                            <td dir="ltr">{{ $order->customer->phone ?? '—' }}</td>
+                            <td>{{ $order->customer_name ?? '—' }}</td>
+                            <td dir="ltr">{{ $order->phone ?? '—' }}</td>
                             <td>
                                 @php
                                     $typeIcons = ['delivery' => 'bi-bicycle', 'table' => 'bi-grid-1x2', 'takeaway' => 'bi-bag'];

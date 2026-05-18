@@ -282,7 +282,9 @@
                         <tr>
                             <th>{{ __('app.order_number') }}</th>
                             <th>{{ __('app.customer') }}</th>
+                            <th>{{ __('app.phone') }}</th>
                             <th>{{ __('app.order_type') }}</th>
+                            <th>{{ __('app.address') }}</th>
                             @if(auth()->user()->isAdmin())
                             <th>{{ __('app.total') }}</th>
                             @endif
@@ -306,11 +308,15 @@
                         @endphp
                         <tr>
                             <td class="fw-semibold">#{{ $order->order_number }}</td>
-                            <td>{{ $order->customer->full_name ?? '—' }}</td>
+                            <td>{{ $order->customer_name ?? '—' }}</td>
+                            <td class="small text-muted">{{ $order->phone ?? '—' }}</td>
                             <td>
                                 @php $typeIcons = ['delivery'=>'bi-bicycle','table'=>'bi-grid-1x2','takeaway'=>'bi-bag']; @endphp
                                 <i class="bi {{ $typeIcons[$order->order_type] ?? 'bi-question' }} me-1"></i>
                                 {{ __('app.' . $order->order_type) }}
+                            </td>
+                            <td class="small text-muted" style="max-width:160px;">
+                                {{ $order->address ? \Illuminate\Support\Str::limit($order->address, 40) : '—' }}
                             </td>
                             @if(auth()->user()->isAdmin())
                             <td>{{ number_format($order->total, 2) }}</td>
@@ -332,7 +338,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="{{ auth()->user()->isAdmin() ? 7 : 6 }}" class="text-center text-muted py-4">
+                            <td colspan="{{ auth()->user()->isAdmin() ? 9 : 8 }}" class="text-center text-muted py-4">
                                 <i class="bi bi-receipt fs-3 d-block mb-2"></i>
                                 {{ __('app.no_orders_found') }}
                             </td>

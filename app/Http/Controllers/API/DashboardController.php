@@ -38,8 +38,7 @@ class DashboardController extends BaseController
         }
 
         // ── Recent orders ────────────────────────────────────────────────────
-        $recentOrders = Order::with('customer')
-            ->latest()
+        $recentOrders = Order::latest()
             ->limit(8)
             ->get();
 

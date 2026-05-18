@@ -35,10 +35,12 @@ class OrderController extends Controller
             $query->where('status', $status);
         }
 
-        // Search by order_number or customer phone
+        // Search by order_number, customer_name, phone (snapshot columns) or customer relation
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('order_number', 'like', '%' . $search . '%')
+                  ->orWhere('customer_name', 'like', '%' . $search . '%')
+                  ->orWhere('phone', 'like', '%' . $search . '%')
                   ->orWhereHas('customer', fn($cq) =>
                       $cq->where('phone', 'like', '%' . $search . '%')
                          ->orWhere('full_name', 'like', '%' . $search . '%')

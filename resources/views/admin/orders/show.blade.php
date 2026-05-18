@@ -116,10 +116,10 @@
                 <div class="card-body">
                     <dl class="row mb-0">
                         <dt class="col-5 text-muted">{{ __('app.customer_name') }}</dt>
-                        <dd class="col-7">{{ $order->customer->full_name ?? '—' }}</dd>
+                        <dd class="col-7">{{ $order->customer_name ?? '—' }}</dd>
 
                         <dt class="col-5 text-muted">{{ __('app.phone') }}</dt>
-                        <dd class="col-7" dir="ltr">{{ $order->customer->phone ?? '—' }}</dd>
+                        <dd class="col-7" dir="ltr">{{ $order->phone ?? '—' }}</dd>
 
                         @if($order->customer && $order->customer->is_blocked)
                         <dd class="col-12">

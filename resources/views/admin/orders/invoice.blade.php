@@ -297,10 +297,10 @@
     {{-- ── Customer ── --}}
     <dl>
         <dt>{{ __('app.customer_name') }}</dt>
-        <dd>{{ $order->customer->full_name ?? '—' }}</dd>
+        <dd>{{ $order->customer_name ?? '—' }}</dd>
 
         <dt>{{ __('app.phone') }}</dt>
-        <dd>{{ $order->customer->phone ?? '—' }}</dd>
+        <dd>{{ $order->phone ?? '—' }}</dd>
 
         @if($order->order_type === 'delivery' && $order->address)
         <dt>{{ __('app.address') }}</dt>

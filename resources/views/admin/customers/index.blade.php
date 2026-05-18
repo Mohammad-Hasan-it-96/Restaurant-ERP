@@ -203,7 +203,7 @@
     {{-- Unblock Modal --}}
     <div class="modal fade" id="unblockModal" tabindex="-1" aria-labelledby="unblockModalLabel" aria-hidden="true">
         <div class="modal-dialog">
-            <form method="POST" action="{{ route('admin.customers.unblock', $customer) }}">
+            <form method="POST" id="unblockForm">
                 @csrf
                 <div class="modal-content">
                     <div class="modal-header bg-success text-white">
@@ -213,9 +213,7 @@
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="mb-0">
-                            {{ __('app.confirm_unblock_named', ['name' => $customer->full_name]) }}
-                        </p>
+                        <p id="unblockModalBody" class="mb-0"></p>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
@@ -232,10 +230,22 @@
 
     @push('scripts')
         <script>
+            const confirmBlockMsg   = @json(__('app.confirm_block_named'));
+            const confirmUnblockMsg = @json(__('app.confirm_unblock_named'));
+
             document.getElementById('blockModal').addEventListener('show.bs.modal', function (e) {
                 const btn = e.relatedTarget;
                 document.getElementById('blockForm').action = btn.dataset.action;
+                document.getElementById('blockModalBody').textContent =
+                    confirmBlockMsg.replace(':name', btn.dataset.name);
                 document.getElementById('blocked_reason').value = '';
+            });
+
+            document.getElementById('unblockModal').addEventListener('show.bs.modal', function (e) {
+                const btn = e.relatedTarget;
+                document.getElementById('unblockForm').action = btn.dataset.action;
+                document.getElementById('unblockModalBody').textContent =
+                    confirmUnblockMsg.replace(':name', btn.dataset.name);
             });
         </script>
     @endpush
