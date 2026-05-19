@@ -3,7 +3,7 @@ import api from '../api/client';
 import { readStoredCustomerInfo, writeStoredCustomerInfo } from '../utils/customerInfo';
 import { useI18n } from '../i18n';
 
-export default function MyProfile() {
+export default function MyProfile({ onMenuClick }) {
   const { t } = useI18n();
 
   const [loading, setLoading]   = useState(true);
@@ -105,11 +105,18 @@ export default function MyProfile() {
 
   return (
     <div className="profile-page">
+      <div className="page-topbar">
+        {onMenuClick && (
+          <button type="button" className="back-to-menu-btn" onClick={onMenuClick}>
+            <span className="back-arrow">→</span>
+            {t('backToMenu')}
+          </button>
+        )}
+        <h2 className="page-topbar-title">{t('myAccount')}</h2>
+      </div>
+
       {/* ── Profile form ───────────────────────────────── */}
       <section className="profile-section">
-        <div className="section-header">
-          <h2>{t('myAccount')}</h2>
-        </div>
 
         {loading ? (
           <div className="profile-skeleton">

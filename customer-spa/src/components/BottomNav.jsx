@@ -1,9 +1,10 @@
-﻿import { CartIcon, PersonIcon, ClipboardIcon } from './Icons';
+﻿import { CartIcon, PersonIcon, ClipboardIcon, MenuIcon } from './Icons';
 import { formatPrice } from '../utils/format';
 import { useI18n } from '../i18n';
 
 export default function BottomNav({
   activePage,
+  onMenuClick,
   onOrdersClick,
   onProfileClick,
   cartCount,
@@ -13,7 +14,7 @@ export default function BottomNav({
   const { t } = useI18n();
   return (
     <nav className="bottom-nav" aria-label={t('mainNavAria')}>
-      {/* طلباتي — يمين (أول عنصر في RTL) */}
+      {/* طلباتي */}
       <button
         type="button"
         className={`bottom-nav-item${activePage === 'orders' ? ' active' : ''}`}
@@ -38,7 +39,7 @@ export default function BottomNav({
         </span>
       </button>
 
-      {/* حسابي — يسار (آخر عنصر في RTL) */}
+      {/* حسابي */}
       <button
         type="button"
         className={`bottom-nav-item${activePage === 'profile' ? ' active' : ''}`}

@@ -1,8 +1,8 @@
-﻿import { BellIcon, CartIcon, ForkKnifeIcon } from './Icons';
+﻿import { BellIcon, CartIcon, ClipboardIcon, ForkKnifeIcon, PersonIcon } from './Icons';
 import { formatPrice } from '../utils/format';
 import { switchLanguage, useI18n } from '../i18n';
 
-export default function Header({ settings, cartCount, onCartClick }) {
+export default function Header({ settings, cartCount, onCartClick, activePage, onOrdersClick, onProfileClick }) {
   const { lang, t } = useI18n();
 
   // Pick locale-aware restaurant name:
@@ -52,6 +52,26 @@ export default function Header({ settings, cartCount, onCartClick }) {
         </div>
 
         <div className="header-right">
+          {/* Desktop-only nav links */}
+          <nav className="header-desktop-nav" aria-label={t('mainNavAria')}>
+            <button
+              type="button"
+              className={`header-nav-btn${activePage === 'orders' ? ' active' : ''}`}
+              onClick={onOrdersClick}
+            >
+              <ClipboardIcon size={16} />
+              <span>{t('ordersPage')}</span>
+            </button>
+            <button
+              type="button"
+              className={`header-nav-btn${activePage === 'profile' ? ' active' : ''}`}
+              onClick={onProfileClick}
+            >
+              <PersonIcon size={16} />
+              <span>{t('profile')}</span>
+            </button>
+          </nav>
+
           <button
             type="button"
             className="lang-btn"

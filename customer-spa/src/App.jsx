@@ -138,6 +138,9 @@ export default function App() {
         settings={settings}
         cartCount={cart.cartCount}
         onCartClick={() => setShowCart(true)}
+        activePage={activePage}
+        onOrdersClick={() => setActivePage('orders')}
+        onProfileClick={() => setActivePage('profile')}
       />
 
       <main className="main-content">
@@ -191,14 +194,15 @@ export default function App() {
             )}
           </>
         ) : activePage === 'orders' ? (
-          <MyOrders onModify={handleModifyOrder} />
+          <MyOrders onModify={handleModifyOrder} onMenuClick={() => setActivePage('menu')} />
         ) : activePage === 'profile' ? (
-          <MyProfile />
+          <MyProfile onMenuClick={() => setActivePage('menu')} />
         ) : null}
       </main>
 
       <BottomNav
         activePage={activePage}
+        onMenuClick={() => setActivePage('menu')}
         onOrdersClick={() => setActivePage('orders')}
         onProfileClick={() => setActivePage('profile')}
         cartCount={cart.cartCount}

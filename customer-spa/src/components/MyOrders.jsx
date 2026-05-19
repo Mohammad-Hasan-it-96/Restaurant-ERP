@@ -131,7 +131,7 @@ function OrderDetailModal({ order, onClose, onModify }) {
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-export default function MyOrders({ onModify }) {
+export default function MyOrders({ onModify, onMenuClick }) {
   const { t, lang } = useI18n();
 
   const [orders,   setOrders]   = useState(() => readMyOrderObjects());
@@ -154,8 +154,14 @@ export default function MyOrders({ onModify }) {
 
   return (
     <div className="orders-page">
-      <div className="section-header" style={{ padding: '16px 16px 8px' }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700 }}>{t('ordersPage')}</h2>
+      <div className="page-topbar">
+        {onMenuClick && (
+          <button type="button" className="back-to-menu-btn" onClick={onMenuClick}>
+            <span className="back-arrow">→</span>
+            {t('backToMenu')}
+          </button>
+        )}
+        <h2 className="page-topbar-title">{t('ordersPage')}</h2>
       </div>
 
       {loading ? (
