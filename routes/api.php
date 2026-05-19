@@ -27,24 +27,26 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         ->middleware('throttle:30,1')
         ->name('logs.frontend');
 
-    // ── Session-bound routes (CustomerSession isolates from admin cookie) ─────
-    // CustomerSession boots a SEPARATE 'customer_spa_session' cookie so the
-    // admin's 'restaurant_session' is never touched by SPA requests.
-    Route::middleware([CustomerSession::class, 'customer.session'])->group(function () {
-
-        // Orders (extra strict throttle on placement only)
+    // ── Order placement (separate customer session, isolated from admin) ────────
+    Route::middleware(['customer.start', 'customer.session'])->group(function () {
         Route::post('orders', [OrderController::class, 'store'])
             ->middleware('throttle:10,1')
             ->name('orders.store');
+    });
+
+    // ── Token-protected routes ────────────────────────────────────────────────
+    // Authorization: Bearer <customer_token>
+    Route::middleware(['customer.token'])->group(function () {
         Route::get ('orders/{order_number}',        [OrderController::class, 'show'])  ->name('orders.show');
         Route::post('orders/{order_number}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
 
-        // Guest profile auto-fill & update
         Route::get ('customer/me',     [CustomerController::class, 'me'])    ->name('customer.me');
         Route::get ('customer/orders', [CustomerController::class, 'orders'])->name('customer.orders');
         Route::post('customer/update', [CustomerController::class, 'update'])->name('customer.update');
+    });
 
-        // Cart
+    // Cart (session-based as before)
+    Route::middleware(['customer.start', 'customer.session'])->group(function () {
         Route::get ('cart',        [CartController::class, 'index'])  ->name('cart.index');
         Route::post('cart/add',    [CartController::class, 'add'])    ->name('cart.add');
         Route::post('cart/update', [CartController::class, 'update']) ->name('cart.update');

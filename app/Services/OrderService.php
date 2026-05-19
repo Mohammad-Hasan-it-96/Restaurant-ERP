@@ -11,6 +11,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class OrderService
@@ -65,7 +66,7 @@ class OrderService
             $sessionCustomerId = session()->get('customer_id');
 
             if ($sessionCustomerId) {
-                $customer = Customer::find($sessionCustomerId);
+                $customer = Customer::findOrFail($sessionCustomerId);
             }
 
             // Fall back to phone lookup / creation (covers first-time & session-less clients)
@@ -91,9 +92,15 @@ class OrderService
             // (e.g. cart ↔ order correlation) don't need to look up by phone again.
             session()->put('customer_id', $customer->id);
 
+            // Generate a persistent token if the customer doesn't have one yet
+            if (! $customer->token) {
+                $customer->update(['token' => (string) Str::uuid()]);
+                Log::debug('customer.token.generated', ['customer_id' => $customer->id]);
+            }
+
             // ── 2. Resolve & validate products ───────────────────────
             $productIds = collect($data['items'])->pluck('product_id')->unique()->toArray();
-            $products   = Product::whereIn('id', $productIds)
+            $products   = Product::query()->whereIn('id', $productIds)
                             ->where('is_active', true)
                             ->where('is_available', true)
                             ->get()

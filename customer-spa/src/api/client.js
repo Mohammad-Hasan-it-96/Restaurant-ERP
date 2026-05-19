@@ -2,6 +2,15 @@ import axios from 'axios';
 
 const api = axios.create({ baseURL: '/api/v1' });
 
+// Attach customer_token as Authorization header on every request
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('customer_token');
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export default api;
 
 /** Extract an array from various API response shapes */

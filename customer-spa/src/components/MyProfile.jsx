@@ -1,19 +1,23 @@
 import { useState, useEffect } from 'react';
 import api from '../api/client';
-import { writeStoredCustomerInfo } from '../utils/customerInfo';
+import { readStoredCustomerInfo, writeStoredCustomerInfo } from '../utils/customerInfo';
 import { useI18n } from '../i18n';
-import OrderHistory from './OrderHistory';
 
 export default function MyProfile() {
   const { t } = useI18n();
 
-  const [loading, setLoading]     = useState(true);
-  const [saving,  setSaving]      = useState(false);
-  const [success, setSuccess]     = useState(false);
-  const [apiError, setApiError]   = useState('');
-  const [apiOrders, setApiOrders] = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [saving,  setSaving]    = useState(false);
+  const [success, setSuccess]   = useState(false);
+  const [apiError, setApiError] = useState('');
 
-  const [form, setForm]   = useState({ name: '', phone: '', address: '' });
+  // Pre-fill immediately from localStorage — instant, no flash
+  const stored = readStoredCustomerInfo();
+  const [form, setForm]     = useState({
+    name:    stored.name    || '',
+    phone:   stored.phone   || '',
+    address: stored.address || '',
+  });
   const [errors, setErrors] = useState({});
 
   function applyProfile(data) {
@@ -24,32 +28,32 @@ export default function MyProfile() {
     });
   }
 
-  // Load profile from API on mount — single source of truth
+  // Try API — if session exists → override localStorage values
   useEffect(() => {
-    let cancelled = false;
+    // If localStorage already had data, stop skeleton immediately
+    if (stored.name || stored.phone) setLoading(false);
 
+    let cancelled = false;
     api.get('/customer/me')
       .then((res) => {
         if (cancelled) return;
         const data = res.data?.data;
-        // data is [] when no session, or object when session exists
         if (data && !Array.isArray(data) && (data.name || data.phone)) {
+          // Session is alive — use server data as source of truth
           applyProfile(data);
           writeStoredCustomerInfo({
             name:    data.name,
             phone:   data.phone,
             address: data.default_address,
           });
-          if (Array.isArray(data.orders)) {
-            setApiOrders(data.orders);
-          }
         }
+        // If data is [] (no session) — localStorage values already applied above, nothing to do
       })
-      .catch(() => {/* network error — form stays empty */})
+      .catch(() => {/* network error — localStorage values already shown */})
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function validate() {
     const e = {};
@@ -81,6 +85,10 @@ export default function MyProfile() {
           phone:   data.phone,
           address: data.default_address,
         });
+        // Store token if returned (new customer scenario)
+        if (data.token) {
+          localStorage.setItem('customer_token', data.token);
+        }
       }
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -157,9 +165,6 @@ export default function MyProfile() {
           </form>
         )}
       </section>
-
-      {/* ── Order history ───────────────────────────────── */}
-      <OrderHistory orders={apiOrders} />
     </div>
   );
 }

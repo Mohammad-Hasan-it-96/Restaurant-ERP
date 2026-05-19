@@ -31,8 +31,12 @@ class OrderController extends Controller
         try {
             $order = $this->orderService->createOrder($request->validated());
 
+            $orderData = new OrderResource($order->load('items'));
+
             return $this->success(
-                new OrderResource($order->load('items')),
+                array_merge($orderData->resolve(), [
+                    'customer_token' => $order->customer->token,
+                ]),
                 __('app.order_placed_successfully'),
                 201
             );
@@ -90,9 +94,15 @@ class OrderController extends Controller
      */
     public function cancel(string $orderNumber): JsonResponse
     {
-        $order = Order::where('order_number', $orderNumber)->first();
+        $customer = request()->attributes->get('customer');
+        $order    = Order::query()->where('order_number', $orderNumber)->first();
 
         if (! $order) {
+            return $this->error(__('app.order_not_found'), 404);
+        }
+
+        // Return 404 (not 403) to avoid leaking order existence
+        if (! $customer || $order->customer_id !== $customer->id) {
             return $this->error(__('app.order_not_found'), 404);
         }
 

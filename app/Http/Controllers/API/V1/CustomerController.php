@@ -7,6 +7,7 @@ use App\Http\Resources\V1\OrderResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Str;
 
 class CustomerController extends Controller
 {
@@ -55,6 +56,7 @@ class CustomerController extends Controller
         }
 
         $orders = \App\Models\Order::where('customer_id', $customer->id)
+            ->with('items')
             ->latest()
             ->get();
 
@@ -83,7 +85,10 @@ class CustomerController extends Controller
                 ['phone' => $validated['phone']],
                 ['full_name' => $validated['name']]
             );
-            session()->put('customer_id', $customer->id);
+            // Generate token for new customer so they can authenticate next time
+            if (! $customer->token) {
+                $customer->update(['token' => (string) Str::uuid()]);
+            }
         }
 
         if ($customer->is_blocked) {
@@ -101,6 +106,7 @@ class CustomerController extends Controller
             'name'            => $customer->full_name,
             'phone'           => $customer->phone,
             'default_address' => $customer->default_address,
+            'token'           => $customer->token,
         ], 'Profile updated successfully.');
     }
 }

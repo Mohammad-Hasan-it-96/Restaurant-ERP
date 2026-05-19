@@ -1,10 +1,10 @@
-﻿import { CartIcon, MenuIcon, PersonIcon } from './Icons';
+﻿import { CartIcon, PersonIcon, ClipboardIcon } from './Icons';
 import { formatPrice } from '../utils/format';
 import { useI18n } from '../i18n';
 
 export default function BottomNav({
   activePage,
-  onMenuClick,
+  onOrdersClick,
   onProfileClick,
   cartCount,
   cartTotal,
@@ -13,15 +13,17 @@ export default function BottomNav({
   const { t } = useI18n();
   return (
     <nav className="bottom-nav" aria-label={t('mainNavAria')}>
+      {/* طلباتي — يمين (أول عنصر في RTL) */}
       <button
         type="button"
-        className={`bottom-nav-item${activePage === 'menu' ? ' active' : ''}`}
-        onClick={onMenuClick}
+        className={`bottom-nav-item${activePage === 'orders' ? ' active' : ''}`}
+        onClick={onOrdersClick}
       >
-        <MenuIcon size={22} />
-        <span>{t('menu')}</span>
+        <ClipboardIcon size={22} />
+        <span>{t('ordersPage')}</span>
       </button>
 
+      {/* السلة — وسط */}
       <button
         type="button"
         className="bottom-nav-cart"
@@ -36,6 +38,7 @@ export default function BottomNav({
         </span>
       </button>
 
+      {/* حسابي — يسار (آخر عنصر في RTL) */}
       <button
         type="button"
         className={`bottom-nav-item${activePage === 'profile' ? ' active' : ''}`}

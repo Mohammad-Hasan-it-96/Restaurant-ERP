@@ -10,6 +10,7 @@ class Customer extends Model
         'default_address',
         'is_blocked',
         'blocked_reason',
+        'token',
     ];
     protected function casts(): array
     {

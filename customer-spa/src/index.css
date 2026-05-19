@@ -274,6 +274,18 @@ button{font-family:inherit;cursor:pointer}
 .profile-skeleton{padding:4px 0}
 .api-success{background:#dcfce7;color:#166534;padding:10px 14px;border-radius:var(--radius-md);font-size:13px;margin-bottom:14px}
 
+/* ── My Orders page ─────────────────────────────────────────────────── */
+.orders-page{padding:0 0 16px}
+.order-history-card--clickable{cursor:pointer;transition:var(--transition)}
+.order-history-card--clickable:hover{border-color:var(--primary);box-shadow:0 0 0 2px rgba(192,57,43,.10)}
+.order-history-card--clickable:active{transform:scale(.99)}
+.order-card-tap-hint{margin-top:8px;font-size:12px;color:var(--primary);font-weight:600;text-align:end}
+.order-detail-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;flex-wrap:wrap}
+.order-items-table{width:100%;border-collapse:collapse;font-size:14px}
+.order-items-table th{text-align:start;font-size:12px;font-weight:600;color:var(--text-sub);padding:6px 8px;border-bottom:2px solid var(--border)}
+.order-items-table td{padding:10px 8px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.order-items-table tbody tr:last-child td{border-bottom:none}
+
 /* ── Utilities ──────────────────────────────────────────────────────── */
 .skeleton{background:linear-gradient(90deg,#ede8e3 25%,#e5dfda 50%,#ede8e3 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:var(--radius-md)}
 .skeleton-card{height:104px;border-radius:var(--radius-lg)}

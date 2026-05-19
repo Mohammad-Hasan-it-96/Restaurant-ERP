@@ -34,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'guest'            => RedirectIfAuthenticated::class,
             'customer.session' => \App\Http\Middleware\EnsureCustomerSession::class,
             'customer.start'   => \App\Http\Middleware\CustomerSession::class,
+            'customer.token'   => \App\Http\Middleware\ResolveCustomerByToken::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

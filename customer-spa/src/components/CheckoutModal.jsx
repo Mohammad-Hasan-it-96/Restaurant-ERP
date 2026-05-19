@@ -106,6 +106,10 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, onSuccess, 
       };
       const res    = await api.post('/orders', payload);
       const data   = extractData(res.data) || res.data || {};
+      // Store customer token for future authenticated requests
+      if (data.customer_token) {
+        localStorage.setItem('customer_token', data.customer_token);
+      }
       const stored = readStoredCustomerInfo();
       writeStoredCustomerInfo({
         name:    name.trim(),
@@ -113,7 +117,7 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, onSuccess, 
         address: orderType === 'delivery' ? address.trim() : stored.address,
       });
       const orderNo = data.order_number || data.id || t('orderUnknown');
-      appendMyOrderNumber(orderNo);
+      appendMyOrderNumber(orderNo, data); // cache full order object locally
       onSuccess(orderNo);
     } catch (err) {
       const rawMsg = err.response?.data?.message || err.message || t('failedLoad');

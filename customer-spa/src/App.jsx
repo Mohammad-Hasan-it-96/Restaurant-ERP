@@ -14,6 +14,7 @@ import CartDrawer from './components/CartDrawer';
 import CheckoutModal from './components/CheckoutModal';
 import OrderSuccess from './components/OrderSuccess';
 import MyProfile from './components/MyProfile';
+import MyOrders from './components/MyOrders';
 import BottomNav from './components/BottomNav';
 
 export default function App() {
@@ -176,6 +177,8 @@ export default function App() {
               </>
             )}
           </>
+        ) : activePage === 'orders' ? (
+          <MyOrders />
         ) : activePage === 'profile' ? (
           <MyProfile />
         ) : null}
@@ -183,7 +186,7 @@ export default function App() {
 
       <BottomNav
         activePage={activePage}
-        onMenuClick={() => setActivePage('menu')}
+        onOrdersClick={() => setActivePage('orders')}
         onProfileClick={() => setActivePage('profile')}
         cartCount={cart.cartCount}
         cartTotal={cart.cartTotal}
