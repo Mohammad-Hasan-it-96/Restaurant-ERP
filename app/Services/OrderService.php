@@ -217,5 +217,161 @@ class OrderService
             throw $e;
         }
     }
+
+    /**
+     * Modify an existing pending order.
+     *
+     * Rules:
+     *  - Order must belong to $customer.
+     *  - Order status must be "pending".
+     *  - Modification must happen within the customer_cancel_before_minutes window.
+     *
+     * On success:
+     *  - Old order status → "modified".
+     *  - New order created (same base data + modifications) with modified_from_order_id.
+     *
+     * @param  Order    $oldOrder  The order to be superseded.
+     * @param  array    $data      Validated payload (same shape as createOrder).
+     * @param  Customer $customer  Token-resolved customer.
+     * @return Order               The newly created replacement order.
+     *
+     * @throws ValidationException|\Throwable
+     */
+    public function modifyOrder(Order $oldOrder, array $data, Customer $customer): Order
+    {
+        // ── 1. Ownership check ────────────────────────────────────────────────
+        if ($oldOrder->customer_id !== $customer->id) {
+            throw ValidationException::withMessages([
+                'order' => [__('app.order_not_found')],
+            ]);
+        }
+
+        // ── 2. Status check ───────────────────────────────────────────────────
+        if ($oldOrder->status !== Order::STATUS_PENDING) {
+            throw ValidationException::withMessages([
+                'order' => [__('app.order_modify_not_allowed')],
+            ]);
+        }
+
+        // ── 3. Time-window check ──────────────────────────────────────────────
+        $cancelBeforeMinutes = (int) $this->config->getNumber('customer_cancel_before_minutes', 0);
+
+        if ($cancelBeforeMinutes > 0) {
+            if (
+                $oldOrder->order_type   === Order::TYPE_DELIVERY
+                && $oldOrder->delivery_type === 'scheduled'
+                && $oldOrder->scheduled_at  !== null
+            ) {
+                // Scheduled: must be before (scheduled_at - window)
+                $deadline = Carbon::parse($oldOrder->scheduled_at)->subMinutes($cancelBeforeMinutes);
+                if (now()->greaterThanOrEqualTo($deadline)) {
+                    throw ValidationException::withMessages([
+                        'order' => [__('app.order_modify_window_passed')],
+                    ]);
+                }
+            } else {
+                // Immediate / table / takeaway: must be within X minutes of placing
+                $deadline = Carbon::parse($oldOrder->created_at)->addMinutes($cancelBeforeMinutes);
+                if (now()->greaterThan($deadline)) {
+                    throw ValidationException::withMessages([
+                        'order' => [__('app.order_modify_window_passed')],
+                    ]);
+                }
+            }
+        }
+
+        Log::info('order.modify.start', [
+            'old_order_id'     => $oldOrder->id,
+            'old_order_number' => $oldOrder->order_number,
+            'customer_id'      => $customer->id,
+        ]);
+
+        $newOrder = DB::transaction(function () use ($oldOrder, $data, $customer) {
+
+            // ── 4. Resolve & validate products ───────────────────────────────
+            $productIds = collect($data['items'])->pluck('product_id')->unique()->toArray();
+            $products   = Product::query()->whereIn('id', $productIds)
+                            ->where('is_active', true)
+                            ->where('is_available', true)
+                            ->get()
+                            ->keyBy('id');
+
+            $missingIds = array_diff($productIds, $products->keys()->toArray());
+            if (count($missingIds)) {
+                throw ValidationException::withMessages([
+                    'items' => [__('app.some_products_not_found')],
+                ]);
+            }
+
+            // ── 5. Build items & totals ───────────────────────────────────────
+            $itemsData = [];
+            $subtotal  = 0;
+
+            foreach ($data['items'] as $itemInput) {
+                /** @var Product $product */
+                $product = $products[$itemInput['product_id']];
+                $price   = (float) $product->effective_price;
+                $qty     = (int) $itemInput['quantity'];
+                $total   = round($price * $qty, 2);
+
+                $itemsData[] = [
+                    'product_id'    => $product->id,
+                    'product_name'  => $product->display_name,
+                    'product_price' => $price,
+                    'quantity'      => $qty,
+                    'total'         => $total,
+                ];
+
+                $subtotal += $total;
+            }
+
+            $subtotal = round($subtotal, 2);
+
+            // ── 6. Mark old order as modified ─────────────────────────────────
+            $oldOrder->update(['status' => Order::STATUS_MODIFIED]);
+
+            // ── 7. Create new (replacement) order ─────────────────────────────
+            $orderNumber = Order::generateOrderNumber();
+
+            $newOrder = Order::create([
+                'order_number'           => $orderNumber,
+                'customer_id'            => $customer->id,
+                'modified_from_order_id' => $oldOrder->id,
+                'customer_name'          => $data['customer_name']  ?? $oldOrder->customer_name,
+                'phone'                  => $data['customer_phone'] ?? $oldOrder->phone,
+                'source'                 => 'website',
+                'order_type'             => $data['order_type'],
+                'table_number'           => $data['table_number']   ?? null,
+                'address'                => $data['address']        ?? null,
+                'delivery_type'          => $data['delivery_type']  ?? null,
+                'scheduled_at'           => isset($data['scheduled_at'])
+                                              ? Carbon::parse($data['scheduled_at'])
+                                              : null,
+                'customer_note'          => $data['customer_note']  ?? null,
+                'status'                 => Order::STATUS_PENDING,
+                'payment_status'         => Order::PAYMENT_UNPAID,
+                'subtotal'               => $subtotal,
+                'estimated_delivery_fee' => $data['estimated_delivery_fee'] ?? null,
+                'delivery_fee'           => null,
+                'discount'               => 0,
+                'total'                  => $subtotal,
+            ]);
+
+            // ── 8. Persist items ──────────────────────────────────────────────
+            foreach ($itemsData as $item) {
+                OrderItem::create(array_merge($item, ['order_id' => $newOrder->id]));
+            }
+
+            return $newOrder->fresh('items', 'customer');
+        });
+
+        Log::info('order.modify.success', [
+            'old_order_id'  => $oldOrder->id,
+            'new_order_id'  => $newOrder->id,
+            'new_order_num' => $newOrder->order_number,
+        ]);
+
+        return $newOrder;
+    }
 }
 

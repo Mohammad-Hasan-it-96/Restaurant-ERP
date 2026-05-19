@@ -27,6 +27,7 @@ export default function App() {
   const [showCheckout, setShowCheckout] = useState(false);
   const [lastOrder, setLastOrder] = useState(null);
   const [activePage, setActivePage] = useState('menu');
+  const [modifyingOrder, setModifyingOrder] = useState(null); // order being modified
 
   const { settings, categories, allProducts, zones, loading, error, retry } =
     useRestaurantData();
@@ -114,7 +115,19 @@ export default function App() {
       cart.clearCart();
       setShowCheckout(false);
       setShowCart(false);
+      setModifyingOrder(null);
       setLastOrder(orderNumber);
+    },
+    [cart]
+  );
+
+  /** Load an existing order into the cart and open checkout in "modify" mode */
+  const handleModifyOrder = useCallback(
+    (order) => {
+      cart.loadFromOrder(order.items);
+      setModifyingOrder(order);
+      setActivePage('menu');
+      setShowCart(true);
     },
     [cart]
   );
@@ -178,7 +191,7 @@ export default function App() {
             )}
           </>
         ) : activePage === 'orders' ? (
-          <MyOrders />
+          <MyOrders onModify={handleModifyOrder} />
         ) : activePage === 'profile' ? (
           <MyProfile />
         ) : null}
@@ -209,6 +222,7 @@ export default function App() {
           onRemove={cart.removeFromCart}
           onClear={cart.clearCart}
           onCheckout={() => setShowCheckout(true)}
+          modifyingOrder={modifyingOrder}
         />
       )}
 
@@ -217,8 +231,10 @@ export default function App() {
           zones={zones}
           cartItems={cart.cartItems}
           cartTotal={cart.cartTotal}
+          modifyingOrder={modifyingOrder}
+          cancelBeforeMinutes={Number(settings.customer_cancel_before_minutes) || 0}
           onSuccess={handleCheckoutSuccess}
-          onClose={() => setShowCheckout(false)}
+          onClose={() => { setShowCheckout(false); setModifyingOrder(null); }}
         />
       )}
 

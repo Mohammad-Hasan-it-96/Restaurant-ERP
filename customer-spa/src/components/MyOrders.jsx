@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import api, { decodeApiText } from '../api/client';
+import api from '../api/client';
 import { formatPrice } from '../utils/format';
 import { readMyOrderObjects } from '../utils/myOrders';
 import { useI18n } from '../i18n';
@@ -8,7 +8,7 @@ import { CloseIcon } from './Icons';
 // ── Status badge helper ───────────────────────────────────────────────────────
 function statusMod(status) {
   if (!status) return 'muted';
-  if (['cancelled', 'cancelled_by_admin', 'cancelled_by_customer', 'rejected'].includes(status))
+  if (['cancelled', 'cancelled_by_admin', 'cancelled_by_customer', 'rejected', 'modified'].includes(status))
     return 'danger';
   if (['completed', 'delivered'].includes(status)) return 'success';
   if (status === 'ready')    return 'ready';
@@ -17,7 +17,7 @@ function statusMod(status) {
 }
 
 // ── Order detail modal ────────────────────────────────────────────────────────
-function OrderDetailModal({ order, onClose }) {
+function OrderDetailModal({ order, onClose, onModify }) {
   const { t, lang } = useI18n();
   const [visible, setVisible] = useState(false);
 
@@ -31,6 +31,7 @@ function OrderDetailModal({ order, onClose }) {
     setTimeout(onClose, 260);
   };
 
+  const canModify = order.status === 'pending';
   const items = order.items ?? [];
 
   return (
@@ -61,7 +62,7 @@ function OrderDetailModal({ order, onClose }) {
 
         {/* Body */}
         <div className="checkout-body">
-          {/* Status + Date row */}
+          {/* Status + Date */}
           <div className="order-detail-meta">
             <span className={`order-status-badge status-${statusMod(order.status)}`}>
               {t(`orderStatus_${order.status}`) || order.status}
@@ -105,14 +106,24 @@ function OrderDetailModal({ order, onClose }) {
           )}
         </div>
 
-        {/* Footer — total */}
+        {/* Footer */}
         <div className="checkout-footer">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: canModify ? 12 : 0 }}>
             <span style={{ fontSize: 15, fontWeight: 600 }}>{t('orderTotal')}</span>
             <strong style={{ fontSize: 20, color: 'var(--primary)' }}>
               {formatPrice(order.total)}
             </strong>
           </div>
+          {canModify && (
+            <button
+              type="button"
+              className="btn-submit"
+              style={{ background: 'var(--warning, #f59e0b)', marginTop: 0 }}
+              onClick={() => { close(); onModify(order); }}
+            >
+              {t('modifyOrder')}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -120,34 +131,24 @@ function OrderDetailModal({ order, onClose }) {
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-export default function MyOrders() {
+export default function MyOrders({ onModify }) {
   const { t, lang } = useI18n();
 
-  // Pre-fill instantly from localStorage — zero wait time
   const [orders,   setOrders]   = useState(() => readMyOrderObjects());
   const [loading,  setLoading]  = useState(true);
   const [selected, setSelected] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
-
     api.get('/customer/orders')
       .then((res) => {
         if (cancelled) return;
         const data = res.data?.data;
         const list = Array.isArray(data) ? data : [];
-
-        if (list.length > 0) {
-          // ✅ Session alive — use full server data (most up-to-date statuses)
-          setOrders(list);
-        }
-        // If [] (no session) — localStorage objects already shown, nothing to override
+        if (list.length > 0) setOrders(list);
       })
-      .catch(() => {
-        // Network error — localStorage objects already shown, keep them
-      })
+      .catch(() => {})
       .finally(() => { if (!cancelled) setLoading(false); });
-
     return () => { cancelled = true; };
   }, []);
 
@@ -191,9 +192,7 @@ export default function MyOrders() {
                   : ''}
               </div>
               <div className="order-history-total">
-                <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-                  {t('orderTotal')}
-                </span>
+                <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{t('orderTotal')}</span>
                 <strong>{formatPrice(order.total)}</strong>
               </div>
               <div className="order-card-tap-hint">{t('orderItems')} ›</div>
@@ -203,9 +202,12 @@ export default function MyOrders() {
       )}
 
       {selected && (
-        <OrderDetailModal order={selected} onClose={() => setSelected(null)} />
+        <OrderDetailModal
+          order={selected}
+          onClose={() => setSelected(null)}
+          onModify={onModify}
+        />
       )}
     </div>
   );
 }
-

@@ -10,6 +10,7 @@ export default function CartDrawer({
   onRemove,
   onClear,
   onCheckout,
+  modifyingOrder,
 }) {
   const { t, dir, lang } = useI18n();
   const [open, setOpen] = useState(false);
@@ -46,7 +47,18 @@ export default function CartDrawer({
       />
       <div className="cart-drawer" style={slideStyle}>
         <div className="cart-header">
-          <h2 className="cart-title">{t('yourOrder')}</h2>
+          <div>
+            <h2 className="cart-title">{t('yourOrder')}</h2>
+            {modifyingOrder && (
+              <span style={{
+                display: 'inline-block', fontSize: 11, fontWeight: 700,
+                background: '#f59e0b', color: '#fff', borderRadius: 4,
+                padding: '1px 7px', marginTop: 2,
+              }}>
+                {t('modifyOrder')} · {modifyingOrder.order_number}
+              </span>
+            )}
+          </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {items.length > 0 && (
               <button

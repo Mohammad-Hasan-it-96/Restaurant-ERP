@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->api(append: [
+            SetLocale::class,
             ApiLoggingMiddleware::class,
         ]);
 

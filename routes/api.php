@@ -39,6 +39,7 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
     Route::middleware(['customer.token'])->group(function () {
         Route::get ('orders/{order_number}',        [OrderController::class, 'show'])  ->name('orders.show');
         Route::post('orders/{order_number}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+        Route::post('orders/{order_number}/modify', [OrderController::class, 'modify'])->name('orders.modify');
 
         Route::get ('customer/me',     [CustomerController::class, 'me'])    ->name('customer.me');
         Route::get ('customer/orders', [CustomerController::class, 'orders'])->name('customer.orders');

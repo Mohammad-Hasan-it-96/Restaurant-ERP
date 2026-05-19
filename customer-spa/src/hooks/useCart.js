@@ -106,6 +106,25 @@ export default function useCart() {
 
   const clearCart = useCallback(() => setCartItems([]), []);
 
+  /**
+   * Replace the cart with items taken directly from an existing order.
+   * Order items shape: { product_id, product_name, product_price, quantity }
+   */
+  const loadFromOrder = useCallback((orderItems) => {
+    const items = (orderItems ?? [])
+      .map((item) => ({
+        product_id:      Number(item.product_id),
+        product_name:    String(item.product_name    ?? '').trim(),
+        product_name_ar: String(item.product_name    ?? '').trim(),
+        product_name_en: String(item.product_name    ?? '').trim(),
+        product_price:   parseFloat(item.product_price ?? 0) || 0,
+        product_image:   null,
+        quantity:        Math.max(1, Math.floor(Number(item.quantity) || 1)),
+      }))
+      .filter((i) => i.product_id > 0 && i.quantity > 0);
+    setCartItems(items);
+  }, []);
+
   const cartCount = cartItems.reduce((s, i) => s + i.quantity, 0);
   const cartTotal = cartItems.reduce((sum, item) => {
     return sum + (parseFloat(item.product_price) || 0) * item.quantity;
@@ -117,6 +136,7 @@ export default function useCart() {
     removeFromCart,
     changeQty,
     clearCart,
+    loadFromOrder,
     cartCount,
     cartTotal,
   };

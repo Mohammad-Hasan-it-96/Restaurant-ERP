@@ -2,12 +2,15 @@ import axios from 'axios';
 
 const api = axios.create({ baseURL: '/api/v1' });
 
-// Attach customer_token as Authorization header on every request
+// Attach customer_token + Accept-Language on every request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('customer_token');
   if (token) {
     config.headers['Authorization'] = `Bearer ${token}`;
   }
+  // Tell the backend which language to use for error messages
+  const lang = localStorage.getItem('spa_lang') || 'ar';
+  config.headers['Accept-Language'] = lang;
   return config;
 });
 

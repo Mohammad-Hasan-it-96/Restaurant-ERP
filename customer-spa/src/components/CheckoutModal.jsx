@@ -17,19 +17,31 @@ function Field({ id, label, error, children }) {
   );
 }
 
-export default function CheckoutModal({ zones, cartItems, cartTotal, onSuccess, onClose }) {
+/** Convert ISO/DB datetime string → "YYYY-MM-DDTHH:mm" for <input type=datetime-local> */
+function toDatetimeLocal(isoStr) {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOrder, cancelBeforeMinutes, onSuccess, onClose }) {
   const { t } = useI18n();
+
+  const isModify = !!modifyingOrder;
 
   const [name,       setName]       = useState('');
   const [phone,      setPhone]      = useState('');
-  const [orderType,  setOrderType]  = useState('table');
-  const [tableNum,   setTableNum]   = useState('');
-  const [address,    setAddress]    = useState('');
+  // Lock order type when modifying
+  const [orderType,  setOrderType]  = useState(modifyingOrder?.order_type ?? 'table');
+  const [tableNum,   setTableNum]   = useState(modifyingOrder?.table_number ?? '');
+  const [address,    setAddress]    = useState(modifyingOrder?.address ?? '');
   const [savedAddress, setSavedAddress]             = useState('');
   const [showAddressSuggestion, setShowAddressSuggestion] = useState(false);
-  const [dlvType,    setDlvType]    = useState('immediate');
-  const [scheduled,  setScheduled]  = useState('');
-  const [note,       setNote]       = useState('');
+  const [dlvType,    setDlvType]    = useState(modifyingOrder?.delivery_type ?? 'immediate');
+  const [scheduled,  setScheduled]  = useState(() => toDatetimeLocal(modifyingOrder?.scheduled_at ?? ''));
+  const [note,       setNote]       = useState(modifyingOrder?.customer_note ?? '');
   const [errors,     setErrors]     = useState({});
   const [apiError,   setApiError]   = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -41,9 +53,17 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, onSuccess, 
     return () => clearTimeout(id);
   }, []);
 
-  // Load customer info from API (session) → fallback to localStorage
+  // Load customer info: if modifying, pre-fill from original order; else from API/localStorage
   useEffect(() => {
     let cancelled = false;
+
+    if (isModify) {
+      // Pre-fill from the original order — no API call needed
+      setName(modifyingOrder.customer_name || '');
+      setPhone(modifyingOrder.phone || '');
+      return;
+    }
+
     (async () => {
       let apiName = '', apiPhone = '', apiDefaultAddress = '';
       try {
@@ -67,7 +87,7 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, onSuccess, 
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const close = () => {
     setVisible(false);
@@ -76,12 +96,25 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, onSuccess, 
 
   function validate() {
     const e = {};
-    if (!name.trim())    e.name    = t('reqName');
-    if (!phone.trim())   e.phone   = t('reqPhone');
-    if (orderType === 'table'    && !tableNum.trim()) e.tableNum  = t('reqTable');
-    if (orderType === 'delivery' && !address.trim())  e.address   = t('reqAddress');
-    if (orderType === 'delivery' && dlvType === 'scheduled' && !scheduled)
-      e.scheduled = t('reqScheduled');
+    if (!isModify) {
+      if (!name.trim())  e.name  = t('reqName');
+      if (!phone.trim()) e.phone = t('reqPhone');
+    }
+    // Table number only required for non-modify (modify keeps original table)
+    if (!isModify && orderType === 'table' && !tableNum.trim()) e.tableNum = t('reqTable');
+    if (orderType === 'delivery' && !address.trim())  e.address = t('reqAddress');
+    if (orderType === 'delivery' && dlvType === 'scheduled') {
+      if (!scheduled) {
+        e.scheduled = t('reqScheduled');
+      } else if (cancelBeforeMinutes > 0) {
+        // Frontend hint: chosen time must be more than cancelBeforeMinutes from now
+        const chosenTime = new Date(scheduled).getTime();
+        const deadline   = Date.now() + cancelBeforeMinutes * 60 * 1000;
+        if (chosenTime <= deadline) {
+          e.scheduled = t('scheduleWindowError').replace('{n}', cancelBeforeMinutes);
+        }
+      }
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -104,7 +137,12 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, onSuccess, 
         customer_note:  note.trim() || null,
         items: cartItems.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
       };
-      const res    = await api.post('/orders', payload);
+
+      const endpoint = isModify
+        ? `/orders/${modifyingOrder.order_number}/modify`
+        : '/orders';
+
+      const res    = await api.post(endpoint, payload);
       const data   = extractData(res.data) || res.data || {};
       // Store customer token for future authenticated requests
       if (data.customer_token) {
@@ -150,7 +188,14 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, onSuccess, 
         onSubmit={handleSubmit}
       >
         <div className="checkout-header">
-          <h2 className="checkout-title">{t('orderDetails')}</h2>
+          <h2 className="checkout-title">
+            {isModify ? t('modifyOrderTitle') : t('orderDetails')}
+          </h2>
+          {isModify && (
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block' }}>
+              {modifyingOrder.order_number}
+            </span>
+          )}
           <button type="button" className="icon-btn" onClick={close} aria-label={t('close')}>
             <CloseIcon />
           </button>
@@ -159,27 +204,31 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, onSuccess, 
         <div className="checkout-body">
           {apiError && <div className="api-error">{apiError}</div>}
 
-          <Field id="name" label={t('fullName')} error={errors.name}>
-            <input
-              id="name"
-              className={`form-input${errors.name ? ' error' : ''}`}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoComplete="name"
-            />
-          </Field>
+          {!isModify && (
+            <>
+              <Field id="name" label={t('fullName')} error={errors.name}>
+                <input
+                  id="name"
+                  className={`form-input${errors.name ? ' error' : ''}`}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="name"
+                />
+              </Field>
 
-          <Field id="phone" label={t('phoneNumber')} error={errors.phone}>
-            <input
-              id="phone"
-              className={`form-input${errors.phone ? ' error' : ''}`}
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              type="tel"
-              dir="ltr"
-              autoComplete="tel"
-            />
-          </Field>
+              <Field id="phone" label={t('phoneNumber')} error={errors.phone}>
+                <input
+                  id="phone"
+                  className={`form-input${errors.phone ? ' error' : ''}`}
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  type="tel"
+                  dir="ltr"
+                  autoComplete="tel"
+                />
+              </Field>
+            </>
+          )}
 
           <Field id="orderType" label={t('orderType')} error={null}>
             <div className="order-type-btns">
@@ -188,7 +237,9 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, onSuccess, 
                   key={ot}
                   type="button"
                   className={`order-type-btn${orderType === ot ? ' active' : ''}`}
-                  onClick={() => setOrderType(ot)}
+                  onClick={() => !isModify && setOrderType(ot)}
+                  disabled={isModify}
+                  style={isModify ? { opacity: orderType === ot ? 1 : 0.35, cursor: 'default' } : undefined}
                 >
                   {t(ot)}
                 </button>
@@ -281,7 +332,9 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, onSuccess, 
             <strong style={{ fontSize: 18 }}>{formatPrice(cartTotal)}</strong>
           </div>
           <button type="submit" className="btn-submit" disabled={submitting}>
-            {submitting ? (<><span className="spinner" />{t('sending')}</>) : t('placeOrder')}
+            {submitting
+              ? (<><span className="spinner" />{isModify ? t('modifying') : t('sending')}</>)
+              : isModify ? t('confirmModify') : t('placeOrder')}
           </button>
         </div>
       </form>

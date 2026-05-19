@@ -28,9 +28,10 @@ class PublicSettingsController extends Controller
             'restaurant_phone'     => $this->config->getFirstText(['restaurant_phone', 'support_phone'], ''),
             'restaurant_whatsapp'  => $this->config->getFirstText(['restaurant_whatsapp'], ''),
             'opening_hours'        => $this->config->getOpeningHours(),
-            'is_accepting_orders'  => $this->config->isAcceptingOrders(),
-            'is_open_now'          => $this->config->isOpenAt(),
-            'delivery_note'        => $this->config->getFirstText(['delivery_note'], ''),
+            'is_accepting_orders'         => $this->config->isAcceptingOrders(),
+            'is_open_now'                 => $this->config->isOpenAt(),
+            'delivery_note'               => $this->config->getFirstText(['delivery_note'], ''),
+            'customer_cancel_before_minutes' => (int) $this->config->getNumber('customer_cancel_before_minutes', 0),
         ];
 
         Log::debug('settings.public.response', $payload);

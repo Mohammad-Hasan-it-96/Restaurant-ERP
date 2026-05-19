@@ -24,6 +24,7 @@ class Order extends Model
     const PAYMENT_UNPAID = 'unpaid';
     const PAYMENT_PAID   = 'paid';
     const PAYMENT_REFUNDED = 'refunded';
+    const STATUS_MODIFIED = 'modified';
     protected $fillable = [
         'order_number',
         'customer_id',
@@ -71,6 +72,16 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+    /** The original order this one was modified from. */
+    public function originalOrder(): BelongsTo
+    {
+        return $this->belongsTo(Order::class, 'modified_from_order_id');
+    }
+    /** The newer order that replaced this one. */
+    public function modifiedOrder(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Order::class, 'modified_from_order_id');
     }
     // ??? Helpers ??????????????????????????????????????????????????
     public function isPending(): bool   { return $this->status === self::STATUS_PENDING; }
