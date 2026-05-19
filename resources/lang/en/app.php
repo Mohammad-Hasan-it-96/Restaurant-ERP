@@ -514,6 +514,7 @@ return [
     'order_modify_not_allowed'    => 'This order cannot be modified. Only pending orders can be modified.',
     'order_modify_window_passed'  => 'The modification window for this order has passed.',
     'customer_blocked_message'    => 'Your account has been blocked. Please contact support.',
+    'order_unavailable_message'   => 'Sorry, we are unable to accept orders at this time.',
     'some_products_not_found'     => 'One or more selected products could not be found.',
     'product_not_active'          => 'The product ":name" is currently unavailable.',
     'product_not_available'       => 'The product ":name" is out of stock.',

@@ -84,7 +84,7 @@ class OrderService
 
             if ($customer->is_blocked) {
                 throw ValidationException::withMessages([
-                    'phone' => [__('app.customer_blocked_message')],
+                    'phone' => [__('app.order_unavailable_message')],
                 ]);
             }
 

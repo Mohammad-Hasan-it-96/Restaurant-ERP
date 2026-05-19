@@ -503,6 +503,7 @@ return [
     'order_modify_not_allowed'    => 'لا يمكن تعديل هذا الطلب. يمكن تعديل الطلبات المعلّقة فقط.',
     'order_modify_window_passed'  => 'انتهت مهلة تعديل هذا الطلب.',
     'customer_blocked_message'    => 'تم حظر حسابك. يرجى التواصل مع الدعم.',
+    'order_unavailable_message'   => 'عذراً، لا يمكننا استقبال الطلبات حالياً.',
     'some_products_not_found'     => 'أحد المنتجات المختارة غير موجود.',
     'product_not_active'          => 'المنتج ":name" غير متاح حالياً.',
     'product_not_available'       => 'المنتج ":name" نفذت كميته.',
