@@ -239,7 +239,10 @@ class OrderController extends Controller
     {
         $order->load('customer', 'items');
 
-        $restaurantName  = $this->config->getText('restaurant_name', config('app.name'));
+        $restaurantName  = $this->config->getFirstText(
+            ['restaurant_name_ar', 'restaurant_name', 'restaurant_name_en', 'site_name'],
+            config('app.name', '')
+        );
         $restaurantPhone = $this->config->getText('restaurant_phone');
         $restaurantLogo  = $this->config->get('restaurant_logo');
 
