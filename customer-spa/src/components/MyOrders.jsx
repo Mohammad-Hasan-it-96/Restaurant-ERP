@@ -16,10 +16,31 @@ function statusMod(status) {
   return 'pending';
 }
 
+/**
+ * Returns true if the order is still within the cancellation window.
+ * - Non-scheduled (immediate/table/takeaway): allowed whenever status = pending.
+ * - Scheduled delivery: allowed only if now < scheduled_at - cancelBeforeMinutes.
+ */
+function canCancelOrder(order, cancelBeforeMinutes) {
+  if (order.status !== 'pending') return false;
+  if (
+    order.order_type === 'delivery' &&
+    order.delivery_type === 'scheduled' &&
+    order.scheduled_at
+  ) {
+    const deadline = new Date(order.scheduled_at).getTime() - cancelBeforeMinutes * 60 * 1000;
+    if (Date.now() >= deadline) return false;
+  }
+  return true;
+}
+
 // ── Order detail modal ────────────────────────────────────────────────────────
-function OrderDetailModal({ order, onClose, onModify }) {
+function OrderDetailModal({ order, onClose, onModify, onCancelled, cancelBeforeMinutes }) {
   const { t, lang } = useI18n();
   const [visible, setVisible] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelling, setCancelling]       = useState(false);
+  const [cancelError, setCancelError]     = useState('');
 
   useEffect(() => {
     const id = setTimeout(() => setVisible(true), 10);
@@ -32,7 +53,25 @@ function OrderDetailModal({ order, onClose, onModify }) {
   };
 
   const canModify = order.status === 'pending';
+  const canCancel = canCancelOrder(order, cancelBeforeMinutes);
   const items = order.items ?? [];
+
+  const handleCancel = async () => {
+    setCancelling(true);
+    setCancelError('');
+    try {
+      await api.post(`/orders/${order.order_number}/cancel`);
+      // Notify parent to update order in list
+      onCancelled(order.order_number);
+      close();
+    } catch (err) {
+      const msg = err.response?.data?.message || t('cancelNotAllowed');
+      setCancelError(msg);
+    } finally {
+      setCancelling(false);
+      setConfirmCancel(false);
+    }
+  };
 
   return (
     <div
@@ -104,24 +143,80 @@ function OrderDetailModal({ order, onClose, onModify }) {
               </tbody>
             </table>
           )}
+
+          {/* Cancel error */}
+          {cancelError && (
+            <p style={{ color: 'var(--danger, #dc2626)', fontSize: 13, marginTop: 12, textAlign: 'center' }}>
+              {cancelError}
+            </p>
+          )}
+
+          {/* Cancel confirmation prompt */}
+          {confirmCancel && (
+            <div style={{
+              marginTop: 16,
+              padding: '12px 16px',
+              background: 'var(--danger-light, #fee2e2)',
+              borderRadius: 10,
+              textAlign: 'center',
+            }}>
+              <p style={{ margin: '0 0 12px', fontWeight: 600, color: 'var(--danger, #dc2626)', fontSize: 14 }}>
+                {t('cancelOrderPrompt')}
+              </p>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  className="btn-submit"
+                  style={{ background: 'var(--danger, #dc2626)', flex: 1, marginTop: 0 }}
+                  onClick={handleCancel}
+                  disabled={cancelling}
+                >
+                  {cancelling ? t('cancelling') : t('cancelOrderConfirm')}
+                </button>
+                <button
+                  type="button"
+                  className="btn-submit"
+                  style={{ background: 'var(--text-muted, #6b7280)', flex: 1, marginTop: 0 }}
+                  onClick={() => setConfirmCancel(false)}
+                  disabled={cancelling}
+                >
+                  {t('cancelOrderBack')}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
         <div className="checkout-footer">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: canModify ? 12 : 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: (canModify || canCancel) ? 12 : 0 }}>
             <span style={{ fontSize: 15, fontWeight: 600 }}>{t('orderTotal')}</span>
             <strong style={{ fontSize: 20, color: 'var(--primary)' }}>
               {formatPrice(order.total)}
             </strong>
           </div>
+
+          {/* Modify button */}
           {canModify && (
             <button
               type="button"
               className="btn-submit"
-              style={{ background: 'var(--warning, #f59e0b)', marginTop: 0 }}
+              style={{ background: 'var(--warning, #f59e0b)', marginTop: 0, marginBottom: canCancel ? 8 : 0 }}
               onClick={() => { close(); onModify(order); }}
             >
               {t('modifyOrder')}
+            </button>
+          )}
+
+          {/* Cancel button */}
+          {canCancel && !confirmCancel && (
+            <button
+              type="button"
+              className="btn-submit"
+              style={{ background: 'transparent', color: 'var(--danger, #dc2626)', border: '1.5px solid var(--danger, #dc2626)', marginTop: 0 }}
+              onClick={() => { setCancelError(''); setConfirmCancel(true); }}
+            >
+              {t('cancelOrder')}
             </button>
           )}
         </div>
@@ -131,8 +226,10 @@ function OrderDetailModal({ order, onClose, onModify }) {
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-export default function MyOrders({ onModify, onMenuClick }) {
+export default function MyOrders({ onModify, onMenuClick, settings = {} }) {
   const { t, lang } = useI18n();
+
+  const cancelBeforeMinutes = Number(settings.customer_cancel_before_minutes) || 0;
 
   const [orders,   setOrders]   = useState(() => readMyOrderObjects());
   const [loading,  setLoading]  = useState(true);
@@ -151,6 +248,23 @@ export default function MyOrders({ onModify, onMenuClick }) {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
+
+  /** Called when cancel succeeds — update that order's status in local list */
+  const handleCancelled = (orderNumber) => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.order_number === orderNumber
+          ? { ...o, status: 'cancelled_by_customer' }
+          : o
+      )
+    );
+    // Also update selected so the badge refreshes if the modal is still animating out
+    setSelected((prev) =>
+      prev && prev.order_number === orderNumber
+        ? { ...prev, status: 'cancelled_by_customer' }
+        : prev
+    );
+  };
 
   return (
     <div className="orders-page">
@@ -212,6 +326,8 @@ export default function MyOrders({ onModify, onMenuClick }) {
           order={selected}
           onClose={() => setSelected(null)}
           onModify={onModify}
+          onCancelled={handleCancelled}
+          cancelBeforeMinutes={cancelBeforeMinutes}
         />
       )}
     </div>

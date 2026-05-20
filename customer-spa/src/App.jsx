@@ -194,7 +194,7 @@ export default function App() {
             )}
           </>
         ) : activePage === 'orders' ? (
-          <MyOrders onModify={handleModifyOrder} onMenuClick={() => setActivePage('menu')} />
+          <MyOrders onModify={handleModifyOrder} onMenuClick={() => setActivePage('menu')} settings={settings} />
         ) : activePage === 'profile' ? (
           <MyProfile onMenuClick={() => setActivePage('menu')} />
         ) : null}

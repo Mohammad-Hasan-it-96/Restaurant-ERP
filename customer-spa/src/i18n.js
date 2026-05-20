@@ -132,6 +132,14 @@ export const STRINGS = {
     loadingProducts: 'جاري تحميل المنتجات...',
     currentItems: 'المنتجات الحالية',
     addNewItems: 'إضافة منتجات',
+    // Order cancellation
+    cancelOrder: 'إلغاء الطلب',
+    cancelOrderPrompt: 'هل أنت متأكد أنك تريد إلغاء هذا الطلب؟',
+    cancelOrderConfirm: 'نعم، إلغاء',
+    cancelOrderBack: 'لا، تراجع',
+    cancelling: 'جاري الإلغاء...',
+    cancelOrderSuccess: 'تم إلغاء طلبك بنجاح',
+    cancelNotAllowed: 'لا يمكن إلغاء هذا الطلب',
   },
   en: {
     documentTitle: 'Restaurant Menu',
@@ -255,6 +263,14 @@ export const STRINGS = {
     loadingProducts: 'Loading products...',
     currentItems: 'Current Items',
     addNewItems: 'Add Items',
+    // Order cancellation
+    cancelOrder: 'Cancel Order',
+    cancelOrderPrompt: 'Are you sure you want to cancel this order?',
+    cancelOrderConfirm: 'Yes, Cancel',
+    cancelOrderBack: 'No, Go Back',
+    cancelling: 'Cancelling...',
+    cancelOrderSuccess: 'Your order has been cancelled',
+    cancelNotAllowed: 'This order cannot be cancelled',
   },
 };
 
