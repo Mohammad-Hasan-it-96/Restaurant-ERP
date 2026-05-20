@@ -16,14 +16,14 @@ class LanguageSeeder extends Seeder
         $languages = [
             [
                 'name' => 'English',
-                'code' => 'EN',
+                'code' => 'en',
                 'direction' => 'ltr' ,
                 'status' => 1 ,
                 'is_default' => 0 ,
                 'flag_path' =>'flags/en.png'
             ],
             ['name' => 'Arabic',
-                'code' => 'AR',
+                'code' => 'ar',
                 'direction' => 'rtl' ,
                 'status' => 1 ,
                 'is_default' => 1 ,

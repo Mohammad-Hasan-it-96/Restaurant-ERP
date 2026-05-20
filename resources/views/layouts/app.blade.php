@@ -204,7 +204,7 @@
             <div class="d-flex align-items-center gap-3">
                 <!-- Language Selector -->
                 @php
-                    $languages = \App\Models\Language::where('status', 1)->get();
+                    $languages = \App\Models\Language::query()->where('status', 1)->get();
                     $currentLocale = session('locale', config('app.locale'));
                     $currentLanguage = $languages->where('code', $currentLocale)->first();
                 @endphp

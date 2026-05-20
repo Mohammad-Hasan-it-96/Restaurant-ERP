@@ -179,17 +179,20 @@ class LanguageController extends Controller
      */
     public function changeLanguage($locale)
     {
-        // Get the language from database
-        $language = Language::where('code', $locale)
+        // Normalize locale to lowercase for consistent matching
+        $locale = strtolower($locale);
+
+        // Get the language from database (case-insensitive search)
+        $language = Language::query()->whereRaw('LOWER(code) = ?', [$locale])
             ->where('status', 1)
             ->first();
 
         if (!$language) {
             // If language not found or not active, use default
-            $defaultLanguage = Language::where('is_default', 1)->first();
+            $defaultLanguage = Language::query()->where('is_default', 1)->first();
 
             if ($defaultLanguage) {
-                $locale = $defaultLanguage->code;
+                $locale = strtolower($defaultLanguage->code);
                 session(['site_direction' => $defaultLanguage->direction]);
             } else {
                 // If no default language is set, use English with LTR

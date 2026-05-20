@@ -489,7 +489,7 @@ return [
     'delivery'                    => 'توصيل',
     'takeaway'                    => 'سفري',
     'yes_cancel'                  => 'نعم، ألغِ',
-    'currency'                    => 'ر.س',
+    'currency'                    => 'ل.س',
     'cancelled_by_admin'          => 'ملغى من الإدارة',
     'cancelled_by_customer'       => 'ملغى من الزبون',
     // Orders API

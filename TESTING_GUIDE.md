@@ -549,7 +549,7 @@ Arabic:  ١٬٢٣٤٫٥٦
 
 Price display:
 - English: $5.99 → Shows "5.99"
-- Arabic: ر.س ٥٫٩٩ → Shows in Arabic numerals
+- Arabic: ل.س ٥٫٩٩ → Shows in Arabic numerals
 
 Cart total:
 - English: Subtotal: 19.98

@@ -499,7 +499,7 @@ return [
     'delivery'                    => 'Delivery',
     'takeaway'                    => 'Takeaway',
     'yes_cancel'                  => 'Yes, Cancel',
-    'currency'                    => 'SAR',
+    'currency'                    => 'SYP',
     'cancelled_by_admin'          => 'Cancelled by Admin',
     'cancelled_by_customer'       => 'Cancelled by Customer',
 
