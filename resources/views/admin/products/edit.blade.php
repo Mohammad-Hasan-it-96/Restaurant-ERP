@@ -11,6 +11,7 @@
             <form method="POST" action="{{ route('admin.products.update', $product->id) }}" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
+                <input type="hidden" name="_back" value="{{ $back ?? route('admin.products.index') }}">
 
                 <div class="row g-3">
                     {{-- name_ar --}}
@@ -133,7 +134,7 @@
                         <button type="submit" class="btn btn-primary me-2">
                             <i class="bi bi-save me-2"></i>{{\App\Helpers\Helpers::translate('update_product')}}
                         </button>
-                        <a href="{{ route('admin.products.index') }}" class="btn btn-secondary">
+                        <a href="{{ $back ?? route('admin.products.index') }}" class="btn btn-secondary">
                             <i class="bi bi-x-circle me-2"></i>{{\App\Helpers\Helpers::translate('cancel')}}
                         </a>
                     </div>

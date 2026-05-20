@@ -36,7 +36,7 @@ class ConfigController extends Controller
      */
     public function group($group)
     {
-        $configs = SystemConfig::where('group', $group)
+        $configs = SystemConfig::query()->where('group', $group)
             ->orderBy('key', 'asc')
             ->get();
 

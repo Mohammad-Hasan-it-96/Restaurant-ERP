@@ -62,7 +62,7 @@ class OrderController extends Controller
     }
 
     // ── Show ───────────────────────────────────────────────────────────────────
-    public function show(Order $order)
+    public function show(Request $request, Order $order)
     {
         $order->load('customer', 'items');
         $rejectionReasons   = $this->config->getRejectionReasons();
@@ -70,8 +70,10 @@ class OrderController extends Controller
         $restaurantWhatsapp = $this->config->getText('restaurant_whatsapp');
         $deliveryZones      = DeliveryZone::active()->get();
 
+        $back = $request->headers->get('referer', route('admin.orders.index'));
+
         return view('admin.orders.show', compact(
-            'order', 'rejectionReasons', 'restaurantName', 'restaurantWhatsapp', 'deliveryZones'
+            'order', 'rejectionReasons', 'restaurantName', 'restaurantWhatsapp', 'deliveryZones', 'back'
         ));
     }
 

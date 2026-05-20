@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class CustomerController extends Controller
 {
@@ -55,7 +56,7 @@ class CustomerController extends Controller
             return $this->success([]);
         }
 
-        $orders = \App\Models\Order::where('customer_id', $customer->id)
+        $orders = \App\Models\Order::query()->where('customer_id', $customer->id)
             ->with('items')
             ->latest()
             ->get();
@@ -72,13 +73,22 @@ class CustomerController extends Controller
      */
     public function update(Request $request): JsonResponse
     {
+        $customer = $request->attributes->get('customer');
+
         $validated = $request->validate([
             'name'    => 'required|string|max:100',
-            'phone'   => 'required|string|max:30',
+            'phone'   => [
+                'required',
+                'string',
+                'max:30',
+                // If customer exists, ignore their own record in unique check
+                $customer
+                    ? Rule::unique('customers', 'phone')->ignore($customer->id)
+                    : Rule::unique('customers', 'phone'),
+            ],
             'address' => 'nullable|string|max:500',
         ]);
 
-        $customer = $request->attributes->get('customer');
 
         if (! $customer) {
             $customer = Customer::firstOrCreate(

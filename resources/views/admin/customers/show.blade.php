@@ -8,7 +8,7 @@
         {{-- Header --}}
         <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
             <div class="d-flex align-items-center gap-2">
-                <a href="{{ route('admin.customers.index') }}" class="btn btn-outline-secondary btn-sm">
+                <a href="{{ $back ?? route('admin.customers.index') }}" class="btn btn-outline-secondary btn-sm">
                     <i class="bi bi-arrow-right me-1"></i>{{ __('app.back') }}
                 </a>
                 <h2 class="fw-bold mb-0">

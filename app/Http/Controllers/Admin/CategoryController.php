@@ -47,7 +47,7 @@ class CategoryController extends Controller
      */
     public function create()
     {
-        $parentCategories = Category::whereNull('parent_id')->orderBy('sort_order')->get();
+        $parentCategories = Category::query()->whereNull('parent_id')->orderBy('sort_order')->get();
         return view('admin.categories.create', compact('parentCategories'));
     }
 
@@ -81,15 +81,17 @@ class CategoryController extends Controller
     /**
      * Show the form for editing a category.
      */
-    public function edit(Category $category)
+    public function edit(Request $request, Category $category)
     {
         // Exclude the category itself from the parent list (prevent self-reference)
-        $parentCategories = Category::whereNull('parent_id')
+        $parentCategories = Category::query()->whereNull('parent_id')
             ->where('id', '!=', $category->id)
             ->orderBy('sort_order')
             ->get();
 
-        return view('admin.categories.edit', compact('category', 'parentCategories'));
+        $back = $request->headers->get('referer', route('admin.categories.index'));
+
+        return view('admin.categories.edit', compact('category', 'parentCategories', 'back'));
     }
 
     /**
@@ -124,8 +126,9 @@ class CategoryController extends Controller
 
         $category->update($validated);
 
-        return redirect()->route('admin.categories.index')
-            ->with('success', __('app.category_updated'));
+        $back = $request->input('_back', route('admin.categories.index'));
+
+        return redirect($back)->with('success', __('app.category_updated'));
     }
 
     /**

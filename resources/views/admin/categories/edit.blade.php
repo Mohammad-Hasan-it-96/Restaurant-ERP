@@ -7,7 +7,7 @@
 
     {{-- Header --}}
     <div class="d-flex align-items-center mb-4 gap-3">
-        <a href="{{ route('admin.categories.index') }}" class="btn btn-outline-secondary btn-sm">
+        <a href="{{ $back ?? route('admin.categories.index') }}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left"></i>
         </a>
         <div>
@@ -38,11 +38,12 @@
                     <form action="{{ route('admin.categories.update', $category) }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
+                        <input type="hidden" name="_back" value="{{ $back ?? route('admin.categories.index') }}">
 
                         @include('admin.categories._form')
 
                         <div class="d-flex justify-content-end gap-3 mt-4 pt-3" style="border-top: 1px solid var(--border-color);">
-                            <a href="{{ route('admin.categories.index') }}" class="btn btn-outline-secondary">
+                            <a href="{{ $back ?? route('admin.categories.index') }}" class="btn btn-outline-secondary">
                                 <i class="bi bi-x-lg me-1"></i>{{ \App\Helpers\Helpers::translate('cancel') }}
                             </a>
                             <button type="submit" class="btn btn-primary">

@@ -7,7 +7,7 @@
 
     {{-- Header row --}}
     <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
-        <a href="{{ route('admin.orders.index') }}" class="btn btn-outline-secondary btn-sm">
+        <a href="{{ $back ?? route('admin.orders.index') }}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-{{ app()->getLocale() === 'ar' ? 'right' : 'left' }}-short fs-5"></i>
         </a>
         <h2 class="fw-bold mb-0 me-auto">

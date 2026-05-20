@@ -144,5 +144,9 @@ return [
      * | of "email". This simply helps us make our message more expressive.
      * |
      */
-    'attributes' => [],
+    'attributes' => [
+        'name'    => 'full name',
+        'phone'   => 'phone number',
+        'address' => 'address',
+    ],
 ];

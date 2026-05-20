@@ -48,7 +48,7 @@ class ProductController extends Controller
         $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
 
         $products   = $query->orderBy($sortBy, $direction)->paginate(15)->withQueryString();
-        $categories = Category::orderBy('name_ar')->get();
+        $categories = Category::query()->orderBy('name_ar')->get();
 
         // Keep legacy users list for export dropdown
         $users = \App\Models\User::all();
@@ -111,12 +111,16 @@ class ProductController extends Controller
             ->with('success', __('app.product_created'));
     }
 
-    public function edit($id)
+    public function edit(Request $request, $id)
     {
         $product = Product::findOrFail($id);
         $this->authorizeProductAction($product, 'update');
-        $categories = Category::orderBy('name_ar')->get();
-        return view('admin.products.edit', compact('product', 'categories'));
+        $categories = Category::query()->orderBy('name_ar')->get();
+
+        // Remember which page of the index the user came from so we can return there after save
+        $back = $request->headers->get('referer', route('admin.products.index'));
+
+        return view('admin.products.edit', compact('product', 'categories', 'back'));
     }
 
     public function update(Request $request, $id)
@@ -163,8 +167,9 @@ class ProductController extends Controller
 
         $product->update($validated);
 
-        return redirect()->back()
-            ->with('success', __('app.product_updated'));
+        $back = $request->input('_back', route('admin.products.index'));
+
+        return redirect($back)->with('success', __('app.product_updated'));
     }
 
     public function toggleAvailability(Product $product)

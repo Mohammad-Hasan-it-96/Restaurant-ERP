@@ -37,15 +37,17 @@ class CustomerController extends Controller
     /**
      * Show a single customer with their paginated orders.
      */
-    public function show(Customer $customer)
+    public function show(Request $request, Customer $customer)
     {
         $orders      = $customer->orders()->latest()->paginate(10);
         $ordersCount = $customer->orders()->count();
         $totalSpent  = (float) $customer->orders()->sum('total');
         $lastOrder   = $customer->orders()->latest()->first();
 
+        $back = $request->headers->get('referer', route('admin.customers.index'));
+
         return view('admin.customers.show',
-            compact('customer', 'orders', 'ordersCount', 'totalSpent', 'lastOrder'));
+            compact('customer', 'orders', 'ordersCount', 'totalSpent', 'lastOrder', 'back'));
     }
 
     /**
