@@ -3,7 +3,14 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ config('app.name', 'Laravel') }} - @yield('title')</title>
+    @php
+        $config = new (\App\Services\SystemConfigService::class);
+        $lang = str_replace('_', '-', app()->getLocale());
+    @endphp
+    <title>{{ $config->getFirstText(
+            ['restaurant_name_'.$lang, 'restaurant_name', 'site_name'],
+            config('app.name', '')
+        ) }} - @yield('title')</title>
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -274,6 +281,19 @@
             </div>
         </div>
     </nav>
+
+    <!-- Global New Order Notification Banner -->
+    @auth
+    <div id="globalNewOrderBanner" class="alert alert-warning alert-dismissible fade d-none position-fixed"
+         style="top: 70px; left: 50%; transform: translateX(-50%); z-index: 1000; min-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,.15); border-left: 5px solid #f59e0b;">
+        <i class="bi bi-bell-fill me-2 text-warning"></i>
+        <strong>{{ __('app.new_order') ?? 'طلب جديد!' }}</strong> {{ __('app.new_order_arrived') ?? 'وصل طلب جديد.' }}
+        <button id="globalRefreshNowBtn" class="btn btn-sm btn-warning ms-2">
+            <i class="bi bi-arrow-clockwise me-1"></i>{{ __('app.refresh_now') ?? 'تحديث الآن' }}
+        </button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    @endauth
 
     <!-- Sidebar -->
     @auth
@@ -677,6 +697,78 @@
             }
         });
     </script>
+
+    <!-- Global New Orders Polling Script -->
+    <script>
+    @auth
+    (function () {
+        'use strict';
+
+        const banner      = document.getElementById('globalNewOrderBanner');
+        const refreshBtn  = document.getElementById('globalRefreshNowBtn');
+        const pollUrl     = '{{ route("admin.orders.index", ["_poll" => 1]) }}';
+
+        /* ── Load latestId from localStorage (persist across page refreshes) ────── */
+        let latestId = parseInt(localStorage.getItem('admin_latest_order_id') || 0);
+
+        /* ── Notification sound (public/sounds/notification.wav) ───────────── */
+        const SOUND_URL = '{{ asset('sounds/notification.wav') }}';
+        const notifAudio = new Audio(SOUND_URL);
+        notifAudio.volume = 1.0;
+        notifAudio.preload = 'auto';
+
+        function beep() {
+            try {
+                const s = notifAudio.cloneNode();
+                s.volume = 1.0;
+                s.play().catch(() => {});
+                setTimeout(() => {
+                    const s2 = notifAudio.cloneNode();
+                    s2.volume = 1.0;
+                    s2.play().catch(() => {});
+                }, 1100);
+            } catch (e) { /* ignore */ }
+        }
+
+        /* ── Poll for new orders ────────────────────────────────────────────── */
+        async function pollNewOrders() {
+            try {
+                const res  = await fetch(pollUrl, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+
+                if (data.latest_id > latestId) {
+                    latestId = data.latest_id;
+                    /* ── Save to localStorage so it persists across page refreshes ──── */
+                    localStorage.setItem('admin_latest_order_id', latestId.toString());
+
+                    beep();
+                    banner.classList.remove('d-none');
+
+                    let original = document.title;
+                    let blink = 0;
+                    const titleInterval = setInterval(() => {
+                        document.title = (blink++ % 2 === 0) ? '🔔 {{ __("app.new_order") ?? "طلب جديد!" }}' : original;
+                        if (blink > 10) { clearInterval(titleInterval); document.title = original; }
+                    }, 600);
+                }
+            } catch (e) { /* network error — silent */ }
+        }
+
+        /* ── "تحديث الآن" button ─────────────────────────────────────────────── */
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => window.location.reload());
+        }
+
+        /* ── Boot ────────────────────────────────────────────────────────────── */
+        setInterval(pollNewOrders, 10000);
+        setTimeout(pollNewOrders, 2000);
+    })();
+    @endauth
+    </script>
+
     @stack('scripts')
 </body>
 </html>

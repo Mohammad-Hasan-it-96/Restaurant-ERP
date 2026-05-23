@@ -100,6 +100,7 @@ return [
     'processing' => 'قيد المعالجة',
     'pending' => 'قيد الانتظار',
     'cancelled' => 'ملغي',
+    'modified' => 'تم تعديله',
     // User roles
     'admin' => 'مدير',
     'moderator' => 'مشرف',
@@ -629,4 +630,7 @@ return [
     'no_data_for_period'   => 'لا توجد بيانات للفترة المحددة',
     'orders_by_type'       => 'الطلبات حسب النوع',
     'created_at'           => 'تاريخ الانشاء',
+    'new_order'            => 'طلب جديد!',
+    'new_order_arrived'    => 'وصل طلب جديد.',
+    'refresh_now'          => 'تحديث الآن',
 ];

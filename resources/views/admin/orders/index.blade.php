@@ -2,26 +2,9 @@
 
 @section('title', __('app.orders_management'))
 
-@push('styles')
-<style>
-#newOrderBanner {
-    border-left: 5px solid #f59e0b;
-    animation: pulse-border 1s infinite alternate;
-}
-@keyframes pulse-border {
-    from { border-left-color: #f59e0b; }
-    to   { border-left-color: #ef4444; }
-}
-.quick-filter-btn.active-filter { box-shadow: 0 0 0 3px rgba(79,70,229,.35); }
-</style>
-@endpush
 
 @section('content')
-<div class="container-fluid py-4"
-     id="ordersPage"
-     data-latest-id="{{ $latestId }}"
-     data-pending="{{ $counts['pending'] ?? 0 }}"
-     data-poll-url="{{ route('admin.orders.index', ['_poll' => 1]) }}">
+<div class="container-fluid py-4" id="ordersPage">
 
     {{-- Header --}}
     <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
@@ -29,16 +12,6 @@
             <i class="bi bi-receipt me-2 text-primary"></i>
             {{ __('app.orders_management') }}
         </h2>
-    </div>
-
-    {{-- New Order Banner --}}
-    <div id="newOrderBanner" class="alert alert-warning alert-dismissible d-none mb-3">
-        <i class="bi bi-bell-fill me-2 text-warning"></i>
-        <strong>طلب جديد!</strong> وصل طلب جديد.
-        <button id="refreshNowBtn" class="btn btn-sm btn-warning ms-2">
-            <i class="bi bi-arrow-clockwise me-1"></i>تحديث الآن
-        </button>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 
     {{-- Flash --}}
@@ -252,69 +225,4 @@
 </div>
 @endsection
 
-@push('scripts')
-<script>
-(function () {
-    'use strict';
 
-    const page        = document.getElementById('ordersPage');
-    const pollUrl     = page.dataset.pollUrl;
-    let   latestId    = parseInt(page.dataset.latestId) || 0;
-
-    const banner      = document.getElementById('newOrderBanner');
-    const refreshBtn  = document.getElementById('refreshNowBtn');
-
-    /* ── Notification sound (public/sounds/notification.wav) ───────────── */
-    const SOUND_URL = '{{ asset('sounds/notification.wav') }}';
-    const notifAudio = new Audio(SOUND_URL);
-    notifAudio.volume = 1.0;
-    notifAudio.preload = 'auto';
-
-    function beep() {
-        try {
-            const s = notifAudio.cloneNode();
-            s.volume = 1.0;
-            s.play().catch(() => {});
-            setTimeout(() => {
-                const s2 = notifAudio.cloneNode();
-                s2.volume = 1.0;
-                s2.play().catch(() => {});
-            }, 1100);
-        } catch (e) { /* ignore */ }
-    }
-
-    /* ── Poll ────────────────────────────────────────────────────────────── */
-    async function poll() {
-        try {
-            const res  = await fetch(pollUrl, {
-                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-            });
-            if (!res.ok) return;
-            const data = await res.json();
-
-            if (data.latest_id > latestId) {
-                latestId = data.latest_id;
-                beep();
-                banner.classList.remove('d-none');
-
-                let original = document.title;
-                let blink = 0;
-                const titleInterval = setInterval(() => {
-                    document.title = (blink++ % 2 === 0) ? '🔔 طلب جديد!' : original;
-                    if (blink > 10) { clearInterval(titleInterval); document.title = original; }
-                }, 600);
-            }
-        } catch (e) { /* network error — silent */ }
-    }
-
-    /* ── "تحديث الآن" button ─────────────────────────────────────────────── */
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', () => window.location.reload());
-    }
-
-    /* ── Boot ────────────────────────────────────────────────────────────── */
-    setInterval(poll, 10000);
-    setTimeout(poll, 2000);
-})();
-</script>
-@endpush

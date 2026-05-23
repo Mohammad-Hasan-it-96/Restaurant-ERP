@@ -30,7 +30,7 @@ class EnsureCustomerSession
         Log::debug('customer.session', ['id' => $customerId ?? null]);
 
         if ($customerId) {
-            $customer = Customer::find($customerId);
+            $customer = Customer::findOrFail($customerId);
 
             if ($customer) {
                 // Make the model available throughout the request lifecycle

@@ -112,6 +112,7 @@ return [
     'processing' => 'Processing',
     'pending' => 'Pending',
     'cancelled' => 'Cancelled',
+    'modified' => 'Modified',
     // User roles
     'admin' => 'Admin',
     'moderator' => 'Moderator',
@@ -630,4 +631,7 @@ return [
     'no_data_for_period'   => 'No data for selected period',
     'orders_by_type'       => 'Orders by Type',
     'created_at'           => 'Created At',
+    'new_order'            => 'New Order!',
+    'new_order_arrived'    => 'A new order has arrived.',
+    'refresh_now'          => 'Refresh Now',
 ];

@@ -19,7 +19,7 @@ class OrderController extends Controller
         if ($request->boolean('_poll')) {
             return response()->json([
                 'latest_id'     => Order::max('id') ?? 0,
-                'pending_count' => Order::where('status', 'pending')->count(),
+                'pending_count' => Order::query()->where('status', 'pending')->count(),
             ]);
         }
 
@@ -66,7 +66,10 @@ class OrderController extends Controller
     {
         $order->load('customer', 'items');
         $rejectionReasons   = $this->config->getRejectionReasons();
-        $restaurantName     = $this->config->getText('restaurant_name', config('app.name'));
+        $restaurantName  = $this->config->getFirstText(
+            ['restaurant_name_ar', 'restaurant_name', 'restaurant_name_en', 'site_name'],
+            config('app.name', '')
+        );
         $restaurantWhatsapp = $this->config->getText('restaurant_whatsapp');
         $deliveryZones      = DeliveryZone::active()->get();
 
