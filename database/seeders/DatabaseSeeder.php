@@ -26,8 +26,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             SystemConfigSeeder::class,
             LanguageSeeder::class,
-            CategorySeeder::class,
-            ProductSeeder::class,
+//            CategorySeeder::class,
+//            ProductSeeder::class,
             DeliveryZoneSeeder::class,
         ]);
     }
