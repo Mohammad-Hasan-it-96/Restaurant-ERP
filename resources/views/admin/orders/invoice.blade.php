@@ -127,8 +127,8 @@
 
             /* ── Root layout ─────────────────────────────────────────── */
             html, body {
-                width: 80mm !important;
-                max-width: 80mm !important;
+                width: 65mm !important;
+                max-width: 65mm !important;
                 margin: 0 !important;
                 padding: 4mm 3mm !important;
                 font-family: 'Courier New', Courier, monospace !important;
