@@ -216,29 +216,29 @@
                     $currentLanguage = $languages->where('code', $currentLocale)->first();
                 @endphp
 
-                @if($languages->count() > 0)
-                <div class="dropdown language-selector">
-                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        @if($currentLanguage && $currentLanguage->flag_path)
-                            <img src="{{ asset('storage/' . $currentLanguage->flag_path) }}" alt="{{ $currentLanguage->name }}" class="current-language-flag">
-                        @endif
-                        {{ $currentLanguage ? $currentLanguage->name : \App\Helpers\Helpers::translate('english') }}
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        @foreach($languages as $language)
-                            <li>
-                                <a class="dropdown-item {{ $currentLocale == $language->code ? 'active' : '' }}"
-                                   href="{{ route('language.change', $language->code) }}">
-                                    @if($language->flag_path)
-                                        <img src="{{ asset('storage/' . $language->flag_path) }}" alt="{{ $language->name }}">
-                                    @endif
-                                    {{ $language->name }}
-                                </a>
-                            </li>
-                        @endforeach
-                    </ul>
-                </div>
-                @endif
+{{--                @if($languages->count() > 0)--}}
+{{--                <div class="dropdown language-selector">--}}
+{{--                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">--}}
+{{--                        @if($currentLanguage && $currentLanguage->flag_path)--}}
+{{--                            <img src="{{ asset('storage/' . $currentLanguage->flag_path) }}" alt="{{ $currentLanguage->name }}" class="current-language-flag">--}}
+{{--                        @endif--}}
+{{--                        {{ $currentLanguage ? $currentLanguage->name : \App\Helpers\Helpers::translate('english') }}--}}
+{{--                    </button>--}}
+{{--                    <ul class="dropdown-menu dropdown-menu-end">--}}
+{{--                        @foreach($languages as $language)--}}
+{{--                            <li>--}}
+{{--                                <a class="dropdown-item {{ $currentLocale == $language->code ? 'active' : '' }}"--}}
+{{--                                   href="{{ route('language.change', $language->code) }}">--}}
+{{--                                    @if($language->flag_path)--}}
+{{--                                        <img src="{{ asset('storage/' . $language->flag_path) }}" alt="{{ $language->name }}">--}}
+{{--                                    @endif--}}
+{{--                                    {{ $language->name }}--}}
+{{--                                </a>--}}
+{{--                            </li>--}}
+{{--                        @endforeach--}}
+{{--                    </ul>--}}
+{{--                </div>--}}
+{{--                @endif--}}
 
                 @auth
                 <div class="dropdown">
@@ -472,30 +472,30 @@
                     @endif
 
                     <!-- Languages Dropdown -->
-                    <div class="sidebar-item mb-1">
-                        <button class="nav-link d-flex align-items-center justify-content-between w-100 py-3 px-3 rounded-3 border-0 bg-transparent {{ request()->routeIs('admin.languages.*') ? 'active' : '' }}"
-                                data-bs-toggle="collapse" data-bs-target="#languagesCollapse" aria-expanded="{{ request()->routeIs('admin.languages.*') ? 'true' : 'false' }}">
-                            <div class="d-flex align-items-center">
-                                <i class="bi bi-translate me-3" style="{{ request()->routeIs('admin.languages.*') ? 'color: #ffffff !important;' : '' }}"></i>
-                                <span style="{{ request()->routeIs('admin.languages.*') ? 'color: #ffffff !important;' : '' }}">{{ \App\Helpers\Helpers::translate('languages') }}</span>
-                            </div>
-                            <i class="bi {{ request()->routeIs('admin.languages.*') ? 'bi-chevron-down' : 'bi-chevron-right' }}" style="{{ request()->routeIs('admin.languages.*') ? 'color: #ffffff !important;' : '' }}"></i>
-                        </button>
-                        <div class="collapse {{ request()->routeIs('admin.languages.*') ? 'show' : '' }}" id="languagesCollapse">
-                            <div class="nav flex-column ms-4 mt-1">
-                                <a href="{{ route('admin.languages.index') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->routeIs('admin.languages.index') ? 'active' : '' }}">
-                                    <i class="bi bi-list me-2"></i>
-                                    <span>{{ \App\Helpers\Helpers::translate('list') }}</span>
-                                </a>
-                                @if(Auth::user()->role === 'admin')
-                                <a href="{{ route('admin.languages.create') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->routeIs('admin.languages.create') ? 'active' : '' }}">
-                                    <i class="bi bi-plus-circle me-2"></i>
-                                    <span>{{ \App\Helpers\Helpers::translate('add_new') }}</span>
-                                </a>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
+{{--                    <div class="sidebar-item mb-1">--}}
+{{--                        <button class="nav-link d-flex align-items-center justify-content-between w-100 py-3 px-3 rounded-3 border-0 bg-transparent {{ request()->routeIs('admin.languages.*') ? 'active' : '' }}"--}}
+{{--                                data-bs-toggle="collapse" data-bs-target="#languagesCollapse" aria-expanded="{{ request()->routeIs('admin.languages.*') ? 'true' : 'false' }}">--}}
+{{--                            <div class="d-flex align-items-center">--}}
+{{--                                <i class="bi bi-translate me-3" style="{{ request()->routeIs('admin.languages.*') ? 'color: #ffffff !important;' : '' }}"></i>--}}
+{{--                                <span style="{{ request()->routeIs('admin.languages.*') ? 'color: #ffffff !important;' : '' }}">{{ \App\Helpers\Helpers::translate('languages') }}</span>--}}
+{{--                            </div>--}}
+{{--                            <i class="bi {{ request()->routeIs('admin.languages.*') ? 'bi-chevron-down' : 'bi-chevron-right' }}" style="{{ request()->routeIs('admin.languages.*') ? 'color: #ffffff !important;' : '' }}"></i>--}}
+{{--                        </button>--}}
+{{--                        <div class="collapse {{ request()->routeIs('admin.languages.*') ? 'show' : '' }}" id="languagesCollapse">--}}
+{{--                            <div class="nav flex-column ms-4 mt-1">--}}
+{{--                                <a href="{{ route('admin.languages.index') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->routeIs('admin.languages.index') ? 'active' : '' }}">--}}
+{{--                                    <i class="bi bi-list me-2"></i>--}}
+{{--                                    <span>{{ \App\Helpers\Helpers::translate('list') }}</span>--}}
+{{--                                </a>--}}
+{{--                                @if(Auth::user()->role === 'admin')--}}
+{{--                                <a href="{{ route('admin.languages.create') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->routeIs('admin.languages.create') ? 'active' : '' }}">--}}
+{{--                                    <i class="bi bi-plus-circle me-2"></i>--}}
+{{--                                    <span>{{ \App\Helpers\Helpers::translate('add_new') }}</span>--}}
+{{--                                </a>--}}
+{{--                                @endif--}}
+{{--                            </div>--}}
+{{--                        </div>--}}
+{{--                    </div>--}}
 
                     <!-- System Configs Dropdown - Only for Admins -->
                     @if(Auth::user()->role === 'admin')
