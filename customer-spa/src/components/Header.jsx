@@ -72,21 +72,21 @@ export default function Header({ settings, cartCount, onCartClick, activePage, o
             </button>
           </nav>
 
-          <button
-            type="button"
-            className="lang-btn"
-            onClick={handleLangClick}
-            aria-label={t('toggleLanguageAria')}
-          >
-            {t('lang')}
-          </button>
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label={t('bellAria')}
-          >
-            <BellIcon />
-          </button>
+          {/*<button*/}
+          {/*  type="button"*/}
+          {/*  className="lang-btn"*/}
+          {/*  onClick={handleLangClick}*/}
+          {/*  aria-label={t('toggleLanguageAria')}*/}
+          {/*>*/}
+          {/*  {t('lang')}*/}
+          {/*</button>*/}
+          {/*<button*/}
+          {/*  type="button"*/}
+          {/*  className="icon-btn"*/}
+          {/*  aria-label={t('bellAria')}*/}
+          {/*>*/}
+          {/*  <BellIcon />*/}
+          {/*</button>*/}
           <button
             type="button"
             className="cart-btn-header"
