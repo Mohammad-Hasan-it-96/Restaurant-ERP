@@ -16,9 +16,18 @@ class ProductResource extends JsonResource
             'name_en'        => $this->name_en,
             'description_ar' => $this->description_ar,
             'description_en' => $this->description_en,
-            'price'          => (float) $this->price,
-            'discount_price' => $this->discount_price ? (float) $this->discount_price : null,
-            'effective_price'=> (float) $this->effective_price,   // accessor
+            'is_weight_based' => (bool) $this->is_weight_based,
+            'price'           => $this->is_weight_based ? null : (float) $this->price,
+            'discount_price'  => (!$this->is_weight_based && $this->discount_price) ? (float) $this->discount_price : null,
+            'effective_price' => $this->is_weight_based ? null : (float) $this->effective_price,
+            'price_per_kg'    => $this->is_weight_based ? (float) $this->price_per_kg : null,
+            'weights'         => $this->is_weight_based ? $this->whenLoaded('weights', fn () =>
+                $this->weights->map(fn ($w) => [
+                    'id'       => $w->id,
+                    'name'     => $w->name,
+                    'value_kg' => (float) $w->value_kg,
+                ])->values()
+            ) : null,
             'image'          => $this->image ? asset('storage/' . $this->image) : null,
             'category_id'    => $this->category_id,
             'category'       => $this->whenLoaded('category', fn () => [

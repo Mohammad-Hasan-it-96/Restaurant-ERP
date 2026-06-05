@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Weight;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -60,34 +61,47 @@ class ProductController extends Controller
     {
         $this->authorizeProductAction(Product::class, 'create');
         $categories = Category::orderBy('name_ar')->get();
-        return view('admin.products.create', compact('categories'));
+        $weights    = Weight::active()->orderBy('sort_order')->get();
+        return view('admin.products.create', compact('categories', 'weights'));
     }
 
     public function store(Request $request)
     {
         $this->authorizeProductAction(Product::class, 'create');
 
+        $isWeightBased = $request->boolean('is_weight_based');
+
         $validated = $request->validate([
-            'name_ar'        => 'required|string|max:255',
-            'name_en'        => 'nullable|string|max:255',
-            'price'          => 'required|numeric|min:0',
-            'discount_price' => 'nullable|numeric|min:0',
-            'category_id'    => 'nullable|exists:categories,id',
-            'image'          => 'nullable|image|max:2048',
-            'is_available'   => 'boolean',
-            'is_featured'    => 'boolean',
-            'sort_order'     => 'nullable|integer',
-            'is_active'      => 'boolean',
+            'name_ar'         => 'required|string|max:255',
+            'name_en'         => 'nullable|string|max:255',
+            'price'           => $isWeightBased ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
+            'discount_price'  => 'nullable|numeric|min:0',
+            'price_per_kg'    => $isWeightBased ? 'required|numeric|min:0' : 'nullable|numeric|min:0',
+            'is_weight_based' => 'boolean',
+            'weights'         => 'nullable|array',
+            'weights.*'       => 'exists:weights,id',
+            'category_id'     => 'nullable|exists:categories,id',
+            'image'           => 'nullable|image|max:2048',
+            'is_available'    => 'boolean',
+            'is_featured'     => 'boolean',
+            'sort_order'      => 'nullable|integer',
+            'is_active'       => 'boolean',
             // Legacy fields (optional)
-            'name'           => 'nullable|string|max:255',
-            'details'        => 'nullable|string',
-            'quantity'       => 'nullable|integer|min:0',
+            'name'            => 'nullable|string|max:255',
+            'details'         => 'nullable|string',
+            'quantity'        => 'nullable|integer|min:0',
         ]);
 
         // Handle checkboxes
-        $validated['is_available'] = $request->boolean('is_available');
-        $validated['is_featured']  = $request->boolean('is_featured');
-        $validated['is_active']    = $request->boolean('is_active');
+        $validated['is_available']    = $request->boolean('is_available');
+        $validated['is_featured']     = $request->boolean('is_featured');
+        $validated['is_active']       = $request->boolean('is_active');
+        $validated['is_weight_based'] = $isWeightBased;
+
+        // For weight-based products use price_per_kg as the base price too
+        if ($isWeightBased) {
+            $validated['price'] = $validated['price_per_kg'];
+        }
 
         // Handle image upload
         if ($request->hasFile('image')) {
@@ -106,6 +120,8 @@ class ProductController extends Controller
         $product->user_id = Auth::id();
         $product->save();
 
+        $product->weights()->sync($isWeightBased ? ($validated['weights'] ?? []) : []);
+
         return redirect()
             ->route('admin.products.index')
             ->with('success', __('app.product_created'));
@@ -113,14 +129,16 @@ class ProductController extends Controller
 
     public function edit(Request $request, $id)
     {
-        $product = Product::findOrFail($id);
+        $product = Product::with('weights')->findOrFail($id);
         $this->authorizeProductAction($product, 'update');
-        $categories = Category::query()->orderBy('name_ar')->get();
+        $categories    = Category::query()->orderBy('name_ar')->get();
+        $weights       = Weight::active()->orderBy('sort_order')->get();
+        $selectedWeights = $product->weights->pluck('id')->toArray();
 
         // Remember which page of the index the user came from so we can return there after save
         $back = $request->headers->get('referer', route('admin.products.index'));
 
-        return view('admin.products.edit', compact('product', 'categories', 'back'));
+        return view('admin.products.edit', compact('product', 'categories', 'weights', 'selectedWeights', 'back'));
     }
 
     public function update(Request $request, $id)
@@ -128,26 +146,37 @@ class ProductController extends Controller
         $product = Product::findOrFail($id);
         $this->authorizeProductAction($product, 'update');
 
+        $isWeightBased = $request->boolean('is_weight_based');
+
         $validated = $request->validate([
-            'name_ar'        => 'required|string|max:255',
-            'name_en'        => 'nullable|string|max:255',
-            'price'          => 'required|numeric|min:0',
-            'discount_price' => 'nullable|numeric|min:0',
-            'category_id'    => 'nullable|exists:categories,id',
-            'image'          => 'nullable|image|max:2048',
-            'is_available'   => 'boolean',
-            'is_featured'    => 'boolean',
-            'sort_order'     => 'nullable|integer',
-            'is_active'      => 'boolean',
+            'name_ar'         => 'required|string|max:255',
+            'name_en'         => 'nullable|string|max:255',
+            'price'           => $isWeightBased ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
+            'discount_price'  => 'nullable|numeric|min:0',
+            'price_per_kg'    => $isWeightBased ? 'required|numeric|min:0' : 'nullable|numeric|min:0',
+            'is_weight_based' => 'boolean',
+            'weights'         => 'nullable|array',
+            'weights.*'       => 'exists:weights,id',
+            'category_id'     => 'nullable|exists:categories,id',
+            'image'           => 'nullable|image|max:2048',
+            'is_available'    => 'boolean',
+            'is_featured'     => 'boolean',
+            'sort_order'      => 'nullable|integer',
+            'is_active'       => 'boolean',
             // Legacy fields
-            'name'           => 'nullable|string|max:255',
-            'details'        => 'nullable|string',
-            'quantity'       => 'nullable|integer|min:0',
+            'name'            => 'nullable|string|max:255',
+            'details'         => 'nullable|string',
+            'quantity'        => 'nullable|integer|min:0',
         ]);
 
-        $validated['is_available'] = $request->boolean('is_available');
-        $validated['is_featured']  = $request->boolean('is_featured');
-        $validated['is_active']    = $request->boolean('is_active');
+        $validated['is_available']    = $request->boolean('is_available');
+        $validated['is_featured']     = $request->boolean('is_featured');
+        $validated['is_active']       = $request->boolean('is_active');
+        $validated['is_weight_based'] = $isWeightBased;
+
+        if ($isWeightBased) {
+            $validated['price'] = $validated['price_per_kg'];
+        }
 
         // Handle image upload – delete old one
         if ($request->hasFile('image')) {
@@ -166,6 +195,8 @@ class ProductController extends Controller
         $validated['quantity'] = $validated['quantity'] ?? $product->quantity ?? 0;
 
         $product->update($validated);
+
+        $product->weights()->sync($isWeightBased ? ($validated['weights'] ?? []) : []);
 
         $back = $request->input('_back', route('admin.products.index'));
 

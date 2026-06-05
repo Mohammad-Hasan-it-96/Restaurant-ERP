@@ -35,6 +35,7 @@ class StoreOrderRequest extends FormRequest
             'items'              => 'required|array|min:1|max:20',
             'items.*.product_id' => 'required|integer|exists:products,id,is_active,1,is_available,1',
             'items.*.quantity'   => 'required|integer|min:1|max:50',
+            'items.*.weight_id'  => 'nullable|integer|exists:weights,id',
 
             // ── Customer note ─────────────────────────────────────────────────
             'customer_note' => 'nullable|string|max:500',

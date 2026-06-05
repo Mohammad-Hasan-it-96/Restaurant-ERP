@@ -141,6 +141,18 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
         });
     });
 
+    // Weights routes
+    Route::group(['prefix' => 'weights', 'as' => 'weights.'], function () {
+        Route::get('', [App\Http\Controllers\Admin\WeightController::class, 'index'])->name('index');
+        Route::middleware(['moderator'])->group(function () {
+            Route::get('create', [App\Http\Controllers\Admin\WeightController::class, 'create'])->name('create');
+            Route::post('', [App\Http\Controllers\Admin\WeightController::class, 'store'])->name('store');
+            Route::get('{weight}/edit', [App\Http\Controllers\Admin\WeightController::class, 'edit'])->name('edit');
+            Route::put('{weight}', [App\Http\Controllers\Admin\WeightController::class, 'update'])->name('update');
+            Route::delete('{weight}', [App\Http\Controllers\Admin\WeightController::class, 'destroy'])->name('destroy');
+        });
+    });
+
     // System Configs Routes
     Route::prefix('configs')->name('configs.')->middleware(['auth', 'admin'])->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\ConfigController::class, 'index'])->name('index');

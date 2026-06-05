@@ -223,8 +223,26 @@
                                 @foreach($order->items as $item)
                                 <tr>
                                     <td>{{ $item->product_name }}</td>
-                                    <td class="text-center">{{ $item->quantity }}</td>
-                                    <td class="text-end">{{ number_format($item->product_price, 2) }}</td>
+                                    <td class="text-center">
+                                        @if($item->weight_name)
+                                            <span class="fw-semibold">{{ $item->weight_name }}</span>
+                                            @if($item->weight_value_kg)
+                                                <small class="text-muted d-block">
+                                                    ({{ rtrim(rtrim(number_format($item->weight_value_kg, 3), '0'), '.') }} كغ)
+                                                </small>
+                                            @endif
+                                        @else
+                                            {{ $item->quantity }}
+                                        @endif
+                                    </td>
+                                    <td class="text-end">
+                                        {{ number_format($item->product_price, 2) }}
+                                        @if($item->weight_name && $item->weight_value_kg > 0)
+                                            <small class="text-muted d-block">
+                                                {{ number_format($item->product_price / $item->weight_value_kg, 2) }} / كغ
+                                            </small>
+                                        @endif
+                                    </td>
                                     <td class="text-end fw-semibold">{{ number_format($item->total, 2) }}</td>
                                 </tr>
                                 @endforeach

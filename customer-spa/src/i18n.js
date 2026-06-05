@@ -145,6 +145,9 @@ export const STRINGS = {
     closedTodayNoSchedule: 'المطعم مغلق اليوم، التوصيل المجدول غير متاح',
     noSlotsLeft: 'لا تتوفر مواعيد توصيل متاحة لهذا اليوم',
     todayHoursLabel: 'أوقات العمل اليوم:',
+    selectWeight: 'اختر الوزن',
+    weightRequired: 'يرجى اختيار الوزن',
+    perKg: '/ كغ',
   },
   en: {
     documentTitle: 'Restaurant Menu',
@@ -281,6 +284,9 @@ export const STRINGS = {
     closedTodayNoSchedule: 'Restaurant is closed today, scheduled delivery unavailable',
     noSlotsLeft: 'No delivery slots available for today',
     todayHoursLabel: "Today's hours:",
+    selectWeight: 'Select Weight',
+    weightRequired: 'Please select a weight',
+    perKg: '/ kg',
   },
 };
 

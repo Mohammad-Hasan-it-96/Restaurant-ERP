@@ -189,7 +189,11 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOr
           return `${t2.getFullYear()}-${PAD(t2.getMonth() + 1)}-${PAD(t2.getDate())}T${scheduled}:00`;
         })(),
         customer_note:  note.trim() || null,
-        items: cartItems.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
+        items: cartItems.map((i) => ({
+          product_id: i.product_id,
+          quantity:   i.quantity,
+          weight_id:  i.weight_id || null,
+        })),
       };
 
       const endpoint = isModify

@@ -100,6 +100,7 @@ export default function CartDrawer({
             </div>
           ) : (
             items.map((item) => {
+              const lineKey  = item.cart_key || String(item.product_id);
               const lineName = localName(
                 {
                   name_ar: item.product_name_ar,
@@ -108,7 +109,7 @@ export default function CartDrawer({
                 lang
               );
               return (
-                <div key={item.product_id} className="cart-item">
+                <div key={lineKey} className="cart-item">
                 {item.product_image ? (
                   <img
                     className="cart-item-img"
@@ -128,7 +129,12 @@ export default function CartDrawer({
                 </div>
 
                 <div className="cart-item-info">
-                  <div className="cart-item-name">{lineName}</div>
+                  <div className="cart-item-name">
+                    {lineName}
+                    {item.weight_name && (
+                      <span className="cart-item-weight-badge">{item.weight_name}</span>
+                    )}
+                  </div>
                   <div className="cart-item-price">
                     {formatPrice(item.product_price)} {t('times')} {item.quantity}
                   </div>
@@ -144,7 +150,7 @@ export default function CartDrawer({
                     <button
                       type="button"
                       className="cart-qty-btn"
-                      onClick={() => onChangeQty(item.product_id, -1)}
+                      onClick={() => onChangeQty(lineKey, -1)}
                     >
                       <MinusIcon size={12} />
                     </button>
@@ -152,7 +158,7 @@ export default function CartDrawer({
                     <button
                       type="button"
                       className="cart-qty-btn"
-                      onClick={() => onChangeQty(item.product_id, 1)}
+                      onClick={() => onChangeQty(lineKey, 1)}
                     >
                       <PlusIcon size={12} />
                     </button>
@@ -160,7 +166,7 @@ export default function CartDrawer({
                   <button
                     type="button"
                     className="cart-item-delete"
-                    onClick={() => onRemove(item.product_id)}
+                    onClick={() => onRemove(lineKey)}
                     aria-label={t('remove')}
                   >
                     <TrashIcon size={14} />

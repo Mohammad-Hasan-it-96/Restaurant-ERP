@@ -58,15 +58,29 @@
         dl dt { width: 42%; font-weight: bold; }
         dl dd { width: 56%; word-break: break-word; }
 
-        /* ── Items table ────────────────────────────────────────────── */
+        /* ── Items list ─────────────────────────────────────────────── */
+        .item-block { margin: 1.5mm 0; }
+        .item-name  { font-weight: bold; font-size: 11px; }
+        .item-detail {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 11px;
+            gap: 4px;
+        }
+        .item-detail-left  { flex: 1; color: #333; }
+        .item-detail-right { font-weight: bold; white-space: nowrap; }
+        .item-sep {
+            border: none;
+            border-top: 1px dashed #bbb;
+            margin: 1.5mm 0;
+        }
+
+        /* ── Totals table ───────────────────────────────────────────── */
         table {
             width: 100%;
             border-collapse: collapse;
             margin: 2mm 0;
-        }
-        thead tr {
-            border-top: 1px solid #000;
-            border-bottom: 1px solid #000;
         }
         th { font-size: 11px; padding: 1mm 0; text-align: start; }
         td { font-size: 11px; padding: 1mm 0; vertical-align: top; }
@@ -192,7 +206,24 @@
             dl dt { width: 42% !important; font-weight: bold !important; }
             dl dd { width: 56% !important; word-break: break-word !important; }
 
-            /* ── Items table ─────────────────────────────────────────── */
+            /* ── Items list ──────────────────────────────────────────── */
+            .item-block { margin: 1.5mm 0 !important; }
+            .item-name  { font-weight: bold !important; font-size: 11px !important; }
+            .item-detail {
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: baseline !important;
+                font-size: 11px !important;
+            }
+            .item-detail-left  { flex: 1 !important; }
+            .item-detail-right { font-weight: bold !important; white-space: nowrap !important; }
+            .item-sep {
+                border: none !important;
+                border-top: 1px dashed #000 !important;
+                margin: 1.5mm 0 !important;
+            }
+
+            /* ── Totals table ─────────────────────────────────────────── */
             table {
                 width: 100% !important;
                 border-collapse: collapse !important;
@@ -205,15 +236,6 @@
                 font-size: 11px !important;
                 line-height: 1.5 !important;
                 background: transparent !important;
-            }
-            /* Header row: solid lines above and below */
-            thead tr {
-                border-top: 1px solid #000 !important;
-                border-bottom: 1px solid #000 !important;
-            }
-            thead tr th {
-                padding: 1mm 0 !important;
-                font-weight: bold !important;
             }
             /* First tfoot row: dashed separator */
             tfoot tr:first-child td {
@@ -321,25 +343,35 @@
     <hr class="divider">
 
     {{-- ── Items ── --}}
+
+    @foreach($order->items as $item)
+    @php
+        $isWeighted = !empty($item->weight_name) && $item->weight_value_kg > 0;
+        $wKg        = $isWeighted
+            ? rtrim(rtrim(number_format($item->weight_value_kg, 3), '0'), '.')
+            : '';
+        $ratePerKg  = $isWeighted ? round($item->product_price / $item->weight_value_kg, 0) : 0;
+    @endphp
+    <div class="item-block">
+        <div class="item-name">{{ $item->product_name }}</div>
+        <div class="item-detail">
+            <span class="item-detail-left">
+                @if($isWeighted)
+                    {{ $item->weight_name }} ({{ $wKg }} كغ) &times; {{ number_format($ratePerKg, 0) }} / كغ
+                @else
+                    {{ $item->quantity }} &times; {{ number_format($item->product_price, 0) }}
+                @endif
+            </span>
+            <span class="item-detail-right">{{ number_format($item->total, 0) }}</span>
+        </div>
+    </div>
+    @if(!$loop->last)
+    <hr class="item-sep">
+    @endif
+    @endforeach
+
+    {{-- ── Totals ── --}}
     <table>
-        <thead>
-            <tr>
-                <th style="width:50%">{{ __('app.product_name') }}</th>
-                <th class="text-center" style="width:12%">{{ __('app.qty') }}</th>
-                <th class="text-end" style="width:18%">{{ __('app.price') }}</th>
-                <th class="text-end" style="width:20%">{{ __('app.total') }}</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($order->items as $item)
-            <tr>
-                <td>{{ $item->product_name }}</td>
-                <td class="text-center">{{ $item->quantity }}</td>
-                <td class="text-end">{{ number_format($item->product_price, 2) }}</td>
-                <td class="text-end">{{ number_format($item->total, 2) }}</td>
-            </tr>
-            @endforeach
-        </tbody>
         <tfoot>
             <tr>
                 <td colspan="3">{{ __('app.subtotal') }}</td>

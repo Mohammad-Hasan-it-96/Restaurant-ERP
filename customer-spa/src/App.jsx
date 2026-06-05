@@ -94,8 +94,8 @@ export default function App() {
   }, []);
 
   const handleAddToCart = useCallback(
-    (product, qty = 1) => {
-      const ok = cart.addToCart(product, qty);
+    (product, qty = 1, weightOption = null) => {
+      const ok = cart.addToCart(product, qty, weightOption);
       if (!ok) window.alert(t('productUnavailableAlert'));
       return ok;
     },
@@ -104,6 +104,11 @@ export default function App() {
 
   const handleQuickAdd = useCallback(
     (product) => {
+      // Weight-based products need a weight choice — open the modal instead
+      if (product.is_weight_based) {
+        setActiveProduct(product);
+        return;
+      }
       const ok = cart.addToCart(product, 1);
       if (!ok) window.alert(t('productUnavailableAlert'));
     },

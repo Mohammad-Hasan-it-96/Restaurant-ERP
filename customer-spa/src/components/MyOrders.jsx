@@ -131,15 +131,40 @@ function OrderDetailModal({ order, onClose, onModify, onCancelled, cancelBeforeM
                 </tr>
               </thead>
               <tbody>
-                {items.map((item, i) => (
-                  <tr key={i}>
-                    <td>{item.product_name}</td>
-                    <td style={{ textAlign: 'center' }}>{item.quantity}</td>
-                    <td style={{ textAlign: 'end', fontWeight: 600 }}>
-                      {formatPrice(item.total)}
-                    </td>
-                  </tr>
-                ))}
+                {items.map((item, i) => {
+                  const isWeighted = !!item.weight_name;
+                  const kgUnit     = lang === 'ar' ? 'كغ' : 'kg';
+                  const wKg        = item.weight_value_kg ? parseFloat(item.weight_value_kg) : null;
+                  return (
+                    <tr key={i}>
+                      <td>
+                        <div>{item.product_name}</div>
+                        {isWeighted && item.price_per_kg ? (
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                            {formatPrice(item.price_per_kg)} / {kgUnit}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        {isWeighted ? (
+                          <span>
+                            {item.weight_name}
+                            {wKg !== null ? (
+                              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)' }}>
+                                ({wKg} {kgUnit})
+                              </span>
+                            ) : null}
+                          </span>
+                        ) : (
+                          item.quantity
+                        )}
+                      </td>
+                      <td style={{ textAlign: 'end', fontWeight: 600 }}>
+                        {formatPrice(item.total)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
