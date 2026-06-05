@@ -237,6 +237,7 @@ export default function App() {
           cartTotal={cart.cartTotal}
           modifyingOrder={modifyingOrder}
           cancelBeforeMinutes={Number(settings.customer_cancel_before_minutes) || 0}
+          openingHours={settings.opening_hours || {}}
           onSuccess={handleCheckoutSuccess}
           onClose={() => { setShowCheckout(false); setModifyingOrder(null); }}
         />

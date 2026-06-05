@@ -140,6 +140,11 @@ export const STRINGS = {
     cancelling: 'جاري الإلغاء...',
     cancelOrderSuccess: 'تم إلغاء طلبك بنجاح',
     cancelNotAllowed: 'لا يمكن إلغاء هذا الطلب',
+    scheduleBeforeClose: 'يجب أن يكون وقت التوصيل قبل نهاية الدوام',
+    scheduleToday: 'يجب أن يكون وقت التوصيل في نفس اليوم',
+    closedTodayNoSchedule: 'المطعم مغلق اليوم، التوصيل المجدول غير متاح',
+    noSlotsLeft: 'لا تتوفر مواعيد توصيل متاحة لهذا اليوم',
+    todayHoursLabel: 'أوقات العمل اليوم:',
   },
   en: {
     documentTitle: 'Restaurant Menu',
@@ -271,6 +276,11 @@ export const STRINGS = {
     cancelling: 'Cancelling...',
     cancelOrderSuccess: 'Your order has been cancelled',
     cancelNotAllowed: 'This order cannot be cancelled',
+    scheduleBeforeClose: 'Scheduled time must be before closing time',
+    scheduleToday: 'Scheduled time must be for today',
+    closedTodayNoSchedule: 'Restaurant is closed today, scheduled delivery unavailable',
+    noSlotsLeft: 'No delivery slots available for today',
+    todayHoursLabel: "Today's hours:",
   },
 };
 

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import { CloseIcon } from './Icons';
 import api, { extractData, decodeApiText } from '../api/client';
 import { appendMyOrderNumber } from '../utils/myOrders';
@@ -17,16 +17,53 @@ function Field({ id, label, error, children }) {
   );
 }
 
-/** Convert ISO/DB datetime string → "YYYY-MM-DDTHH:mm" for <input type=datetime-local> */
-function toDatetimeLocal(isoStr) {
-  if (!isoStr) return '';
-  const d = new Date(isoStr);
-  if (isNaN(d.getTime())) return '';
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const PAD = (n) => String(n).padStart(2, '0');
+
+/** "HH:MM" for a Date object */
+function dateToHHMM(d) {
+  return `${PAD(d.getHours())}:${PAD(d.getMinutes())}`;
 }
 
-export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOrder, cancelBeforeMinutes, onSuccess, onClose }) {
+/** "HH:MM" for now + plusMinutes */
+function nowPlusMinHHMM(plusMinutes) {
+  return dateToHHMM(new Date(Date.now() + plusMinutes * 60 * 1000));
+}
+
+const JS_DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+/**
+ * Compute time-only bounds (HH:MM) for today's scheduled delivery.
+ * Returns { isClosedToday, isNoSlotsLeft, min, max, todayFrom, todayTo }
+ */
+function getScheduledTimeBounds(openingHours) {
+  const todayName = JS_DAYS[new Date().getDay()];
+  const todayHours = openingHours?.[todayName];
+
+  // No config yet – allow full day
+  if (!todayHours) {
+    const min = nowPlusMinHHMM(30);
+    return { isClosedToday: false, isNoSlotsLeft: false, min, max: '23:59', todayFrom: null, todayTo: null };
+  }
+
+  if (!todayHours.is_open) {
+    return { isClosedToday: true, isNoSlotsLeft: false, min: null, max: null, todayFrom: null, todayTo: null };
+  }
+
+  const todayFrom = todayHours.from || '00:00';
+  const todayTo   = (!todayHours.to || todayHours.to === '00:00') ? '23:59' : todayHours.to;
+
+  // min = later of (now+30 min) and opening time
+  const minByNow = nowPlusMinHHMM(30);
+  const min = minByNow > todayFrom ? minByNow : todayFrom;
+
+  if (min > todayTo) {
+    return { isClosedToday: false, isNoSlotsLeft: true, min: null, max: null, todayFrom, todayTo };
+  }
+
+  return { isClosedToday: false, isNoSlotsLeft: false, min, max: todayTo, todayFrom, todayTo };
+}
+
+export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOrder, cancelBeforeMinutes, openingHours = {}, onSuccess, onClose }) {
   const { t } = useI18n();
 
   const isModify = !!modifyingOrder;
@@ -34,18 +71,29 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOr
   const [name,       setName]       = useState('');
   const [phone,      setPhone]      = useState('');
   // Lock order type when modifying
-  const [orderType,  setOrderType]  = useState(modifyingOrder?.order_type ?? 'table');
+  const [orderType,  setOrderType]  = useState(modifyingOrder?.order_type ?? 'delivery');
   const [tableNum,   setTableNum]   = useState(modifyingOrder?.table_number ?? '');
   const [address,    setAddress]    = useState(modifyingOrder?.address ?? '');
   const [savedAddress, setSavedAddress]             = useState('');
   const [showAddressSuggestion, setShowAddressSuggestion] = useState(false);
   const [dlvType,    setDlvType]    = useState(modifyingOrder?.delivery_type ?? 'immediate');
-  const [scheduled,  setScheduled]  = useState(() => toDatetimeLocal(modifyingOrder?.scheduled_at ?? ''));
+  const [scheduled, setScheduled] = useState(() => {
+    if (modifyingOrder?.scheduled_at) {
+      const d = new Date(modifyingOrder.scheduled_at);
+      if (!isNaN(d.getTime())) return dateToHHMM(d);
+    }
+    return nowPlusMinHHMM(30);
+  });
   const [note,       setNote]       = useState(modifyingOrder?.customer_note ?? '');
   const [errors,     setErrors]     = useState({});
   const [apiError,   setApiError]   = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [visible,    setVisible]    = useState(false);
+
+  const scheduledBounds = useMemo(
+    () => getScheduledTimeBounds(openingHours),
+    [openingHours]
+  );
 
   // Slide-in animation
   useEffect(() => {
@@ -104,15 +152,17 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOr
     if (!isModify && orderType === 'table' && !tableNum.trim()) e.tableNum = t('reqTable');
     if (orderType === 'delivery' && !address.trim())  e.address = t('reqAddress');
     if (orderType === 'delivery' && dlvType === 'scheduled') {
-      if (!scheduled) {
+      const { isClosedToday, isNoSlotsLeft, min, max } = scheduledBounds;
+      if (isClosedToday) {
+        e.scheduled = t('closedTodayNoSchedule');
+      } else if (isNoSlotsLeft) {
+        e.scheduled = t('noSlotsLeft');
+      } else if (!scheduled) {
         e.scheduled = t('reqScheduled');
-      } else if (cancelBeforeMinutes > 0) {
-        // Frontend hint: chosen time must be more than cancelBeforeMinutes from now
-        const chosenTime = new Date(scheduled).getTime();
-        const deadline   = Date.now() + cancelBeforeMinutes * 60 * 1000;
-        if (chosenTime <= deadline) {
-          e.scheduled = t('scheduleWindowError').replace('{n}', cancelBeforeMinutes);
-        }
+      } else if (min && scheduled < min) {
+        e.scheduled = t('scheduleWindowError').replace('{n}', cancelBeforeMinutes > 0 ? cancelBeforeMinutes : 30);
+      } else if (max && scheduled > max) {
+        e.scheduled = t('scheduleBeforeClose');
       }
     }
     setErrors(e);
@@ -133,7 +183,11 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOr
         table_number:   orderType === 'table'    ? tableNum.trim() : null,
         address:        orderType === 'delivery' ? address.trim()  : null,
         delivery_type:  orderType === 'delivery' ? dlvType         : null,
-        scheduled_at:   orderType === 'delivery' && dlvType === 'scheduled' ? scheduled : null,
+        scheduled_at: (() => {
+          if (orderType !== 'delivery' || dlvType !== 'scheduled' || !scheduled) return null;
+          const t2 = new Date();
+          return `${t2.getFullYear()}-${PAD(t2.getMonth() + 1)}-${PAD(t2.getDate())}T${scheduled}:00`;
+        })(),
         customer_note:  note.trim() || null,
         items: cartItems.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
       };
@@ -232,7 +286,8 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOr
 
           <Field id="orderType" label={t('orderType')} error={null}>
             <div className="order-type-btns">
-              {['table', 'delivery', 'takeaway'].map((ot) => (
+              {/* 'table' hidden – restaurant has no dine-in tables */}
+              {['delivery', 'takeaway'].map((ot) => (
                 <button
                   key={ot}
                   type="button"
@@ -247,6 +302,7 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOr
             </div>
           </Field>
 
+          {/* table number – hidden (no dine-in tables)
           {orderType === 'table' && (
             <div className="conditional-section">
               <Field id="tableNum" label={t('tableNumber')} error={errors.tableNum}>
@@ -259,6 +315,7 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOr
               </Field>
             </div>
           )}
+          */}
 
           {orderType === 'delivery' && (
             <div className="conditional-section">
@@ -302,13 +359,29 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOr
 
               {dlvType === 'scheduled' && (
                 <Field id="scheduled" label={t('scheduledAt')} error={errors.scheduled}>
-                  <input
-                    id="scheduled"
-                    type="datetime-local"
-                    className={`form-input${errors.scheduled ? ' error' : ''}`}
-                    value={scheduled}
-                    onChange={(e) => setScheduled(e.target.value)}
-                  />
+                  {scheduledBounds.isClosedToday || scheduledBounds.isNoSlotsLeft ? (
+                    <div className="schedule-unavailable">
+                      <span className="schedule-unavailable-icon">⚠</span>
+                      {scheduledBounds.isClosedToday ? t('closedTodayNoSchedule') : t('noSlotsLeft')}
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        id="scheduled"
+                        type="time"
+                        className={`form-input schedule-time-input${errors.scheduled ? ' error' : ''}`}
+                        value={scheduled}
+                        min={scheduledBounds.min}
+                        max={scheduledBounds.max}
+                        onChange={(e) => setScheduled(e.target.value)}
+                      />
+                      {scheduledBounds.todayFrom && (
+                        <span className="schedule-hours-hint">
+                          {t('todayHoursLabel')} {scheduledBounds.todayFrom} – {scheduledBounds.todayTo}
+                        </span>
+                      )}
+                    </>
+                  )}
                 </Field>
               )}
             </div>
