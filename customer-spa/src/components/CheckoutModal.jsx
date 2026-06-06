@@ -33,40 +33,44 @@ const JS_DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday
 
 /**
  * Compute time-only bounds (HH:MM) for today's scheduled delivery.
- * Returns { isClosedToday, isNoSlotsLeft, min, max, todayFrom, todayTo }
+ * Returns { isClosedToday, isNoSlotsLeft, min, max, todayFrom, todayTo, bufferMinutes }
  */
-function getScheduledTimeBounds(openingHours) {
+function getScheduledTimeBounds(openingHours, bufferMinutes = 30) {
   const todayName = JS_DAYS[new Date().getDay()];
   const todayHours = openingHours?.[todayName];
 
   // No config yet – allow full day
   if (!todayHours) {
-    const min = nowPlusMinHHMM(30);
-    return { isClosedToday: false, isNoSlotsLeft: false, min, max: '23:59', todayFrom: null, todayTo: null };
+    const min = nowPlusMinHHMM(bufferMinutes);
+    return { isClosedToday: false, isNoSlotsLeft: false, min, max: '23:59', todayFrom: null, todayTo: null, bufferMinutes };
   }
 
   if (!todayHours.is_open) {
-    return { isClosedToday: true, isNoSlotsLeft: false, min: null, max: null, todayFrom: null, todayTo: null };
+    return { isClosedToday: true, isNoSlotsLeft: false, min: null, max: null, todayFrom: null, todayTo: null, bufferMinutes };
   }
 
   const todayFrom = todayHours.from || '00:00';
   const todayTo   = (!todayHours.to || todayHours.to === '00:00') ? '23:59' : todayHours.to;
 
-  // min = later of (now+30 min) and opening time
-  const minByNow = nowPlusMinHHMM(30);
+  // min = later of (now + bufferMinutes) and opening time
+  const minByNow = nowPlusMinHHMM(bufferMinutes);
   const min = minByNow > todayFrom ? minByNow : todayFrom;
 
   if (min > todayTo) {
-    return { isClosedToday: false, isNoSlotsLeft: true, min: null, max: null, todayFrom, todayTo };
+    return { isClosedToday: false, isNoSlotsLeft: true, min: null, max: null, todayFrom, todayTo, bufferMinutes };
   }
 
-  return { isClosedToday: false, isNoSlotsLeft: false, min, max: todayTo, todayFrom, todayTo };
+  return { isClosedToday: false, isNoSlotsLeft: false, min, max: todayTo, todayFrom, todayTo, bufferMinutes };
 }
 
 export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOrder, cancelBeforeMinutes, openingHours = {}, onSuccess, onClose }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
 
   const isModify = !!modifyingOrder;
+
+  const todayDateLabel = new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', {
+    weekday: 'long', month: 'short', day: 'numeric',
+  });
 
   const [name,       setName]       = useState('');
   const [phone,      setPhone]      = useState('');
@@ -91,8 +95,8 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOr
   const [visible,    setVisible]    = useState(false);
 
   const scheduledBounds = useMemo(
-    () => getScheduledTimeBounds(openingHours),
-    [openingHours]
+    () => getScheduledTimeBounds(openingHours, Math.max(cancelBeforeMinutes || 0, 30)),
+    [openingHours, cancelBeforeMinutes]
   );
 
   // Slide-in animation
@@ -160,7 +164,7 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOr
       } else if (!scheduled) {
         e.scheduled = t('reqScheduled');
       } else if (min && scheduled < min) {
-        e.scheduled = t('scheduleWindowError').replace('{n}', cancelBeforeMinutes > 0 ? cancelBeforeMinutes : 30);
+        e.scheduled = t('scheduleWindowError').replace('{n}', scheduledBounds.bufferMinutes);
       } else if (max && scheduled > max) {
         e.scheduled = t('scheduleBeforeClose');
       }
@@ -362,7 +366,11 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOr
               </Field>
 
               {dlvType === 'scheduled' && (
-                <Field id="scheduled" label={t('scheduledAt')} error={errors.scheduled}>
+                <Field
+                  id="scheduled"
+                  label={`${t('scheduledAt')} — ${todayDateLabel}`}
+                  error={errors.scheduled}
+                >
                   {scheduledBounds.isClosedToday || scheduledBounds.isNoSlotsLeft ? (
                     <div className="schedule-unavailable">
                       <span className="schedule-unavailable-icon">⚠</span>
@@ -379,11 +387,11 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOr
                         max={scheduledBounds.max}
                         onChange={(e) => setScheduled(e.target.value)}
                       />
-                      {scheduledBounds.todayFrom && (
-                        <span className="schedule-hours-hint">
-                          {t('todayHoursLabel')} {scheduledBounds.todayFrom} – {scheduledBounds.todayTo}
-                        </span>
-                      )}
+                      <span className="schedule-hours-hint">
+                        {scheduledBounds.todayFrom
+                          ? `${t('todayHoursLabel')} ${scheduledBounds.todayFrom} – ${scheduledBounds.todayTo}`
+                          : t('scheduleForTodayOnly')}
+                      </span>
                     </>
                   )}
                 </Field>
