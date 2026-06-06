@@ -225,15 +225,15 @@ class OrderController extends Controller
     }
 
     // ── Mark Paid ─────────────────────────────────────────────────────────────
-    public function markPaid(Request $request, Order $order)
+    public function markPaid(Order $order)
     {
-        $request->validate([
-            'payment_method' => 'required|in:cash,card,online',
-        ]);
+        if ($order->payment_status === Order::PAYMENT_PAID) {
+            return back()->with('info', __('app.already_paid'));
+        }
 
         $order->update([
             'payment_status' => Order::PAYMENT_PAID,
-            'payment_method' => $request->input('payment_method'),
+            'payment_method' => 'cash',
         ]);
 
         return back()->with('success', __('app.order_marked_paid'));

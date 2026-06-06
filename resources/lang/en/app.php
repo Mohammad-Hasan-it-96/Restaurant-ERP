@@ -599,6 +599,8 @@ return [
     'order_marked_ready'      => 'Order is ready.',
     'order_marked_delivered'  => 'Order marked as delivered.',
     'order_marked_paid'       => 'Order marked as paid.',
+    'already_paid'            => 'Payment has already been recorded.',
+    'confirm_mark_paid'       => 'Confirm recording cash payment?',
     'mark_preparing'          => 'Start Preparing',
     'mark_ready'              => 'Mark as Ready',
     'mark_delivered'          => 'Mark as Delivered',

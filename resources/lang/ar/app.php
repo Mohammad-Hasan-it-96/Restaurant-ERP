@@ -597,6 +597,8 @@ return [
     'order_marked_ready'      => 'الطلب جاهز.',
     'order_marked_delivered'  => 'تم توصيل الطلب.',
     'order_marked_paid'       => 'تم تسجيل الدفع بنجاح.',
+    'already_paid'            => 'تم تسجيل الدفع مسبقاً.',
+    'confirm_mark_paid'       => 'تأكيد تسجيل الدفع نقداً؟',
     'mark_preparing'          => 'بدء التحضير',
     'mark_ready'              => 'تحديد كجاهز',
     'mark_delivered'          => 'تحديد كمُوصَّل',
