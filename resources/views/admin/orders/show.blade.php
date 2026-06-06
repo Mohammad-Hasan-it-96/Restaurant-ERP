@@ -223,8 +223,26 @@
                                 @foreach($order->items as $item)
                                 <tr>
                                     <td>{{ $item->product_name }}</td>
-                                    <td class="text-center">{{ $item->quantity }}</td>
-                                    <td class="text-end">{{ number_format($item->product_price, 2) }}</td>
+                                    <td class="text-center">
+                                        @if($item->weight_name)
+                                            <span class="fw-semibold">{{ $item->quantity }} × {{ $item->weight_name }}</span>
+                                            @if($item->weight_value_kg)
+                                                <small class="text-muted d-block">
+                                                    ({{ rtrim(rtrim(number_format($item->weight_value_kg, 3), '0'), '.') }} كغ)
+                                                </small>
+                                            @endif
+                                        @else
+                                            {{ $item->quantity }}
+                                        @endif
+                                    </td>
+                                    <td class="text-end">
+                                        {{ number_format($item->product_price, 2) }}
+                                        @if($item->weight_name && $item->weight_value_kg > 0)
+                                            <small class="text-muted d-block">
+                                                {{ number_format($item->product_price / $item->weight_value_kg, 2) }} / كغ
+                                            </small>
+                                        @endif
+                                    </td>
                                     <td class="text-end fw-semibold">{{ number_format($item->total, 2) }}</td>
                                 </tr>
                                 @endforeach
@@ -263,13 +281,24 @@
                         <dt class="col-6 text-muted">{{ __('app.payment_status') }}</dt>
                         <dd class="col-6 text-end">
                             @php $ps = $order->payment_status ?? 'unpaid'; @endphp
-                            <span class="badge bg-{{ $ps === 'paid' ? 'success' : ($ps === 'refunded' ? 'warning' : 'secondary') }}">
-                                {{ __('app.' . $ps) }}
-                            </span>
-                            @if($ps !== 'paid' && !in_array($order->status, ['rejected', 'cancelled', 'cancelled_by_admin', 'cancelled_by_customer']))
-                            <button class="btn btn-sm btn-outline-success ms-2" data-bs-toggle="modal" data-bs-target="#markPaidModal">
-                                <i class="bi bi-credit-card me-1"></i>{{ __('app.mark_paid') }}
-                            </button>
+                            @if($ps === 'paid')
+                                <span class="badge bg-success fs-6">
+                                    <i class="bi bi-check-circle me-1"></i>{{ __('app.paid') }}
+                                </span>
+                            @elseif($ps === 'refunded')
+                                <span class="badge bg-warning text-dark">{{ __('app.refunded') }}</span>
+                            @else
+                                @if(!in_array($order->status, ['rejected', 'cancelled', 'cancelled_by_admin', 'cancelled_by_customer']))
+                                <form method="POST" action="{{ route('admin.orders.mark-paid', $order) }}" class="d-inline">
+                                    @csrf @method('PATCH')
+                                    <button type="submit" class="btn btn-success btn-sm"
+                                        onclick="return confirm('{{ __('app.confirm_mark_paid') }}')">
+                                        <i class="bi bi-cash-coin me-1"></i>{{ __('app.mark_paid') }}
+                                    </button>
+                                </form>
+                                @else
+                                    <span class="badge bg-secondary">{{ __('app.' . $ps) }}</span>
+                                @endif
                             @endif
                         </dd>
                         @if($order->payment_method)

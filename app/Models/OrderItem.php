@@ -11,13 +11,16 @@ class OrderItem extends Model
         'product_price',
         'quantity',
         'total',
+        'weight_name',
+        'weight_value_kg',
     ];
     protected function casts(): array
     {
         return [
-            'product_price' => 'decimal:2',
-            'total'         => 'decimal:2',
-            'quantity'      => 'integer',
+            'product_price'   => 'decimal:2',
+            'total'           => 'decimal:2',
+            'quantity'        => 'integer',
+            'weight_value_kg' => 'decimal:3',
         ];
     }
     // ??? Relations ????????????????????????????????????????????????

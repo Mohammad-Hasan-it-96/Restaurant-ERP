@@ -1253,12 +1253,14 @@ button {
 }
 
 .order-type-btns {
-    display: grid;
-    grid-template-columns:repeat(3, 1fr);
-    gap: 8px
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    width: 100%
 }
 
 .order-type-btn {
+    flex: 1;
     padding: 10px;
     border: 1.5px solid var(--border);
     border-radius: var(--radius-md);
@@ -1284,6 +1286,121 @@ button {
     border-radius: var(--radius-md);
     font-size: 13px;
     margin-bottom: 14px
+}
+
+.schedule-time-input {
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+    letter-spacing: 2px;
+    cursor: pointer
+}
+
+.schedule-hours-hint {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    text-align: center
+}
+
+.schedule-unavailable {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffc107;
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 500
+}
+
+.schedule-unavailable-icon {
+    font-size: 16px;
+    flex-shrink: 0
+}
+
+/* ── Weight selector (ProductModal) ──────────────────────────────────────── */
+.weight-selector {
+    margin: 12px 0 4px;
+}
+
+.weight-selector-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.weight-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.weight-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 24px;
+    cursor: pointer;
+    transition: border-color 0.18s, background 0.18s;
+    font-size: 14px;
+    background: #fafafa;
+}
+
+.weight-option input[type="radio"] {
+    display: none;
+}
+
+.weight-option:hover {
+    border-color: var(--primary);
+    background: #fff;
+}
+
+.weight-option.selected {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #fff;
+}
+
+.weight-option-name {
+    font-weight: 600;
+}
+
+.weight-option-kg {
+    font-size: 12px;
+    opacity: 0.75;
+}
+
+.weight-option-price {
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.product-sheet-per-kg {
+    font-size: 12px;
+    font-weight: 400;
+    opacity: 0.7;
+}
+
+/* ── Weight badge in CartDrawer ──────────────────────────────────────────── */
+.cart-item-weight-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--primary);
+    color: #fff;
+    border-radius: 10px;
+    padding: 1px 7px;
+    margin-inline-start: 6px;
+    vertical-align: middle;
 }
 
 .btn-submit {

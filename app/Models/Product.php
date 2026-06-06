@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
@@ -39,6 +40,8 @@ class Product extends Model
         'sort_order',
         'is_active',
         'slug',
+        'is_weight_based',
+        'price_per_kg',
     ];
 
     protected function casts(): array
@@ -46,11 +49,13 @@ class Product extends Model
         return [
             'price'          => 'decimal:2',
             'discount_price' => 'decimal:2',
-            'is_available'   => 'boolean',
-            'is_featured'    => 'boolean',
-            'is_active'      => 'boolean',
-            'sort_order'     => 'integer',
-            'quantity'       => 'integer',
+            'is_available'    => 'boolean',
+            'is_featured'     => 'boolean',
+            'is_active'       => 'boolean',
+            'is_weight_based' => 'boolean',
+            'price_per_kg'    => 'decimal:2',
+            'sort_order'      => 'integer',
+            'quantity'        => 'integer',
         ];
     }
 
@@ -78,6 +83,14 @@ class Product extends Model
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * Available weight options for this product (weight-based products only).
+     */
+    public function weights(): BelongsToMany
+    {
+        return $this->belongsToMany(Weight::class,'product_weights');
     }
 
     // ─── Helpers ──────────────────────────────────────────────────

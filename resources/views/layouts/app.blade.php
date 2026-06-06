@@ -415,6 +415,32 @@
                         </div>
                     </div>
 
+                    <!-- Weights Dropdown -->
+                    <div class="sidebar-item mb-1">
+                        <button class="nav-link d-flex align-items-center justify-content-between w-100 py-3 px-3 rounded-3 border-0 bg-transparent {{ request()->routeIs('admin.weights.*') ? 'active' : '' }}"
+                                data-bs-toggle="collapse" data-bs-target="#weightsCollapse" aria-expanded="{{ request()->routeIs('admin.weights.*') ? 'true' : 'false' }}">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-speedometer2 me-3" style="{{ request()->routeIs('admin.weights.*') ? 'color: #ffffff !important;' : '' }}"></i>
+                                <span style="{{ request()->routeIs('admin.weights.*') ? 'color: #ffffff !important;' : '' }}">{{ \App\Helpers\Helpers::translate('weights') }}</span>
+                            </div>
+                            <i class="bi {{ request()->routeIs('admin.weights.*') ? 'bi-chevron-down' : 'bi-chevron-right' }}" style="{{ request()->routeIs('admin.weights.*') ? 'color: #ffffff !important;' : '' }}"></i>
+                        </button>
+                        <div class="collapse {{ request()->routeIs('admin.weights.*') ? 'show' : '' }}" id="weightsCollapse">
+                            <div class="nav flex-column ms-4 mt-1">
+                                <a href="{{ route('admin.weights.index') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->routeIs('admin.weights.index') ? 'active' : '' }}">
+                                    <i class="bi bi-list me-2"></i>
+                                    <span>{{ \App\Helpers\Helpers::translate('list') }}</span>
+                                </a>
+                                @if(Auth::user()->role === 'admin' || Auth::user()->role === 'moderator')
+                                <a href="{{ route('admin.weights.create') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->routeIs('admin.weights.create') ? 'active' : '' }}">
+                                    <i class="bi bi-plus-circle me-2"></i>
+                                    <span>{{ \App\Helpers\Helpers::translate('add_new') }}</span>
+                                </a>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Products Dropdown -->
                     <div class="sidebar-item mb-1">
                         <button class="nav-link d-flex align-items-center justify-content-between w-100 py-3 px-3 rounded-3 border-0 bg-transparent {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"

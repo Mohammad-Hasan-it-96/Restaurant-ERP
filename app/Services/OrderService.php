@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\Weight;
 use App\Services\SystemConfigService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -136,28 +137,7 @@ class OrderService
             }
 
             // ── 4. Build order items & calculate totals ──────────────
-            $itemsData = [];
-            $subtotal  = 0;
-
-            foreach ($data['items'] as $itemInput) {
-                /** @var Product $product */
-                $product = $products[$itemInput['product_id']];
-                $price   = (float) $product->effective_price;
-                $qty     = (int) $itemInput['quantity'];
-                $total   = round($price * $qty, 2);
-
-                $itemsData[] = [
-                    'product_id'    => $product->id,
-                    'product_name'  => $product->display_name,
-                    'product_price' => $price,
-                    'quantity'      => $qty,
-                    'total'         => $total,
-                ];
-
-                $subtotal += $total;
-            }
-
-            $subtotal = round($subtotal, 2);
+            [$itemsData, $subtotal] = $this->buildItemsData($data['items'], $products);
 
             // ── 5. Generate unique order number ──────────────────────
             $orderNumber = Order::generateOrderNumber();
@@ -304,28 +284,7 @@ class OrderService
             }
 
             // ── 5. Build items & totals ───────────────────────────────────────
-            $itemsData = [];
-            $subtotal  = 0;
-
-            foreach ($data['items'] as $itemInput) {
-                /** @var Product $product */
-                $product = $products[$itemInput['product_id']];
-                $price   = (float) $product->effective_price;
-                $qty     = (int) $itemInput['quantity'];
-                $total   = round($price * $qty, 2);
-
-                $itemsData[] = [
-                    'product_id'    => $product->id,
-                    'product_name'  => $product->display_name,
-                    'product_price' => $price,
-                    'quantity'      => $qty,
-                    'total'         => $total,
-                ];
-
-                $subtotal += $total;
-            }
-
-            $subtotal = round($subtotal, 2);
+            [$itemsData, $subtotal] = $this->buildItemsData($data['items'], $products);
 
             // ── 6. Mark old order as modified ─────────────────────────────────
             $oldOrder->update(['status' => Order::STATUS_MODIFIED]);
@@ -372,6 +331,70 @@ class OrderService
         ]);
 
         return $newOrder;
+    }
+
+    /**
+     * Build the $itemsData array and compute the subtotal from raw item inputs.
+     *
+     * For weight-based products the price is price_per_kg × weight.value_kg.
+     * For normal products the price is effective_price (discount applied).
+     *
+     * @param  array       $itemInputs  Each element has product_id, quantity, weight_id?
+     * @param  \Illuminate\Support\Collection  $products  Keyed by id
+     * @return array{0: array, 1: float}
+     */
+    private function buildItemsData(array $itemInputs, $products): array
+    {
+        // Pre-load all weights referenced across the item list in one query
+        $weightIds = collect($itemInputs)->pluck('weight_id')->filter()->unique()->toArray();
+        $weights   = $weightIds
+            ? Weight::whereIn('id', $weightIds)->get()->keyBy('id')
+            : collect();
+
+        $itemsData = [];
+        $subtotal  = 0;
+
+        foreach ($itemInputs as $itemInput) {
+            /** @var Product $product */
+            $product = $products[$itemInput['product_id']];
+            $qty     = (int) $itemInput['quantity'];
+
+            $weightName    = null;
+            $weightValueKg = null;
+
+            if ($product->is_weight_based) {
+                $weightId = $itemInput['weight_id'] ?? null;
+                $weight   = $weightId ? $weights->get($weightId) : null;
+
+                if (! $weight) {
+                    throw ValidationException::withMessages([
+                        'items' => [__('app.weight_required_for_product')],
+                    ]);
+                }
+
+                $price         = round((float) $product->price_per_kg * (float) $weight->value_kg, 2);
+                $weightName    = $weight->name;
+                $weightValueKg = (float) $weight->value_kg;
+            } else {
+                $price = (float) $product->effective_price;
+            }
+
+            $total = round($price * $qty, 2);
+
+            $itemsData[] = [
+                'product_id'      => $product->id,
+                'product_name'    => $product->display_name,
+                'product_price'   => $price,
+                'quantity'        => $qty,
+                'total'           => $total,
+                'weight_name'     => $weightName,
+                'weight_value_kg' => $weightValueKg,
+            ];
+
+            $subtotal += $total;
+        }
+
+        return [$itemsData, round($subtotal, 2)];
     }
 }
 

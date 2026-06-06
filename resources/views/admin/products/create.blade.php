@@ -44,22 +44,84 @@
                         @error('category_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
 
-                    {{-- price --}}
-                    <div class="col-md-3">
+                    {{-- is_weight_based toggle --}}
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input type="hidden" name="is_weight_based" value="0">
+                            <input class="form-check-input" type="checkbox" name="is_weight_based" id="is_weight_based"
+                                   value="1" {{ old('is_weight_based') ? 'checked' : '' }}>
+                            <label class="form-check-label fw-semibold" for="is_weight_based">
+                                {{\App\Helpers\Helpers::translate('is_weight_based')}}
+                            </label>
+                        </div>
+                    </div>
+
+                    {{-- Normal price section (hidden when weight-based) --}}
+                    <div id="normal-price-section" class="col-md-3">
                         <label for="price" class="form-label">{{\App\Helpers\Helpers::translate('price')}} <span class="text-danger">*</span></label>
                         <input type="number" step="0.01" min="0"
                                class="form-control @error('price') is-invalid @enderror"
-                               id="price" name="price" value="{{ old('price') }}" required>
+                               id="price" name="price" value="{{ old('price') }}">
                         @error('price')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
 
-                    {{-- discount_price --}}
-                    <div class="col-md-3">
+                    {{-- discount_price (hidden when weight-based) --}}
+                    <div id="discount-price-section" class="col-md-3">
                         <label for="discount_price" class="form-label">{{\App\Helpers\Helpers::translate('discount_price')}}</label>
                         <input type="number" step="0.01" min="0"
                                class="form-control @error('discount_price') is-invalid @enderror"
                                id="discount_price" name="discount_price" value="{{ old('discount_price') }}">
                         @error('discount_price')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+
+                    {{-- Weight-based section (hidden when not weight-based) --}}
+                    <div id="weight-based-section" class="col-12" style="display:none;">
+                        <div class="card border-warning">
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label for="price_per_kg" class="form-label">
+                                            {{\App\Helpers\Helpers::translate('price_per_kg')}} <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" step="0.01" min="0"
+                                                   class="form-control @error('price_per_kg') is-invalid @enderror"
+                                                   id="price_per_kg" name="price_per_kg" value="{{ old('price_per_kg') }}">
+                                            <span class="input-group-text">/ kg</span>
+                                        </div>
+                                        @error('price_per_kg')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                                    </div>
+                                    @if($weights->isNotEmpty())
+                                    <div class="col-md-8">
+                                        <label class="form-label">{{\App\Helpers\Helpers::translate('available_weights')}}</label>
+                                        <div class="d-flex flex-wrap gap-2 border rounded p-2">
+                                            @foreach($weights as $weight)
+                                            <div class="form-check me-3">
+                                                <input class="form-check-input" type="checkbox"
+                                                       name="weights[]" id="weight_{{ $weight->id }}"
+                                                       value="{{ $weight->id }}"
+                                                       {{ in_array($weight->id, old('weights', [])) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="weight_{{ $weight->id }}">
+                                                    {{ $weight->name }} ({{ $weight->value_kg }} kg)
+                                                </label>
+                                            </div>
+                                            @endforeach
+                                        </div>
+                                        @error('weights')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                                    </div>
+                                    @else
+                                    <div class="col-md-8">
+                                        <p class="text-muted mt-4 mb-0">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            {{\App\Helpers\Helpers::translate('no_weights_defined')}}
+                                            <a href="{{ route('admin.weights.create') }}" class="ms-1">{{\App\Helpers\Helpers::translate('add_weight')}}</a>
+                                        </p>
+                                    </div>
+                                    @endif
+                                </div>
+                                <small class="text-muted">{{\App\Helpers\Helpers::translate('weight_based_hint')}}</small>
+                            </div>
+                        </div>
                     </div>
 
                     {{-- sort_order --}}
@@ -131,5 +193,34 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+(function () {
+    const toggle = document.getElementById('is_weight_based');
+    const normalPrice = document.getElementById('normal-price-section');
+    const discountPrice = document.getElementById('discount-price-section');
+    const weightSection = document.getElementById('weight-based-section');
+    const priceInput = document.getElementById('price');
+
+    function applyToggle() {
+        if (toggle.checked) {
+            normalPrice.style.display = 'none';
+            discountPrice.style.display = 'none';
+            weightSection.style.display = '';
+            priceInput.removeAttribute('required');
+        } else {
+            normalPrice.style.display = '';
+            discountPrice.style.display = '';
+            weightSection.style.display = 'none';
+            priceInput.setAttribute('required', '');
+        }
+    }
+
+    toggle.addEventListener('change', applyToggle);
+    applyToggle();
+})();
+</script>
+@endpush
 @endsection
 
