@@ -24,4 +24,3 @@ class DeliveryZoneController extends Controller
         return $this->success(DeliveryZoneResource::collection($zones));
     }
 }
-

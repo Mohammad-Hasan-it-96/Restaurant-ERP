@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\API;
 
-use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -56,7 +55,7 @@ class ProfileController extends BaseController
         $user = Auth::user();
 
         // Verify the current password before allowing account deletion
-        if (!\Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+        if (! \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
             return back()->withErrors(['password' => __('app.invalid_password')])->withInput();
         }
 

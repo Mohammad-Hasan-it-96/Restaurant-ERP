@@ -23,68 +23,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     @endif
 
-    <style>
-        .sidebar {
-            width: 250px;
-            height: calc(100vh - 56px);
-            position: fixed;
-            top: 56px;
-            left: 0;
-            background: #f8f9fa;
-            padding: 20px;
-            box-shadow: 2px 0 5px rgba(0,0,0,.1);
-        }
-
-        .main-content {
-            margin-left: 280px;
-            margin-top: 56px;
-            padding: 30px;
-            transition: all 0.3s ease;
-        }
-
-        /* RTL adjustments for sidebar and content */
-        html[dir="rtl"] .sidebar {
-            left: auto;
-            right: 0;
-            box-shadow: -2px 0 5px rgba(0,0,0,.1);
-        }
-
-        html[dir="rtl"] .main-content {
-            margin-left: 0;
-            margin-right: 280px;
-        }
-
-        @media (max-width: 768px) {
-            .sidebar {
-                left: -280px;
-            }
-
-            html[dir="rtl"] .sidebar {
-                left: auto;
-                right: -280px;
-            }
-
-            .main-content {
-                margin-left: 0;
-                padding: 20px;
-            }
-
-            html[dir="rtl"] .main-content {
-                margin-right: 0;
-            }
-
-            .sidebar.active {
-                left: 0;
-            }
-
-            html[dir="rtl"] .sidebar.active {
-                right: 0;
-                left: auto;
-            }
-        }
-    </style>
-
-    <!-- Rest of your styles remain unchanged -->
+    <!-- Main layout: sidebar + content offsets -->
     <style>
         :root {
             --primary: #4f46e5;
@@ -176,7 +115,161 @@
         }
     </style>
 
+    {{-- PWA --}}
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+    <style>
+        /* ── Sidebar ──────────────────────────────────────────────────────────── */
+        .sidebar {
+            width: 280px;
+            height: calc(100vh - 56px);
+            position: fixed;
+            top: 56px;
+            left: 0;
+            background-color: var(--sidebar-bg);
+            padding: 0;
+            box-shadow: 2px 0 15px rgba(0,0,0,.1);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        html[dir="rtl"] .sidebar {
+            left: auto;
+            right: 0;
+            box-shadow: -2px 0 15px rgba(0,0,0,.1);
+        }
+
+        /* ── Main content ─────────────────────────────────────────────────────── */
+        .main-content {
+            margin-left: 280px;
+            margin-top: 56px;
+            padding: 30px;
+            transition: all 0.3s ease;
+        }
+        html[dir="rtl"] .main-content {
+            margin-left: 0;
+            margin-right: 280px;
+        }
+        @media (max-width: 767.98px) {
+            .main-content {
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                padding: 16px;
+                /* Clear the bottom navigation bar */
+                padding-bottom: 80px;
+            }
+        }
+
+        /* ── Avatar ───────────────────────────────────────────────────────────── */
+        .avatar-circle {
+            width: 80px;
+            height: 80px;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ── Sidebar nav links ────────────────────────────────────────────────── */
+        .sidebar .nav-link {
+            color: var(--text);
+            transition: all 0.2s;
+        }
+        .sidebar .nav-link:hover:not(.active) { background-color: var(--sidebar-hover); }
+        .sidebar-heading {
+            letter-spacing: 1px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .sidebar .text-muted { color: var(--text-muted) !important; }
+
+        .sidebar-item button {
+            text-align: left;
+            font-size: 1rem;
+            color: var(--text);
+        }
+        .sidebar-item button:hover:not(.active) { background-color: var(--sidebar-hover); }
+        .sidebar-item button:focus { outline: none; box-shadow: none; }
+
+        .sidebar .nav-link.active,
+        .sidebar-item button.active { background-color: var(--primary) !important; }
+
+        .sidebar .nav-link.active span,
+        .sidebar .nav-link.active i,
+        .sidebar-item button.active span,
+        .sidebar-item button.active i,
+        .sidebar-item .collapse .nav-link.active span,
+        .sidebar-item .collapse .nav-link.active i { color: #ffffff !important; }
+
+        .sidebar-item button span,
+        .sidebar-item .nav-link span { color: var(--text); }
+
+        /* ── Dark mode dropdown ───────────────────────────────────────────────── */
+        [data-bs-theme="dark"] .dropdown-menu {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+        }
+        [data-bs-theme="dark"] .dropdown-item { color: var(--text); }
+        [data-bs-theme="dark"] .dropdown-item:hover { background-color: var(--sidebar-hover); }
+        [data-bs-theme="dark"] .dropdown-divider { border-color: var(--border-color); }
+
+        /* ── Bottom navigation bar ────────────────────────────────────────────── */
+        .bottom-nav-item {
+            color: var(--text-muted);
+            font-size: 10px;
+            cursor: pointer;
+            transition: color 0.15s;
+        }
+        .bottom-nav-item:hover,
+        .bottom-nav-active { color: var(--primary) !important; }
+
+        /* ── Bootstrap offcanvas overrides ───────────────────────────────────── */
+        @media (max-width: 767.98px) {
+            #adminSidebar {
+                top: 56px !important;
+                bottom: auto !important;
+                height: calc(100vh - 56px) !important;
+                left: 0 !important;
+                right: auto !important;
+                width: 280px !important;
+                z-index: 1045 !important;
+                background-color: var(--sidebar-bg) !important;
+            }
+            html[dir="rtl"] #adminSidebar {
+                right: 0 !important;
+                left: auto !important;
+            }
+        }
+        @media (min-width: 768px) {
+            #adminSidebar {
+                position: fixed !important;
+                top: 56px !important;
+                bottom: auto !important;
+                height: calc(100vh - 56px) !important;
+                width: 280px !important;
+                background-color: var(--sidebar-bg) !important;
+                transform: none !important;
+                visibility: visible !important;
+                left: 0 !important;
+                right: auto !important;
+            }
+            html[dir="rtl"] #adminSidebar {
+                right: 0 !important;
+                left: auto !important;
+            }
+        }
+    </style>
+
     @stack('styles')
+
+    {{-- Feature flags for admin-side JS (resolved booleans, admin context). --}}
+    <script>window.features = @json(\App\Support\Feature::all());</script>
 </head>
 <body>
     <!-- Header -->
@@ -210,35 +303,37 @@
 
             <div class="d-flex align-items-center gap-3">
                 <!-- Language Selector -->
+                @feature('localization.languages')
                 @php
                     $languages = \App\Models\Language::query()->where('status', 1)->get();
                     $currentLocale = session('locale', config('app.locale'));
                     $currentLanguage = $languages->where('code', $currentLocale)->first();
                 @endphp
 
-{{--                @if($languages->count() > 0)--}}
-{{--                <div class="dropdown language-selector">--}}
-{{--                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">--}}
-{{--                        @if($currentLanguage && $currentLanguage->flag_path)--}}
-{{--                            <img src="{{ asset('storage/' . $currentLanguage->flag_path) }}" alt="{{ $currentLanguage->name }}" class="current-language-flag">--}}
-{{--                        @endif--}}
-{{--                        {{ $currentLanguage ? $currentLanguage->name : \App\Helpers\Helpers::translate('english') }}--}}
-{{--                    </button>--}}
-{{--                    <ul class="dropdown-menu dropdown-menu-end">--}}
-{{--                        @foreach($languages as $language)--}}
-{{--                            <li>--}}
-{{--                                <a class="dropdown-item {{ $currentLocale == $language->code ? 'active' : '' }}"--}}
-{{--                                   href="{{ route('language.change', $language->code) }}">--}}
-{{--                                    @if($language->flag_path)--}}
-{{--                                        <img src="{{ asset('storage/' . $language->flag_path) }}" alt="{{ $language->name }}">--}}
-{{--                                    @endif--}}
-{{--                                    {{ $language->name }}--}}
-{{--                                </a>--}}
-{{--                            </li>--}}
-{{--                        @endforeach--}}
-{{--                    </ul>--}}
-{{--                </div>--}}
-{{--                @endif--}}
+                @if($languages->count() > 0)
+                <div class="dropdown language-selector">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        @if($currentLanguage && $currentLanguage->flag_path)
+                            <img src="{{ asset('storage/' . $currentLanguage->flag_path) }}" alt="{{ $currentLanguage->name }}" class="current-language-flag">
+                        @endif
+                        {{ $currentLanguage ? $currentLanguage->name : \App\Helpers\Helpers::translate('english') }}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        @foreach($languages as $language)
+                            <li>
+                                <a class="dropdown-item {{ $currentLocale == $language->code ? 'active' : '' }}"
+                                   href="{{ route('language.change', $language->code) }}">
+                                    @if($language->flag_path)
+                                        <img src="{{ asset('storage/' . $language->flag_path) }}" alt="{{ $language->name }}">
+                                    @endif
+                                    {{ $language->name }}
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+                @endif
+                @endfeature
 
                 @auth
                 <div class="dropdown">
@@ -274,7 +369,8 @@
                 </button>
 
                 @auth
-                <button class="navbar-toggler border-0" type="button" onclick="toggleSidebar()">
+                <button class="navbar-toggler border-0 d-md-none" type="button"
+                        data-bs-toggle="offcanvas" data-bs-target="#adminSidebar" aria-controls="adminSidebar">
                     <i class="bi bi-list" style="color: var(--text); font-size: 1.5rem;"></i>
                 </button>
                 @endauth
@@ -285,11 +381,14 @@
     <!-- Global New Order Notification Banner -->
     @auth
     <div id="globalNewOrderBanner" class="alert alert-warning alert-dismissible fade d-none position-fixed"
-         style="top: 70px; left: 50%; transform: translateX(-50%); z-index: 1000; min-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,.15); border-left: 5px solid #f59e0b;">
+         style="top: 56px; left: 50%; transform: translateX(-50%); z-index: 1031; width: min(92vw, 480px); box-shadow: 0 4px 12px rgba(0,0,0,.15); border-left: 5px solid #f59e0b;">
         <i class="bi bi-bell-fill me-2 text-warning"></i>
         <strong>{{ __('app.new_order') ?? 'طلب جديد!' }}</strong> {{ __('app.new_order_arrived') ?? 'وصل طلب جديد.' }}
         <button id="globalRefreshNowBtn" class="btn btn-sm btn-warning ms-2">
             <i class="bi bi-arrow-clockwise me-1"></i>{{ __('app.refresh_now') ?? 'تحديث الآن' }}
+        </button>
+        <button id="globalMuteBtn" class="btn btn-sm btn-outline-secondary ms-1" title="Mute">
+            <i class="bi bi-bell"></i>
         </button>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
@@ -297,7 +396,14 @@
 
     <!-- Sidebar -->
     @auth
-    <div class="sidebar">
+    {{-- offcanvas-start = left in LTR, right in RTL (Bootstrap RTL flips it automatically) --}}
+    <div id="adminSidebar" class="sidebar offcanvas offcanvas-start" tabindex="-1" aria-label="Admin Sidebar">
+        <!-- Mobile close button -->
+        <div class="d-md-none text-end px-3 pt-2">
+            <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="offcanvas" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
         <div class="d-flex flex-column gap-4">
             <!-- User Profile Section -->
             <div class="text-center py-4">
@@ -390,6 +496,7 @@
                     </div>
 
                     <!-- Delivery Zones Dropdown -->
+                    @feature('core.delivery')
                     <div class="sidebar-item mb-1">
                         <button class="nav-link d-flex align-items-center justify-content-between w-100 py-3 px-3 rounded-3 border-0 bg-transparent {{ request()->routeIs('admin.delivery-zones.*') ? 'active' : '' }}"
                                 data-bs-toggle="collapse" data-bs-target="#deliveryZonesCollapse" aria-expanded="{{ request()->routeIs('admin.delivery-zones.*') ? 'true' : 'false' }}">
@@ -414,8 +521,10 @@
                             </div>
                         </div>
                     </div>
+                    @endfeature
 
                     <!-- Weights Dropdown -->
+                    @feature('products.weight_products')
                     <div class="sidebar-item mb-1">
                         <button class="nav-link d-flex align-items-center justify-content-between w-100 py-3 px-3 rounded-3 border-0 bg-transparent {{ request()->routeIs('admin.weights.*') ? 'active' : '' }}"
                                 data-bs-toggle="collapse" data-bs-target="#weightsCollapse" aria-expanded="{{ request()->routeIs('admin.weights.*') ? 'true' : 'false' }}">
@@ -440,6 +549,35 @@
                             </div>
                         </div>
                     </div>
+                    @endfeature
+
+                    <!-- Options Dropdown -->
+                    @feature('products.options')
+                    <div class="sidebar-item mb-1">
+                        <button class="nav-link d-flex align-items-center justify-content-between w-100 py-3 px-3 rounded-3 border-0 bg-transparent {{ request()->routeIs('admin.options.*') ? 'active' : '' }}"
+                                data-bs-toggle="collapse" data-bs-target="#optionsCollapse" aria-expanded="{{ request()->routeIs('admin.options.*') ? 'true' : 'false' }}">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-sliders me-3" style="{{ request()->routeIs('admin.options.*') ? 'color: #ffffff !important;' : '' }}"></i>
+                                <span style="{{ request()->routeIs('admin.options.*') ? 'color: #ffffff !important;' : '' }}">خيارات المنتجات</span>
+                            </div>
+                            <i class="bi {{ request()->routeIs('admin.options.*') ? 'bi-chevron-down' : 'bi-chevron-right' }}" style="{{ request()->routeIs('admin.options.*') ? 'color: #ffffff !important;' : '' }}"></i>
+                        </button>
+                        <div class="collapse {{ request()->routeIs('admin.options.*') ? 'show' : '' }}" id="optionsCollapse">
+                            <div class="nav flex-column ms-4 mt-1">
+                                <a href="{{ route('admin.options.index') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->routeIs('admin.options.index') ? 'active' : '' }}">
+                                    <i class="bi bi-list me-2"></i>
+                                    <span>القائمة</span>
+                                </a>
+                                @if(Auth::user()->role === 'admin' || Auth::user()->role === 'moderator')
+                                <a href="{{ route('admin.options.create') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->routeIs('admin.options.create') ? 'active' : '' }}">
+                                    <i class="bi bi-plus-circle me-2"></i>
+                                    <span>إضافة خيار</span>
+                                </a>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    @endfeature
 
                     <!-- Products Dropdown -->
                     <div class="sidebar-item mb-1">
@@ -498,30 +636,32 @@
                     @endif
 
                     <!-- Languages Dropdown -->
-{{--                    <div class="sidebar-item mb-1">--}}
-{{--                        <button class="nav-link d-flex align-items-center justify-content-between w-100 py-3 px-3 rounded-3 border-0 bg-transparent {{ request()->routeIs('admin.languages.*') ? 'active' : '' }}"--}}
-{{--                                data-bs-toggle="collapse" data-bs-target="#languagesCollapse" aria-expanded="{{ request()->routeIs('admin.languages.*') ? 'true' : 'false' }}">--}}
-{{--                            <div class="d-flex align-items-center">--}}
-{{--                                <i class="bi bi-translate me-3" style="{{ request()->routeIs('admin.languages.*') ? 'color: #ffffff !important;' : '' }}"></i>--}}
-{{--                                <span style="{{ request()->routeIs('admin.languages.*') ? 'color: #ffffff !important;' : '' }}">{{ \App\Helpers\Helpers::translate('languages') }}</span>--}}
-{{--                            </div>--}}
-{{--                            <i class="bi {{ request()->routeIs('admin.languages.*') ? 'bi-chevron-down' : 'bi-chevron-right' }}" style="{{ request()->routeIs('admin.languages.*') ? 'color: #ffffff !important;' : '' }}"></i>--}}
-{{--                        </button>--}}
-{{--                        <div class="collapse {{ request()->routeIs('admin.languages.*') ? 'show' : '' }}" id="languagesCollapse">--}}
-{{--                            <div class="nav flex-column ms-4 mt-1">--}}
-{{--                                <a href="{{ route('admin.languages.index') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->routeIs('admin.languages.index') ? 'active' : '' }}">--}}
-{{--                                    <i class="bi bi-list me-2"></i>--}}
-{{--                                    <span>{{ \App\Helpers\Helpers::translate('list') }}</span>--}}
-{{--                                </a>--}}
-{{--                                @if(Auth::user()->role === 'admin')--}}
-{{--                                <a href="{{ route('admin.languages.create') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->routeIs('admin.languages.create') ? 'active' : '' }}">--}}
-{{--                                    <i class="bi bi-plus-circle me-2"></i>--}}
-{{--                                    <span>{{ \App\Helpers\Helpers::translate('add_new') }}</span>--}}
-{{--                                </a>--}}
-{{--                                @endif--}}
-{{--                            </div>--}}
-{{--                        </div>--}}
-{{--                    </div>--}}
+                    @feature('localization.languages')
+                    <div class="sidebar-item mb-1">
+                        <button class="nav-link d-flex align-items-center justify-content-between w-100 py-3 px-3 rounded-3 border-0 bg-transparent {{ request()->routeIs('admin.languages.*') ? 'active' : '' }}"
+                                data-bs-toggle="collapse" data-bs-target="#languagesCollapse" aria-expanded="{{ request()->routeIs('admin.languages.*') ? 'true' : 'false' }}">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-translate me-3" style="{{ request()->routeIs('admin.languages.*') ? 'color: #ffffff !important;' : '' }}"></i>
+                                <span style="{{ request()->routeIs('admin.languages.*') ? 'color: #ffffff !important;' : '' }}">{{ \App\Helpers\Helpers::translate('languages') }}</span>
+                            </div>
+                            <i class="bi {{ request()->routeIs('admin.languages.*') ? 'bi-chevron-down' : 'bi-chevron-right' }}" style="{{ request()->routeIs('admin.languages.*') ? 'color: #ffffff !important;' : '' }}"></i>
+                        </button>
+                        <div class="collapse {{ request()->routeIs('admin.languages.*') ? 'show' : '' }}" id="languagesCollapse">
+                            <div class="nav flex-column ms-4 mt-1">
+                                <a href="{{ route('admin.languages.index') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->routeIs('admin.languages.index') ? 'active' : '' }}">
+                                    <i class="bi bi-list me-2"></i>
+                                    <span>{{ \App\Helpers\Helpers::translate('list') }}</span>
+                                </a>
+                                @if(Auth::user()->role === 'admin')
+                                <a href="{{ route('admin.languages.create') }}" class="nav-link py-2 px-3 rounded-3 {{ request()->routeIs('admin.languages.create') ? 'active' : '' }}">
+                                    <i class="bi bi-plus-circle me-2"></i>
+                                    <span>{{ \App\Helpers\Helpers::translate('add_new') }}</span>
+                                </a>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    @endfeature
 
                     <!-- System Configs Dropdown - Only for Admins -->
                     @if(Auth::user()->role === 'admin')
@@ -551,6 +691,15 @@
                             </div>
                         </div>
                     </div>
+                    @endif
+
+                    <!-- Log Viewer - Admin only -->
+                    @if(Auth::user()->role === 'admin')
+                    <a href="{{ url('admin/system-secure-metrics-health-logs') }}"
+                       class="nav-link d-flex align-items-center py-3 px-3 rounded-3 mb-1 {{ request()->is('admin/system-secure-metrics-health-logs*') ? 'active' : '' }}">
+                        <i class="bi bi-file-text me-3"></i>
+                        <span>سجلات النظام</span>
+                    </a>
                     @endif
                 </div>
             </div>
@@ -584,11 +733,6 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function toggleSidebar() {
-            document.querySelector('.sidebar').classList.toggle('active');
-        }
-    </script>
     <script>
         // Theme toggle functionality
         document.addEventListener('DOMContentLoaded', function() {
@@ -685,16 +829,10 @@
             });
         });
 
-        // Toggle sidebar on mobile
-        function toggleSidebar() {
-            const sidebar = document.querySelector('.sidebar');
-            sidebar.classList.toggle('active');
-        }
-
         // Initialize animations for page elements
         function initializeAnimations() {
             // Apply animations to cards, alerts, and other elements
-            const animatedElements = document.querySelectorAll('.card, .alert');
+            const animatedElements = document.querySelectorAll('.card:not([data-no-anim]), .alert');
             animatedElements.forEach(element => {
                 element.style.opacity = '0';
                 element.style.transform = 'translateY(10px)';
@@ -744,7 +882,9 @@
         notifAudio.preload = 'auto';
 
         function beep() {
+            if (localStorage.getItem('admin_sound_muted') === '1') return;
             try {
+                navigator.vibrate && navigator.vibrate([200, 100, 200]);
                 const s = notifAudio.cloneNode();
                 s.volume = 1.0;
                 s.play().catch(() => {});
@@ -756,6 +896,22 @@
             } catch (e) { /* ignore */ }
         }
 
+        /* ── Mute toggle ─────────────────────────────────────────────────── */
+        const muteBtn = document.getElementById('globalMuteBtn');
+        function syncMuteBtn() {
+            if (!muteBtn) return;
+            const muted = localStorage.getItem('admin_sound_muted') === '1';
+            muteBtn.querySelector('i').className = muted ? 'bi bi-bell-slash-fill' : 'bi bi-bell';
+            muteBtn.classList.toggle('btn-danger', muted);
+            muteBtn.classList.toggle('btn-outline-secondary', !muted);
+        }
+        syncMuteBtn();
+        muteBtn && muteBtn.addEventListener('click', () => {
+            const muted = localStorage.getItem('admin_sound_muted') === '1';
+            localStorage.setItem('admin_sound_muted', muted ? '0' : '1');
+            syncMuteBtn();
+        });
+
         /* ── Poll for new orders ────────────────────────────────────────────── */
         async function pollNewOrders() {
             try {
@@ -764,6 +920,19 @@
                 });
                 if (!res.ok) return;
                 const data = await res.json();
+
+                /* ── Update bottom nav pending badge live ────────────────────── */
+                if (data.pending_count !== undefined) {
+                    const bnBadge = document.getElementById('bottomNavBadge');
+                    if (bnBadge) {
+                        if (data.pending_count > 0) {
+                            bnBadge.textContent = data.pending_count;
+                            bnBadge.classList.remove('d-none');
+                        } else {
+                            bnBadge.classList.add('d-none');
+                        }
+                    }
+                }
 
                 if (data.latest_id > latestId) {
                     latestId = data.latest_id;
@@ -785,7 +954,9 @@
 
         /* ── "تحديث الآن" button ─────────────────────────────────────────────── */
         if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => window.location.reload());
+            refreshBtn.addEventListener('click', () => {
+                window.location.href = '{{ route("admin.orders.index") }}';
+            });
         }
 
         /* ── Boot ────────────────────────────────────────────────────────────── */
@@ -795,126 +966,156 @@
     @endauth
     </script>
 
+    {{-- ── Bottom Navigation Bar (mobile only) ──────────────────────────── --}}
+    @auth
+    @php $bnPending = \App\Models\Order::query()->where('status','pending')->count(); @endphp
+    <nav class="d-md-none position-fixed bottom-0 start-0 end-0" id="bottomNav"
+         style="background:var(--card-bg);border-top:1px solid var(--border-color);z-index:599;">
+        <div class="d-flex">
+            <a href="{{ route('admin.dashboard') }}"
+               class="bottom-nav-item flex-fill text-decoration-none py-2 text-center
+                      {{ request()->routeIs('admin.dashboard') ? 'bottom-nav-active' : '' }}">
+                <i class="bi bi-speedometer2 d-block" style="font-size:22px;line-height:1;"></i>
+                <span style="font-size:10px;">{{ app()->isLocale('ar') ? 'الرئيسية' : 'Home' }}</span>
+            </a>
+            <a href="{{ route('admin.orders.index') }}"
+               class="bottom-nav-item flex-fill text-decoration-none py-2 text-center position-relative
+                      {{ request()->routeIs('admin.orders.*') ? 'bottom-nav-active' : '' }}">
+                <i class="bi bi-receipt d-block" style="font-size:22px;line-height:1;"></i>
+                <span style="font-size:10px;">{{ app()->isLocale('ar') ? 'الطلبات' : 'Orders' }}</span>
+                <span id="bottomNavBadge"
+                      class="badge bg-danger position-absolute {{ $bnPending > 0 ? '' : 'd-none' }}"
+                      style="top:4px;{{ app()->isLocale('ar') ? 'left:calc(50% - 20px)' : 'left:calc(50% + 4px)' }};font-size:9px;min-width:16px;padding:2px 4px;">{{ $bnPending ?: '' }}</span>
+            </a>
+            <a href="{{ route('admin.products.index') }}"
+               class="bottom-nav-item flex-fill text-decoration-none py-2 text-center
+                      {{ request()->routeIs('admin.products.*', 'admin.categories.*') ? 'bottom-nav-active' : '' }}">
+                <i class="bi bi-grid d-block" style="font-size:22px;line-height:1;"></i>
+                <span style="font-size:10px;">{{ app()->isLocale('ar') ? 'القائمة' : 'Menu' }}</span>
+            </a>
+            <button type="button" id="bottomNavMore"
+                    class="bottom-nav-item flex-fill py-2 text-center border-0 bg-transparent"
+                    data-bs-toggle="offcanvas" data-bs-target="#adminSidebar">
+                <i class="bi bi-grid-3x3-gap d-block" style="font-size:22px;line-height:1;"></i>
+                <span style="font-size:10px;">{{ app()->isLocale('ar') ? 'المزيد' : 'More' }}</span>
+            </button>
+        </div>
+    </nav>
+    @endauth
+
+    {{-- ── Toast container (bottom-right / bottom-left for RTL) ─────────── --}}
+    <div id="appToastContainer" class="position-fixed"
+         style="bottom:80px;{{ app()->isLocale('ar') ? 'left:1rem;' : 'right:1rem;' }}z-index:1100;"></div>
+
+    <script>
+    /* ── Toast helper ────────────────────────────────────────────────────── */
+    function showToast(message, type) {
+        const container = document.getElementById('appToastContainer');
+        if (!container) return;
+        const bg = type === 'success' ? 'bg-success text-white'
+                 : type === 'warning' ? 'bg-warning text-dark'
+                 : 'bg-danger text-white';
+        const closeCls = type === 'warning' ? '' : 'btn-close-white';
+        const delay = type === 'error' ? 6000 : 3000;
+        const el = document.createElement('div');
+        el.className = `toast align-items-center ${bg} border-0 mb-2`;
+        el.setAttribute('role', 'alert');
+        el.setAttribute('data-bs-autohide', 'true');
+        el.setAttribute('data-bs-delay', delay);
+        el.innerHTML = `<div class="d-flex"><div class="toast-body fw-semibold">${message}</div>
+            <button type="button" class="btn-close ${closeCls} me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
+        container.prepend(el);
+        new bootstrap.Toast(el).show();
+        el.addEventListener('hidden.bs.toast', () => el.remove());
+    }
+
+    /* ── Auto-show session flash as toasts ──────────────────────────────── */
+    @if(session('success'))
+    document.addEventListener('DOMContentLoaded', () => showToast({{ json_encode(session('success')) }}, 'success'));
+    @endif
+    @if(session('error'))
+    document.addEventListener('DOMContentLoaded', () => showToast({{ json_encode(session('error')) }}, 'error'));
+    @endif
+
+    /* ── Global haptic feedback on primary button taps ──────────────────── */
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.btn-success,.btn-danger,.btn-warning,.btn-primary')) {
+            navigator.vibrate && navigator.vibrate(40);
+        }
+    });
+
+    /* ── Prevent duplicate submits on order-action forms ─────────────────────
+       Covers accept / reject / ready / delivered / completed / pay. On submit the
+       button is disabled, gets a spinner + "جاري التنفيذ...", and repeat submits
+       are ignored. Synchronous forms navigate on response, so the button stays
+       disabled on success (no repeat); a bfcache restore or a safety timeout
+       re-enables it. AJAX status-advance forms manage their own state (see the
+       orders index page) and are excluded here. */
+    (function () {
+        const ACTION_PATHS = ['/accept', '/reject', '/ready', '/delivered', '/completed', '/mark-paid', '/delivery-fee'];
+        const LOADING_TEXT = 'جاري التنفيذ...';
+
+        function isActionForm(form) {
+            if (form.classList.contains('status-advance-form')) return false; // self-managed (AJAX)
+            let path;
+            try { path = new URL(form.action, window.location.origin).pathname; }
+            catch (e) { return false; }
+            return ACTION_PATHS.some(p => path.endsWith(p));
+        }
+
+        function lock(btn) {
+            if (!btn) return;
+            btn.dataset.originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.classList.add('loading');
+            // Per-button override (e.g. "جاري الحفظ..." for the delivery-fee modal).
+            const text = btn.dataset.loadingText || LOADING_TEXT;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' + text;
+        }
+
+        function unlock(btn) {
+            if (!btn || btn.dataset.originalHtml === undefined) return;
+            btn.disabled = false;
+            btn.classList.remove('loading');
+            btn.innerHTML = btn.dataset.originalHtml;
+        }
+
+        // Attach on DOMContentLoaded so this delegated handler runs AFTER any
+        // page-specific validators (e.g. the reject-reason check) — if they
+        // cancelled the submit, e.defaultPrevented is true and we do nothing.
+        document.addEventListener('DOMContentLoaded', function () {
+            document.addEventListener('submit', function (e) {
+                const form = e.target;
+                if (!(form instanceof HTMLFormElement) || !isActionForm(form)) return;
+                if (e.defaultPrevented) return;
+
+                if (form.dataset.submitting === '1') { e.preventDefault(); return; }
+                form.dataset.submitting = '1';
+
+                const btn = form.querySelector('[type=submit]') || e.submitter;
+                lock(btn);
+
+                // Safety net: if no navigation happens (e.g. a network failure with
+                // no server response), re-enable after a while so the user isn't stuck.
+                setTimeout(function () {
+                    form.dataset.submitting = '';
+                    unlock(btn);
+                }, 15000);
+            });
+        });
+
+        // Back/forward bfcache restore can resurrect a page with its button still
+        // disabled — reset any in-flight forms when that happens.
+        window.addEventListener('pageshow', function (e) {
+            if (!e.persisted) return;
+            document.querySelectorAll('form[data-submitting="1"]').forEach(function (form) {
+                form.dataset.submitting = '';
+                unlock(form.querySelector('[type=submit]'));
+            });
+        });
+    })();
+    </script>
+
     @stack('scripts')
 </body>
 </html>
-
-<style>
-    .sidebar {
-        width: 280px;
-        height: calc(100vh - 56px);
-        position: fixed;
-        top: 56px;
-        left: 0;
-        background-color: var(--sidebar-bg);
-        padding: 0;
-        box-shadow: 2px 0 15px rgba(0,0,0,.1);
-        transition: all 0.3s ease;
-        display: flex;
-        flex-direction: column;
-        overflow-y: auto;
-    }
-
-    /* RTL sidebar adjustments */
-    html[dir="rtl"] .sidebar {
-        left: auto;
-        right: 0;
-        box-shadow: -2px 0 15px rgba(0,0,0,.1);
-    }
-
-    .avatar-circle {
-        width: 80px;
-        height: 80px;
-        background-color: var(--primary);
-        color: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .sidebar .nav-link {
-        color: var(--text);
-        transition: all 0.2s;
-    }
-
-    .sidebar .nav-link:hover:not(.active) {
-        background-color: var(--sidebar-hover);
-    }
-
-    .sidebar-heading {
-        letter-spacing: 1px;
-        font-size: 0.75rem;
-        color: var(--text-muted);
-    }
-
-    .sidebar .text-muted {
-        color: var(--text-muted) !important;
-    }
-
-    /* Sidebar dropdown styles */
-    .sidebar-item button {
-        text-align: left;
-        font-size: 1rem;
-        color: var(--text);
-    }
-
-    .sidebar-item button:hover:not(.active) {
-        background-color: var(--sidebar-hover);
-    }
-
-    .sidebar-item button:focus {
-        outline: none;
-        box-shadow: none;
-    }
-
-    /* Fix for active items - with increased specificity */
-    .sidebar .nav-link.active,
-    .sidebar-item button.active {
-        background-color: var(--primary) !important;
-    }
-
-    .sidebar .nav-link.active span,
-    .sidebar .nav-link.active i,
-    .sidebar-item button.active span,
-    .sidebar-item button.active i {
-        color: #ffffff !important; /* Use explicit #ffffff instead of 'white' */
-    }
-
-    /* Additional specificity for dropdown items */
-    .sidebar-item .collapse .nav-link.active span,
-    .sidebar-item .collapse .nav-link.active i {
-        color: #ffffff !important;
-    }
-
-    /* Ensure text is visible in all states */
-    .sidebar-item button span,
-    .sidebar-item .nav-link span {
-        color: var(--text);
-    }
-
-    .sidebar-item button.active span,
-    .sidebar-item button.active i,
-    .sidebar-item .nav-link.active span,
-    .sidebar-item .nav-link.active i {
-        color: #ffffff !important;
-    }
-
-    /* Dark mode adjustments for dropdown menus */
-    [data-bs-theme="dark"] .dropdown-menu {
-        background-color: var(--card-bg);
-        border-color: var(--border-color);
-    }
-
-    [data-bs-theme="dark"] .dropdown-item {
-        color: var(--text);
-    }
-
-    [data-bs-theme="dark"] .dropdown-item:hover {
-        background-color: var(--sidebar-hover);
-    }
-
-    [data-bs-theme="dark"] .dropdown-divider {
-        border-color: var(--border-color);
-    }
-</style>

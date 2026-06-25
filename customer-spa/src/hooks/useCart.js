@@ -4,10 +4,16 @@ const STORAGE_KEY = 'restaurant_cart_v1';
 
 /**
  * Derives a stable cart-line key. Weight-based lines are keyed per weight so
- * the same product can appear multiple times with different weights.
+ * the same product can appear multiple times with different weights. Lines with
+ * different options are also kept separate.
  */
-function makeCartKey(productId, weightId) {
-  return weightId ? `${productId}_w${weightId}` : String(productId);
+function makeCartKey(productId, weightId, optionName) {
+  let key = weightId ? `${productId}_w${weightId}` : String(productId);
+  if (optionName) {
+    const safe = optionName.replace(/[^\w]/g, '_').toLowerCase();
+    key += `_o_${safe}`;
+  }
+  return key;
 }
 
 /**
@@ -18,7 +24,8 @@ function normalizeCartItem(raw) {
   const product_id = Number(raw.product_id ?? raw.id);
   if (!Number.isFinite(product_id)) return null;
   const weight_id   = raw.weight_id ? Number(raw.weight_id) : null;
-  const cart_key    = raw.cart_key || makeCartKey(product_id, weight_id);
+  const option_name = raw.option_name || null;
+  const cart_key    = raw.cart_key || makeCartKey(product_id, weight_id, option_name);
   return {
     cart_key,
     product_id,
@@ -30,6 +37,7 @@ function normalizeCartItem(raw) {
     quantity:        Math.max(1, Math.floor(Number(raw.quantity ?? 1))),
     weight_id,
     weight_name: raw.weight_name || null,
+    option_name,
   };
 }
 
@@ -65,14 +73,15 @@ export default function useCart() {
   /**
    * Adds a product to the cart.
    * weightOption = { id, name, value_kg } for weight-based products.
+   * optionName = selected option value string (e.g. "مفروم").
    * Returns false if product is unavailable.
    */
-  const addToCart = useCallback((product, qty = 1, weightOption = null) => {
+  const addToCart = useCallback((product, qty = 1, weightOption = null, optionName = null) => {
     if (!product || product.is_available === false) return false;
     const addQty = Math.max(1, Math.floor(Number(qty)) || 1);
 
     const weight_id  = weightOption ? Number(weightOption.id) : null;
-    const cart_key   = makeCartKey(product.id, weight_id);
+    const cart_key   = makeCartKey(product.id, weight_id, optionName);
     const price      = weightOption
       ? parseFloat(weightOption.value_kg) * parseFloat(product.price_per_kg || 0)
       : unitPriceFromProduct(product);
@@ -97,6 +106,7 @@ export default function useCart() {
           quantity:        addQty,
           weight_id,
           weight_name: weightOption ? weightOption.name : null,
+          option_name: optionName || null,
         },
       ];
     });
@@ -124,14 +134,15 @@ export default function useCart() {
 
   /**
    * Replace the cart with items taken directly from an existing order.
-   * Order items shape: { product_id, product_name, product_price, quantity, weight_id?, weight_name? }
+   * Order items shape: { product_id, product_name, product_price, quantity, weight_id?, weight_name?, option_name? }
    */
   const loadFromOrder = useCallback((orderItems) => {
     const items = (orderItems ?? [])
       .map((item) => {
-        const product_id = Number(item.product_id);
-        const weight_id  = item.weight_id ? Number(item.weight_id) : null;
-        const cart_key   = makeCartKey(product_id, weight_id);
+        const product_id  = Number(item.product_id);
+        const weight_id   = item.weight_id ? Number(item.weight_id) : null;
+        const option_name = item.option_name || null;
+        const cart_key    = makeCartKey(product_id, weight_id, option_name);
         return {
           cart_key,
           product_id,
@@ -143,6 +154,7 @@ export default function useCart() {
           quantity:        Math.max(1, Math.floor(Number(item.quantity) || 1)),
           weight_id,
           weight_name: item.weight_name || null,
+          option_name,
         };
       })
       .filter((i) => i.product_id > 0 && i.quantity > 0);

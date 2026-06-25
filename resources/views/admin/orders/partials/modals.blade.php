@@ -19,6 +19,7 @@
                 </div>
 
                 @if($order->order_type === 'delivery')
+                @feature('core.delivery')
                 {{-- ══ DELIVERY ORDER: show address + zones reference + fee input ══ --}}
                 <div class="modal-body">
 
@@ -76,6 +77,7 @@
                         <div class="form-text">{{ __('app.delivery_fee_hint') }}</div>
                     </div>
                 </div>
+                @endfeature
 
                 @else
                 {{-- ══ DINE-IN / TAKEAWAY: simple confirmation ══ --}}
@@ -98,6 +100,7 @@
 </div>
 
 {{-- ── REJECT MODAL ──────────────────────────────────────────── --}}
+@feature('orders.admin_cancel')
 <div class="modal fade" id="rejectModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -137,60 +140,9 @@
         </div>
     </div>
 </div>
+@endfeature
 @endif
 
-{{-- ── CANCEL MODAL ──────────────────────────────────────────── --}}
-@php
-    $terminal = ['completed', 'rejected', 'cancelled', 'cancelled_by_admin', 'cancelled_by_customer'];
-@endphp
-@if(!in_array($order->status, $terminal))
-<div class="modal fade" id="cancelModal" tabindex="-1">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <form action="{{ route('admin.orders.cancel', $order) }}" method="POST">
-                @csrf
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-slash-circle text-dark me-2"></i>{{ __('app.cancel_order') }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>{{ __('app.cancel_order_confirm') }}</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ __('app.no') }}</button>
-                    <button type="submit" class="btn btn-dark">{{ __('app.yes_cancel') }}</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-@endif
-
-{{-- ── COMPLETE MODAL (legacy: admin can still force-complete from accepted) ──
-     Note: the normal workflow now uses inline PATCH forms via the new routes.
-     This modal is kept as a fallback and triggered from the old POST /complete route. --}}
-@if($order->status === 'accepted')
-<div class="modal fade" id="completeModal" tabindex="-1">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <form action="{{ route('admin.orders.complete', $order) }}" method="POST">
-                @csrf
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-bag-check text-success me-2"></i>{{ __('app.complete_order') }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>{{ __('app.complete_order_confirm') }}</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ __('app.cancel') }}</button>
-                    <button type="submit" class="btn btn-success">{{ __('app.complete') }}</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-@endif
 
 
 @push('scripts')

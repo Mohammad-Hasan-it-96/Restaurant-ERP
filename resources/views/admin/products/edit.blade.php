@@ -48,6 +48,7 @@
                     </div>
 
                     {{-- is_weight_based toggle --}}
+                    @feature('products.weight_products')
                     <div class="col-12">
                         <div class="form-check form-switch">
                             <input type="hidden" name="is_weight_based" value="0">
@@ -58,6 +59,7 @@
                             </label>
                         </div>
                     </div>
+                    @endfeature
 
                     {{-- Normal price section (hidden when weight-based) --}}
                     <div id="normal-price-section" class="col-md-3">
@@ -78,6 +80,7 @@
                     </div>
 
                     {{-- Weight-based section (hidden when not weight-based) --}}
+                    @feature('products.weight_products')
                     <div id="weight-based-section" class="col-12" style="display:none;">
                         <div class="card border-warning">
                             <div class="card-body">
@@ -127,6 +130,7 @@
                             </div>
                         </div>
                     </div>
+                    @endfeature
 
                     {{-- sort_order --}}
                     <div class="col-md-3">
@@ -211,6 +215,7 @@
 <script>
 (function () {
     const toggle = document.getElementById('is_weight_based');
+    if (!toggle) return; // weight-products feature disabled — nothing to toggle
     const normalPrice = document.getElementById('normal-price-section');
     const discountPrice = document.getElementById('discount-price-section');
     const weightSection = document.getElementById('weight-based-section');

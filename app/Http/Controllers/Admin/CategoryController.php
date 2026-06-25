@@ -21,7 +21,7 @@ class CategoryController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name_ar', 'like', "%{$search}%")
-                  ->orWhere('name_en', 'like', "%{$search}%");
+                    ->orWhere('name_en', 'like', "%{$search}%");
             });
         }
 
@@ -30,9 +30,9 @@ class CategoryController extends Controller
             $query->where('parent_id', $request->parent_id);
         }
 
-        $allowed    = ['id', 'name_ar', 'name_en', 'sort_order', 'created_at'];
-        $sortBy     = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'created_at';
-        $direction  = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+        $allowed = ['id', 'name_ar', 'name_en', 'sort_order', 'created_at'];
+        $sortBy = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'created_at';
+        $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
 
         $categories = $query->orderBy($sortBy, $direction)->paginate(15)->withQueryString();
 
@@ -48,6 +48,7 @@ class CategoryController extends Controller
     public function create()
     {
         $parentCategories = Category::query()->whereNull('parent_id')->orderBy('sort_order')->get();
+
         return view('admin.categories.create', compact('parentCategories'));
     }
 
@@ -57,16 +58,16 @@ class CategoryController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name_ar'    => 'required|string|max:255',
-            'name_en'    => 'nullable|string|max:255',
-            'image'      => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            'parent_id'  => 'nullable|exists:categories,id',
+            'name_ar' => 'required|string|max:255',
+            'name_en' => 'nullable|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'parent_id' => 'nullable|exists:categories,id',
             'sort_order' => 'nullable|integer|min:0',
-            'is_active'  => 'nullable|boolean',
+            'is_active' => 'nullable|boolean',
         ]);
 
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
-        $validated['is_active']  = $request->has('is_active') ? true : false;
+        $validated['is_active'] = $request->has('is_active') ? true : false;
 
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image')->store('categories', 'public');
@@ -100,12 +101,12 @@ class CategoryController extends Controller
     public function update(Request $request, Category $category)
     {
         $validated = $request->validate([
-            'name_ar'    => 'required|string|max:255',
-            'name_en'    => 'nullable|string|max:255',
-            'image'      => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            'parent_id'  => 'nullable|exists:categories,id',
+            'name_ar' => 'required|string|max:255',
+            'name_en' => 'nullable|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'parent_id' => 'nullable|exists:categories,id',
             'sort_order' => 'nullable|integer|min:0',
-            'is_active'  => 'nullable|boolean',
+            'is_active' => 'nullable|boolean',
         ]);
 
         // Prevent setting a category as its own parent
@@ -114,7 +115,7 @@ class CategoryController extends Controller
         }
 
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
-        $validated['is_active']  = $request->has('is_active') ? true : false;
+        $validated['is_active'] = $request->has('is_active') ? true : false;
 
         if ($request->hasFile('image')) {
             // Delete old image if exists
@@ -158,4 +159,3 @@ class CategoryController extends Controller
             ->with('success', __('app.category_deleted'));
     }
 }
-

@@ -518,6 +518,7 @@ return [
     'order_unavailable_message'   => 'Sorry, we are unable to accept orders at this time.',
     'some_products_not_found'        => 'One or more selected products could not be found.',
     'weight_required_for_product'    => 'A weight selection is required for each weight-based product.',
+    'order_type_unavailable'         => 'The selected order type is currently unavailable.',
     'product_not_active'             => 'The product ":name" is currently unavailable.',
     'product_not_available'       => 'The product ":name" is out of stock.',
     'restaurant_closed_message'   => 'Sorry, we are currently closed. Please try again later.',

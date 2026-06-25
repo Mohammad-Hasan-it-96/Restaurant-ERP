@@ -52,14 +52,12 @@
                     <label class="form-label small fw-semibold mb-1">{{ __('app.status') }}</label>
                     <select name="status" class="form-select form-select-sm">
                         <option value="all"       {{ $filters['status'] === 'all'       ? 'selected' : '' }}>{{ __('app.all_statuses') }}</option>
-                        <option value="completed" {{ $filters['status'] === 'completed' ? 'selected' : '' }}>{{ __('app.completed') }}</option>
                         <option value="pending"   {{ $filters['status'] === 'pending'   ? 'selected' : '' }}>{{ __('app.pending') }}</option>
                         <option value="accepted"  {{ $filters['status'] === 'accepted'  ? 'selected' : '' }}>{{ __('app.accepted') }}</option>
-                        <option value="preparing" {{ $filters['status'] === 'preparing' ? 'selected' : '' }}>{{ __('app.preparing') }}</option>
                         <option value="ready"     {{ $filters['status'] === 'ready'     ? 'selected' : '' }}>{{ __('app.ready') }}</option>
                         <option value="delivered" {{ $filters['status'] === 'delivered' ? 'selected' : '' }}>{{ __('app.delivered') }}</option>
+                        <option value="completed" {{ $filters['status'] === 'completed' ? 'selected' : '' }}>{{ __('app.completed') }}</option>
                         <option value="rejected"  {{ $filters['status'] === 'rejected'  ? 'selected' : '' }}>{{ __('app.rejected') }}</option>
-                        <option value="cancelled_by_admin"    {{ $filters['status'] === 'cancelled_by_admin'    ? 'selected' : '' }}>{{ __('app.cancelled_by_admin') }}</option>
                         <option value="cancelled_by_customer" {{ $filters['status'] === 'cancelled_by_customer' ? 'selected' : '' }}>{{ __('app.cancelled_by_customer') }}</option>
                     </select>
                 </div>

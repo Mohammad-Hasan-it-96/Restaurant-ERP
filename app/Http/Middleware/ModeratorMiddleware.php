@@ -2,21 +2,26 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\Feature;
+use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Closure;
 
 class ModeratorMiddleware
 {
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
      * @return mixed
      */
     public function handle(Request $request, Closure $next)
     {
+        // Single-role mode: when the permissions system is disabled, any
+        // authenticated user is allowed through.
+        if (Auth::check() && Feature::disabled('admin.permissions_system')) {
+            return $next($request);
+        }
+
         if (Auth::check() && (Auth::user()->role === 'admin' || Auth::user()->role === 'moderator')) {
             return $next($request);
         }

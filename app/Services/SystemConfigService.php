@@ -31,8 +31,8 @@ class SystemConfigService
     /**
      * Set a config value (arrays are auto-encoded to JSON).
      *
-     * @param  mixed  $value   Scalar, array, or null
-     * @param  string $group   Config group (default: restaurant)
+     * @param  mixed  $value  Scalar, array, or null
+     * @param  string  $group  Config group (default: restaurant)
      */
     public function set(string $key, mixed $value, string $group = 'restaurant'): bool
     {
@@ -125,7 +125,7 @@ class SystemConfigService
 
         // Case 2: raw string containing unicode escapes, e.g. "\\u0627\\u0644..."
         if (str_contains($trimmed, '\\u')) {
-            $wrapped = '"' . str_replace('"', '\\"', $trimmed) . '"';
+            $wrapped = '"'.str_replace('"', '\\"', $trimmed).'"';
             $decodedWrapped = json_decode($wrapped, true);
 
             if (json_last_error() === JSON_ERROR_NONE && is_string($decodedWrapped)) {
@@ -148,16 +148,16 @@ class SystemConfigService
     public function getPublicSettings(): array
     {
         return [
-            'restaurant_name'      => $this->getFirstText(['restaurant_name_ar', 'restaurant_name', 'site_name'], config('app.name', '')),
-            'restaurant_name_en'   => $this->getFirstText(['restaurant_name_en'], ''),
-            'restaurant_logo'      => $this->get('restaurant_logo'),
-            'restaurant_phone'     => $this->get('restaurant_phone'),
-            'restaurant_whatsapp'  => $this->get('restaurant_whatsapp'),
-            'is_accepting_orders'  => $this->isAcceptingOrders(),
+            'restaurant_name' => $this->getFirstText(['restaurant_name_ar', 'restaurant_name', 'site_name'], config('app.name', '')),
+            'restaurant_name_en' => $this->getFirstText(['restaurant_name_en'], ''),
+            'restaurant_logo' => $this->get('restaurant_logo'),
+            'restaurant_phone' => $this->get('restaurant_phone'),
+            'restaurant_whatsapp' => $this->get('restaurant_whatsapp'),
+            'is_accepting_orders' => $this->isAcceptingOrders(),
             'order_closed_message' => $this->get('order_closed_message', ''),
-            'delivery_note'        => $this->get('delivery_note', ''),
-            'opening_hours'        => $this->getOpeningHours(),
-            'rejection_reasons'    => $this->getRejectionReasons(),
+            'delivery_note' => $this->get('delivery_note', ''),
+            'opening_hours' => $this->getOpeningHours(),
+            'rejection_reasons' => $this->getRejectionReasons(),
         ];
     }
 
@@ -207,8 +207,8 @@ class SystemConfigService
             return false;
         }
 
-        $now   = $dateTime ?? Carbon::now();
-        $day   = strtolower($now->format('l')); // e.g. "saturday"
+        $now = $dateTime ?? Carbon::now();
+        $day = strtolower($now->format('l')); // e.g. "saturday"
         $hours = $this->getOpeningHours();
 
         // No opening_hours configured at all → treat as open 24/7 (no restriction)
@@ -230,7 +230,7 @@ class SystemConfigService
 
         // Parse from/to – both must be present and valid HH:MM
         $from = $dayConfig['from'] ?? null;
-        $to   = $dayConfig['to']   ?? null;
+        $to = $dayConfig['to'] ?? null;
 
         if (! $from || ! $to) {
             // Misconfigured – assume open all day if the day is marked open
@@ -238,11 +238,11 @@ class SystemConfigService
         }
 
         [$fromH, $fromM] = array_map('intval', explode(':', $from));
-        [$toH,   $toM]   = array_map('intval', explode(':', $to));
+        [$toH,   $toM] = array_map('intval', explode(':', $to));
 
-        $openMinutes  = $fromH * 60 + $fromM;
-        $closeMinutes = $toH   * 60 + $toM;
-        $nowMinutes   = $now->hour * 60 + $now->minute;
+        $openMinutes = $fromH * 60 + $fromM;
+        $closeMinutes = $toH * 60 + $toM;
+        $nowMinutes = $now->hour * 60 + $now->minute;
 
         // Handle midnight-crossing windows (e.g. 22:00 – 02:00)
         if ($closeMinutes < $openMinutes) {
@@ -252,4 +252,3 @@ class SystemConfigService
         return $nowMinutes >= $openMinutes && $nowMinutes < $closeMinutes;
     }
 }
-

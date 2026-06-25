@@ -16,6 +16,7 @@ import OrderSuccess from './components/OrderSuccess';
 import MyProfile from './components/MyProfile';
 import MyOrders from './components/MyOrders';
 import BottomNav from './components/BottomNav';
+import { featureEnabled } from './utils/features';
 
 export default function App() {
   const { t, lang } = useI18n();
@@ -32,6 +33,16 @@ export default function App() {
   const { settings, categories, allProducts, zones, loading, error, retry } =
     useRestaurantData();
   const cart = useCart();
+
+  const showOrders = featureEnabled(settings, 'customer.order_history');
+  const showProfile = featureEnabled(settings, 'customer.profile');
+
+  // If the active page's feature was disabled, fall back to the menu so a stale
+  // activePage can never render a hidden section.
+  useEffect(() => {
+    if (activePage === 'orders' && !showOrders) setActivePage('menu');
+    if (activePage === 'profile' && !showProfile) setActivePage('menu');
+  }, [activePage, showOrders, showProfile]);
 
   useEffect(() => {
     document.title = t('documentTitle');
@@ -94,8 +105,8 @@ export default function App() {
   }, []);
 
   const handleAddToCart = useCallback(
-    (product, qty = 1, weightOption = null) => {
-      const ok = cart.addToCart(product, qty, weightOption);
+    (product, qty = 1, weightOption = null, optionName = null) => {
+      const ok = cart.addToCart(product, qty, weightOption, optionName);
       if (!ok) window.alert(t('productUnavailableAlert'));
       return ok;
     },
@@ -109,10 +120,15 @@ export default function App() {
         setActiveProduct(product);
         return;
       }
+      // Products with options require modal selection
+      if (featureEnabled(settings, 'products.options') && product.options?.length > 0) {
+        setActiveProduct(product);
+        return;
+      }
       const ok = cart.addToCart(product, 1);
       if (!ok) window.alert(t('productUnavailableAlert'));
     },
-    [cart, t]
+    [cart, t, settings]
   );
 
   const handleCheckoutSuccess = useCallback(
@@ -198,9 +214,9 @@ export default function App() {
               </>
             )}
           </>
-        ) : activePage === 'orders' ? (
+        ) : activePage === 'orders' && showOrders ? (
           <MyOrders onModify={handleModifyOrder} onMenuClick={() => setActivePage('menu')} settings={settings} />
-        ) : activePage === 'profile' ? (
+        ) : activePage === 'profile' && showProfile ? (
           <MyProfile onMenuClick={() => setActivePage('menu')} />
         ) : null}
       </main>
@@ -213,6 +229,8 @@ export default function App() {
         cartCount={cart.cartCount}
         cartTotal={cart.cartTotal}
         onCartClick={() => setShowCart(true)}
+        showOrders={showOrders}
+        showProfile={showProfile}
       />
 
       {activeProduct && (
@@ -220,6 +238,7 @@ export default function App() {
           product={activeProduct}
           onAdd={handleAddToCart}
           onClose={() => setActiveProduct(null)}
+          settings={settings}
         />
       )}
 
@@ -232,6 +251,7 @@ export default function App() {
           onClear={cart.clearCart}
           onCheckout={() => setShowCheckout(true)}
           modifyingOrder={modifyingOrder}
+          settings={settings}
         />
       )}
 
@@ -243,6 +263,7 @@ export default function App() {
           modifyingOrder={modifyingOrder}
           cancelBeforeMinutes={Number(settings.customer_cancel_before_minutes) || 0}
           openingHours={settings.opening_hours || {}}
+          features={settings.features || {}}
           onSuccess={handleCheckoutSuccess}
           onClose={() => { setShowCheckout(false); setModifyingOrder(null); }}
         />

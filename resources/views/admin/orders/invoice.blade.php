@@ -308,10 +308,12 @@
         <dt>{{ __('app.order_type') }}</dt>
         <dd>{{ __('app.' . $order->order_type) }}</dd>
 
+        @feature('core.table_ordering')
         @if($order->order_type === 'table' && $order->table_number)
         <dt>{{ __('app.table_number') }}</dt>
         <dd>{{ $order->table_number }}</dd>
         @endif
+        @endfeature
     </dl>
 
     <hr class="divider">
@@ -324,6 +326,7 @@
         <dt>{{ __('app.phone') }}</dt>
         <dd>{{ $order->phone ?? '—' }}</dd>
 
+        @feature('core.delivery')
         @if($order->order_type === 'delivery' && $order->address)
         <dt>{{ __('app.address') }}</dt>
         <dd>{{ $order->address }}</dd>
@@ -333,6 +336,7 @@
         <dt>{{ __('app.delivery_type') }}</dt>
         <dd>{{ __('app.' . $order->delivery_type) }}</dd>
         @endif
+        @endfeature
 
         @if($order->scheduled_at)
         <dt>{{ __('app.scheduled_at') }}</dt>

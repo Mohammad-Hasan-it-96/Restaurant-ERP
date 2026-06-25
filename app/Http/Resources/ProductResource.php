@@ -8,17 +8,21 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class ProductResource extends JsonResource
 {
     private int $id;
+
     private string $name;
+
     private string $detail;
+
     private int $quantity;
+
     private float $price;
+
     private $created_at;
+
     private $updated_at;
 
     /**
      * Transform the resource into an array.
-     *
-     * @return array
      */
     public function toArray(Request $request): array
     {

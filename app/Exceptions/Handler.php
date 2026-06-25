@@ -33,7 +33,7 @@ class Handler extends ExceptionHandler
         $this->renderable(function (AccessDeniedHttpException $e, $request) {
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => $e->getMessage() ?: 'Unauthorized action.'
+                    'message' => $e->getMessage() ?: 'Unauthorized action.',
                 ], 403);
             }
 
@@ -44,7 +44,7 @@ class Handler extends ExceptionHandler
         $this->renderable(function (NotFoundHttpException $e, $request) {
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'Resource not found.'
+                    'message' => 'Resource not found.',
                 ], 404);
             }
 

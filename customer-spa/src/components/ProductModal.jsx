@@ -1,19 +1,35 @@
 import { useState, useMemo, useEffect } from 'react';
 import { CloseIcon, PlusIcon, MinusIcon, ImageIcon } from './Icons';
 import { formatPrice, localDesc, localName } from '../utils/format';
+import { featureEnabled } from '../utils/features';
 import { useI18n } from '../i18n';
 
-export default function ProductModal({ product, onAdd, onClose }) {
+export default function ProductModal({ product, onAdd, onClose, settings }) {
   const { lang, t } = useI18n();
   const [qty, setQty] = useState(1);
   const [visible, setVisible] = useState(false);
 
-  const isWeightBased = !!product.is_weight_based;
+  const isWeightBased = !!product.is_weight_based && featureEnabled(settings, 'products.weight_products');
   const weights = isWeightBased ? (product.weights || []) : [];
 
   const [selectedWeight, setSelectedWeight] = useState(() =>
     weights.length > 0 ? weights[0] : null
   );
+
+  const optionsEnabled = featureEnabled(settings, 'products.options');
+  const productOptions = optionsEnabled && Array.isArray(product.options) && product.options.length > 0
+    ? product.options
+    : [];
+
+  const [selectedOptionValues, setSelectedOptionValues] = useState(() => {
+    const auto = {};
+    (optionsEnabled && Array.isArray(product.options) ? product.options : []).forEach((og) => {
+      if (og.values && og.values.length === 1) auto[og.name] = og.values[0].name;
+    });
+    return auto;
+  });
+
+  const allOptionsSelected = productOptions.every((og) => !!selectedOptionValues[og.name]);
 
   useEffect(() => {
     const id = setTimeout(() => setVisible(true), 10);
@@ -32,7 +48,10 @@ export default function ProductModal({ product, onAdd, onClose }) {
   }, [isWeightBased, selectedWeight, product]);
 
   const handleAdd = () => {
-    const ok = onAdd(product, qty, isWeightBased ? selectedWeight : null);
+    const optionName = productOptions.length > 0
+      ? productOptions.map((og) => selectedOptionValues[og.name]).filter(Boolean).join(', ')
+      : null;
+    const ok = onAdd(product, qty, isWeightBased ? selectedWeight : null, optionName);
     if (ok !== false) close();
   };
 
@@ -40,7 +59,9 @@ export default function ProductModal({ product, onAdd, onClose }) {
   const available = !!p.is_available;
   const displayName = localName(p, lang);
   const desc = localDesc(p, lang);
-  const canAdd = available && (!isWeightBased || selectedWeight !== null);
+  const canAdd = available
+    && (!isWeightBased || selectedWeight !== null)
+    && (productOptions.length === 0 || allOptionsSelected);
 
   return (
     <div
@@ -143,6 +164,34 @@ export default function ProductModal({ product, onAdd, onClose }) {
             </div>
           )}
 
+          {productOptions.map((og) => (
+            <div key={og.name} className="weight-selector">
+              <p className="weight-selector-label">{og.name}</p>
+              <div className="weight-options">
+                {og.values.map((v) => {
+                  const isSelected = selectedOptionValues[og.name] === v.name;
+                  return (
+                    <label
+                      key={v.id}
+                      className={`weight-option${isSelected ? ' selected' : ''}`}
+                    >
+                      <input
+                        type="radio"
+                        name={`option_${og.name}`}
+                        value={v.name}
+                        checked={isSelected}
+                        onChange={() =>
+                          setSelectedOptionValues((prev) => ({ ...prev, [og.name]: v.name }))
+                        }
+                      />
+                      <span className="weight-option-name">{v.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
           {!available && (
             <div className="product-sheet-unavail">{t('unavailable')}</div>
           )}
@@ -173,11 +222,13 @@ export default function ProductModal({ product, onAdd, onClose }) {
             disabled={!canAdd}
             onClick={handleAdd}
           >
-            {!canAdd && isWeightBased && available
-              ? t('weightRequired')
-              : unitPrice !== null
-                ? `${t('addToCart')} · ${formatPrice(unitPrice * qty)}`
-                : t('addToCart')}
+            {!canAdd && productOptions.length > 0 && !allOptionsSelected && available
+              ? t('optionRequired')
+              : !canAdd && isWeightBased && available
+                ? t('weightRequired')
+                : unitPrice !== null
+                  ? `${t('addToCart')} · ${formatPrice(unitPrice * qty)}`
+                  : t('addToCart')}
           </button>
         </div>
       </div>

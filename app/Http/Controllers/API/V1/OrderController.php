@@ -20,7 +20,7 @@ class OrderController extends Controller
     use ApiResponse;
 
     public function __construct(
-        protected OrderService        $orderService,
+        protected OrderService $orderService,
         protected SystemConfigService $config
     ) {}
 
@@ -51,6 +51,7 @@ class OrderController extends Controller
 
         } catch (\Throwable $e) {
             report($e);
+
             return $this->error(__('app.order_failed'), 500);
         }
     }
@@ -64,16 +65,16 @@ class OrderController extends Controller
 
         Log::debug('order.access', [
             'order_number' => $orderNumber,
-            'customer_id'  => $customer->id ?? null,
+            'customer_id' => $customer->id ?? null,
         ]);
 
-        if (!$customer) {
+        if (! $customer) {
             return $this->error('Unauthorized', 403);
         }
 
         $order = Order::query()->where('order_number', $orderNumber)->first();
 
-        if (!$order) {
+        if (! $order) {
             return $this->error(__('app.order_not_found'), 404);
         }
 
@@ -96,7 +97,7 @@ class OrderController extends Controller
     public function cancel(string $orderNumber): JsonResponse
     {
         $customer = request()->attributes->get('customer');
-        $order    = Order::query()->where('order_number', $orderNumber)->first();
+        $order = Order::query()->where('order_number', $orderNumber)->first();
 
         if (! $order) {
             return $this->error(__('app.order_not_found'), 404);
@@ -113,12 +114,12 @@ class OrderController extends Controller
 
         // Scheduled delivery: enforce cancellation window
         if (
-            $order->order_type   === Order::TYPE_DELIVERY
+            $order->order_type === Order::TYPE_DELIVERY
             && $order->delivery_type === 'scheduled'
-            && $order->scheduled_at  !== null
+            && $order->scheduled_at !== null
         ) {
             $cancelBeforeMinutes = (int) $this->config->getNumber('customer_cancel_before_minutes', 0);
-            $deadline            = Carbon::parse($order->scheduled_at)->subMinutes($cancelBeforeMinutes);
+            $deadline = Carbon::parse($order->scheduled_at)->subMinutes($cancelBeforeMinutes);
 
             if (now()->greaterThanOrEqualTo($deadline)) {
                 return $this->error(__('app.order_cancel_window_passed'), 422);
@@ -126,7 +127,7 @@ class OrderController extends Controller
         }
 
         $order->update([
-            'status'       => 'cancelled_by_customer',
+            'status' => 'cancelled_by_customer',
             'cancelled_at' => now(),
         ]);
 
@@ -160,8 +161,12 @@ class OrderController extends Controller
 
         // Fill name/phone from original order when not sent by the frontend
         $data = $request->validated();
-        if (empty($data['customer_name']))  $data['customer_name']  = $oldOrder->customer_name;
-        if (empty($data['customer_phone'])) $data['customer_phone'] = $oldOrder->phone;
+        if (empty($data['customer_name'])) {
+            $data['customer_name'] = $oldOrder->customer_name;
+        }
+        if (empty($data['customer_phone'])) {
+            $data['customer_phone'] = $oldOrder->phone;
+        }
 
         try {
             $newOrder = $this->orderService->modifyOrder($oldOrder, $data, $customer);
@@ -171,7 +176,7 @@ class OrderController extends Controller
             return $this->success(
                 array_merge($orderData->resolve(), [
                     'old_order_number' => $oldOrder->order_number,
-                    'customer_token'   => $newOrder->customer->token ?? $customer->token,
+                    'customer_token' => $newOrder->customer->token ?? $customer->token,
                 ]),
                 __('app.order_modified_successfully'),
                 201
@@ -186,6 +191,7 @@ class OrderController extends Controller
 
         } catch (\Throwable $e) {
             report($e);
+
             return $this->error(__('app.order_failed'), 500);
         }
     }

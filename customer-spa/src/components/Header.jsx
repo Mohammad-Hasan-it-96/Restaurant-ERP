@@ -1,9 +1,14 @@
 ﻿import { BellIcon, CartIcon, ClipboardIcon, ForkKnifeIcon, PersonIcon } from './Icons';
 import { formatPrice } from '../utils/format';
+import { featureEnabled } from '../utils/features';
 import { switchLanguage, useI18n } from '../i18n';
 
 export default function Header({ settings, cartCount, onCartClick, activePage, onOrdersClick, onProfileClick }) {
   const { lang, t } = useI18n();
+
+  const showOrders = featureEnabled(settings, 'customer.order_history');
+  const showProfile = featureEnabled(settings, 'customer.profile');
+  const showLang = featureEnabled(settings, 'localization.languages');
 
   // Pick locale-aware restaurant name:
   // English → prefer restaurant_name_en, fall back to Arabic name
@@ -54,6 +59,7 @@ export default function Header({ settings, cartCount, onCartClick, activePage, o
         <div className="header-right">
           {/* Desktop-only nav links */}
           <nav className="header-desktop-nav" aria-label={t('mainNavAria')}>
+            {showOrders && (
             <button
               type="button"
               className={`header-nav-btn${activePage === 'orders' ? ' active' : ''}`}
@@ -62,6 +68,8 @@ export default function Header({ settings, cartCount, onCartClick, activePage, o
               <ClipboardIcon size={16} />
               <span>{t('ordersPage')}</span>
             </button>
+            )}
+            {showProfile && (
             <button
               type="button"
               className={`header-nav-btn${activePage === 'profile' ? ' active' : ''}`}
@@ -70,23 +78,28 @@ export default function Header({ settings, cartCount, onCartClick, activePage, o
               <PersonIcon size={16} />
               <span>{t('profile')}</span>
             </button>
+            )}
           </nav>
 
-          {/*<button*/}
-          {/*  type="button"*/}
-          {/*  className="lang-btn"*/}
-          {/*  onClick={handleLangClick}*/}
-          {/*  aria-label={t('toggleLanguageAria')}*/}
-          {/*>*/}
-          {/*  {t('lang')}*/}
-          {/*</button>*/}
-          {/*<button*/}
-          {/*  type="button"*/}
-          {/*  className="icon-btn"*/}
-          {/*  aria-label={t('bellAria')}*/}
-          {/*>*/}
-          {/*  <BellIcon />*/}
-          {/*</button>*/}
+          {showLang && (
+          <button
+            type="button"
+            className="lang-btn"
+            onClick={handleLangClick}
+            aria-label={t('toggleLanguageAria')}
+          >
+            {t('lang')}
+          </button>
+          )}
+          {featureEnabled(settings, 'notifications.push') && (
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label={t('bellAria')}
+          >
+            <BellIcon />
+          </button>
+          )}
           <button
             type="button"
             className="cart-btn-header"

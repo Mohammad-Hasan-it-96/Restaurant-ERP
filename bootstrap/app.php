@@ -3,6 +3,7 @@
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\ApiLoggingMiddleware;
 use App\Http\Middleware\Authenticate;
+use App\Http\Middleware\MinifyHtml;
 use App\Http\Middleware\ModeratorMiddleware;
 use App\Http\Middleware\RedirectIfAuthenticated;
 use App\Http\Middleware\SetLocale;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [
             SetLocale::class,
+            MinifyHtml::class,
         ]);
 
         $middleware->api(append: [
@@ -36,6 +38,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'customer.session' => \App\Http\Middleware\EnsureCustomerSession::class,
             'customer.start'   => \App\Http\Middleware\CustomerSession::class,
             'customer.token'   => \App\Http\Middleware\ResolveCustomerByToken::class,
+            'cache.headers'    => \App\Http\Middleware\SetCacheHeaders::class,
+            'feature'          => \App\Http\Middleware\FeatureGate::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -54,8 +53,8 @@ class ReportController extends Controller
         // ── Summary cards ────────────────────────────────────────────────────
         $baseSummary = $this->applyFilters(Order::query(), $filters);
 
-        $totalRevenue      = (float) (clone $baseSummary)->sum('total');
-        $totalOrders       = (clone $baseSummary)->count();
+        $totalRevenue = (float) (clone $baseSummary)->sum('total');
+        $totalOrders = (clone $baseSummary)->count();
         $averageOrderValue = $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0.0;
         $totalDeliveryFees = (float) (clone $baseSummary)->sum('delivery_fee');
 
@@ -129,13 +128,13 @@ class ReportController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
-        $filename = 'orders-report-' . now()->format('Y-m-d') . '.csv';
+        $filename = 'orders-report-'.now()->format('Y-m-d').'.csv';
 
         $headers = [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-            'Cache-Control'       => 'no-store, no-cache',
-            'Pragma'              => 'no-cache',
+            'Cache-Control' => 'no-store, no-cache',
+            'Pragma' => 'no-cache',
         ];
 
         $callback = function () use ($orders) {
@@ -160,12 +159,12 @@ class ReportController extends Controller
                 fputcsv($handle, [
                     $order->order_number,
                     $order->customer->full_name ?? '',
-                    $order->customer->phone     ?? '',
+                    $order->customer->phone ?? '',
                     $order->order_type,
                     $order->status,
-                    number_format((float) $order->subtotal,      2, '.', ''),
+                    number_format((float) $order->subtotal, 2, '.', ''),
                     number_format((float) ($order->delivery_fee ?? 0), 2, '.', ''),
-                    number_format((float) $order->total,         2, '.', ''),
+                    number_format((float) $order->total, 2, '.', ''),
                     $order->created_at->format('Y-m-d H:i'),
                 ]);
             }
@@ -176,4 +175,3 @@ class ReportController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 }
-

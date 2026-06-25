@@ -17,9 +17,9 @@ class Weight extends Model
     protected function casts(): array
     {
         return [
-            'value_kg'   => 'decimal:3',
+            'value_kg' => 'decimal:3',
             'sort_order' => 'integer',
-            'is_active'  => 'boolean',
+            'is_active' => 'boolean',
         ];
     }
 

@@ -12,6 +12,7 @@ trait ApiResponse
         if ($data !== null) {
             $payload['data'] = $data;
         }
+
         return response()->json($payload, $status);
     }
 
@@ -21,7 +22,7 @@ trait ApiResponse
         if ($errors) {
             $payload['errors'] = $errors;
         }
+
         return response()->json($payload, $status);
     }
 }
-

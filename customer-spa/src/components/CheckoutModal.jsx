@@ -4,6 +4,7 @@ import api, { extractData, decodeApiText } from '../api/client';
 import { appendMyOrderNumber } from '../utils/myOrders';
 import { readStoredCustomerInfo, writeStoredCustomerInfo } from '../utils/customerInfo';
 import { formatPrice } from '../utils/format';
+import { featureEnabled } from '../utils/features';
 import { useI18n } from '../i18n';
 
 // ── Defined OUTSIDE component so React never remounts inputs on re-render ──
@@ -63,10 +64,18 @@ function getScheduledTimeBounds(openingHours, bufferMinutes = 30) {
   return { isClosedToday: false, isNoSlotsLeft: false, min, max: todayTo, todayFrom, todayTo, bufferMinutes };
 }
 
-export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOrder, cancelBeforeMinutes, openingHours = {}, onSuccess, onClose }) {
+export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOrder, cancelBeforeMinutes, openingHours = {}, features = {}, onSuccess, onClose }) {
   const { t, lang } = useI18n();
 
   const isModify = !!modifyingOrder;
+
+  // Only show order-type channels whose core.* feature is enabled. (Dine-in/
+  // table ordering UI remains intentionally disabled in the SPA; the backend
+  // still enforces core.table_ordering.)
+  const availableTypes = useMemo(
+    () => ['delivery', 'takeaway'].filter((ot) => featureEnabled({ features }, `core.${ot}`)),
+    [features]
+  );
 
   const todayDateLabel = new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', {
     weekday: 'long', month: 'short', day: 'numeric',
@@ -74,8 +83,8 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOr
 
   const [name,       setName]       = useState('');
   const [phone,      setPhone]      = useState('');
-  // Lock order type when modifying
-  const [orderType,  setOrderType]  = useState(modifyingOrder?.order_type ?? 'delivery');
+  // Lock order type when modifying; otherwise default to the first enabled channel
+  const [orderType,  setOrderType]  = useState(modifyingOrder?.order_type ?? availableTypes[0] ?? 'delivery');
   const [tableNum,   setTableNum]   = useState(modifyingOrder?.table_number ?? '');
   const [address,    setAddress]    = useState(modifyingOrder?.address ?? '');
   const [savedAddress, setSavedAddress]             = useState('');
@@ -194,9 +203,10 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOr
         })(),
         customer_note:  note.trim() || null,
         items: cartItems.map((i) => ({
-          product_id: i.product_id,
-          quantity:   i.quantity,
-          weight_id:  i.weight_id || null,
+          product_id:  i.product_id,
+          quantity:    i.quantity,
+          weight_id:   i.weight_id   || null,
+          option_name: i.option_name || null,
         })),
       };
 
@@ -294,8 +304,8 @@ export default function CheckoutModal({ zones, cartItems, cartTotal, modifyingOr
 
           <Field id="orderType" label={t('orderType')} error={null}>
             <div className="order-type-btns">
-              {/* 'table' hidden – restaurant has no dine-in tables */}
-              {['delivery', 'takeaway'].map((ot) => (
+              {/* Channels are driven by core.* feature flags; 'table' dine-in stays hidden in the SPA. */}
+              {availableTypes.map((ot) => (
                 <button
                   key={ot}
                   type="button"

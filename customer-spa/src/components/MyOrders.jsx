@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../api/client';
 import { formatPrice } from '../utils/format';
 import { readMyOrderObjects } from '../utils/myOrders';
+import { featureEnabled } from '../utils/features';
 import { useI18n } from '../i18n';
 import { CloseIcon } from './Icons';
 
@@ -35,7 +36,7 @@ function canCancelOrder(order, cancelBeforeMinutes) {
 }
 
 // ── Order detail modal ────────────────────────────────────────────────────────
-function OrderDetailModal({ order, onClose, onModify, onCancelled, cancelBeforeMinutes }) {
+function OrderDetailModal({ order, onClose, onModify, onCancelled, cancelBeforeMinutes, settings = {} }) {
   const { t, lang } = useI18n();
   const [visible, setVisible] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -52,8 +53,10 @@ function OrderDetailModal({ order, onClose, onModify, onCancelled, cancelBeforeM
     setTimeout(onClose, 260);
   };
 
-  const canModify = order.status === 'pending';
-  const canCancel = canCancelOrder(order, cancelBeforeMinutes);
+  // Gate on the order state AND the feature flag — when a feature is disabled
+  // the backend route also 403s, so hiding the button keeps the UI honest.
+  const canModify = order.status === 'pending' && featureEnabled(settings, 'orders.modification');
+  const canCancel = canCancelOrder(order, cancelBeforeMinutes) && featureEnabled(settings, 'orders.customer_cancellation');
   const items = order.items ?? [];
 
   const handleCancel = async () => {
@@ -132,8 +135,9 @@ function OrderDetailModal({ order, onClose, onModify, onCancelled, cancelBeforeM
               </thead>
               <tbody>
                 {items.map((item, i) => {
-                  const isWeighted = !!item.weight_name;
-                  const kgUnit     = lang === 'ar' ? 'كغ' : 'kg';
+                  const weightEnabled = featureEnabled(settings, 'products.weight_products');
+                  const isWeighted    = !!item.weight_name && weightEnabled;
+                  const kgUnit        = lang === 'ar' ? 'كغ' : 'kg';
                   const wKg        = item.weight_value_kg ? parseFloat(item.weight_value_kg) : null;
                   return (
                     <tr key={i}>
@@ -144,6 +148,11 @@ function OrderDetailModal({ order, onClose, onModify, onCancelled, cancelBeforeM
                             {formatPrice(item.price_per_kg)} / {kgUnit}
                           </div>
                         ) : null}
+                        {item.option_name && (
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                            {item.option_name}
+                          </div>
+                        )}
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         {isWeighted ? (
@@ -243,6 +252,29 @@ function OrderDetailModal({ order, onClose, onModify, onCancelled, cancelBeforeM
             >
               {t('cancelOrder')}
             </button>
+          )}
+
+          {/* WhatsApp contact button */}
+          {featureEnabled(settings, 'notifications.whatsapp_in_order_view') &&
+           settings?.restaurant_whatsapp && (
+            <a
+              href={`https://wa.me/${String(settings.restaurant_whatsapp).replace(/\D/g, '')}?text=${encodeURIComponent(
+                `${t('whatsappOrderMsg')} ${order.order_number}`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-submit"
+              style={{
+                background: '#25D366',
+                color: '#fff',
+                textDecoration: 'none',
+                display: 'block',
+                textAlign: 'center',
+                marginTop: 8,
+              }}
+            >
+              {t('contactWhatsapp')}
+            </a>
           )}
         </div>
       </div>
@@ -353,6 +385,7 @@ export default function MyOrders({ onModify, onMenuClick, settings = {} }) {
           onModify={onModify}
           onCancelled={handleCancelled}
           cancelBeforeMinutes={cancelBeforeMinutes}
+          settings={settings}
         />
       )}
     </div>

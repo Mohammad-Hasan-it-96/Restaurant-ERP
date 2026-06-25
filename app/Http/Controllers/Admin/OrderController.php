@@ -3,14 +3,21 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
 use App\Models\DeliveryZone;
 use App\Models\Order;
+use App\Services\NotificationService;
 use App\Services\SystemConfigService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
-    public function __construct(protected SystemConfigService $config) {}
+    public function __construct(
+        protected SystemConfigService $config,
+        protected NotificationService $notifications,
+    ) {}
 
     // ── Index ──────────────────────────────────────────────────────────────────
     public function index(Request $request)
@@ -18,13 +25,13 @@ class OrderController extends Controller
         // ── Lightweight poll for JS auto-refresh ──────────────────────────────
         if ($request->boolean('_poll')) {
             return response()->json([
-                'latest_id'     => Order::max('id') ?? 0,
+                'latest_id' => Order::max('id') ?? 0,
                 'pending_count' => Order::query()->where('status', 'pending')->count(),
             ]);
         }
 
-        $allowed   = ['id', 'total', 'status', 'created_at'];
-        $sortBy    = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'id';
+        $allowed = ['id', 'total', 'status', 'created_at'];
+        $sortBy = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'id';
         $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
 
         $query = Order::with('customer')
@@ -38,13 +45,12 @@ class OrderController extends Controller
         // Search by order_number, customer_name, phone (snapshot columns) or customer relation
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('order_number', 'like', '%' . $search . '%')
-                  ->orWhere('customer_name', 'like', '%' . $search . '%')
-                  ->orWhere('phone', 'like', '%' . $search . '%')
-                  ->orWhereHas('customer', fn($cq) =>
-                      $cq->where('phone', 'like', '%' . $search . '%')
-                         ->orWhere('full_name', 'like', '%' . $search . '%')
-                  );
+                $q->where('order_number', 'like', '%'.$search.'%')
+                    ->orWhere('customer_name', 'like', '%'.$search.'%')
+                    ->orWhere('phone', 'like', '%'.$search.'%')
+                    ->orWhereHas('customer', fn ($cq) => $cq->where('phone', 'like', '%'.$search.'%')
+                        ->orWhere('full_name', 'like', '%'.$search.'%')
+                    );
             });
         }
 
@@ -65,13 +71,17 @@ class OrderController extends Controller
     public function show(Request $request, Order $order)
     {
         $order->load('customer', 'items');
-        $rejectionReasons   = $this->config->getRejectionReasons();
-        $restaurantName  = $this->config->getFirstText(
+        $rejectionReasons = $this->config->getRejectionReasons();
+        $restaurantName = $this->config->getFirstText(
             ['restaurant_name_ar', 'restaurant_name', 'restaurant_name_en', 'site_name'],
             config('app.name', '')
         );
-        $restaurantWhatsapp = $this->config->getText('restaurant_whatsapp');
-        $deliveryZones      = DeliveryZone::active()->get();
+        // Only load the WhatsApp number when the order-view feature is on —
+        // the Blade panel is also @feature-wrapped, this avoids loading unused data.
+        $restaurantWhatsapp = feature('notifications.whatsapp_in_order_view')
+            ? $this->config->getText('restaurant_whatsapp')
+            : '';
+        $deliveryZones = DeliveryZone::active()->get();
 
         $back = $request->headers->get('referer', route('admin.orders.index'));
 
@@ -83,31 +93,91 @@ class OrderController extends Controller
     // ── Accept ─────────────────────────────────────────────────────────────────
     public function accept(Request $request, Order $order)
     {
-        if ($order->status !== Order::STATUS_PENDING) {
+        if (! $order->canTransitionTo(Order::STATUS_ACCEPTED)) {
             return back()->with('error', __('app.order_action_not_allowed'));
         }
 
-        $request->validate([
-            'delivery_fee' => 'nullable|numeric|min:0',
-        ]);
-
-        $deliveryFee = (float) ($request->input('delivery_fee') ?? 0);
-        $total       = (float) $order->subtotal + $deliveryFee;
+        // Delivery orders must carry a valid fee (> 0); dine-in / takeaway have none.
+        $deliveryFee = null;
+        if ($order->order_type === Order::TYPE_DELIVERY) {
+            $deliveryFee = $this->validDeliveryFee($request);
+            if ($deliveryFee === null) {
+                return back()->with('error', __('app.delivery_fee_invalid'));
+            }
+        }
 
         $order->update([
-            'status'       => Order::STATUS_ACCEPTED,
-            'delivery_fee' => $deliveryFee > 0 ? $deliveryFee : null,
-            'total'        => $total,
-            'accepted_at'  => now(),
+            'status' => Order::STATUS_ACCEPTED,
+            'delivery_fee' => $deliveryFee,
+            'total' => (float) $order->subtotal + (float) ($deliveryFee ?? 0),
+            'accepted_at' => now(),
         ]);
 
+        $order->load('customer');
+        $this->notifications->notifyOrderStatus($order);
+
         return back()->with('success', __('app.order_accepted'));
+    }
+
+    // ── Edit Delivery Fee (delivery orders, while still accepted) ──────────────
+    public function setDeliveryFee(Request $request, Order $order)
+    {
+        // Only delivery orders carry a delivery fee.
+        if ($order->order_type !== Order::TYPE_DELIVERY) {
+            return back()->with('error', __('app.order_action_not_allowed'));
+        }
+
+        // Editable only while still accepted — locked once it moves to ready/delivered.
+        if ($order->status !== Order::STATUS_ACCEPTED) {
+            return back()->with('error', __('app.delivery_fee_edit_not_allowed'));
+        }
+
+        $newFee = $this->validDeliveryFee($request);
+        if ($newFee === null) {
+            return back()->with('error', __('app.delivery_fee_invalid'));
+        }
+
+        $oldFee = $order->delivery_fee;
+
+        // Update the fee (whether or not one was already set) and recompute the total.
+        $order->update([
+            'delivery_fee' => $newFee,
+            'total' => (float) $order->subtotal + $newFee,
+        ]);
+
+        Log::info('delivery_fee_updated', [
+            'order_id' => $order->id,
+            'old_fee' => $oldFee,
+            'new_fee' => $newFee,
+            'admin_id' => auth()->id(),
+        ]);
+
+        return back()->with('success', __('app.delivery_fee_updated'));
+    }
+
+    /**
+     * Validate a submitted delivery_fee: required, numeric, and >= 1.
+     * Returns the float value, or null if invalid (caller surfaces the Arabic
+     * message). Done manually rather than via $request->validate() because this
+     * admin UI renders no $errors bag — only session flash toasts are shown.
+     */
+    private function validDeliveryFee(Request $request): ?float
+    {
+        $fee = $request->input('delivery_fee');
+
+        if ($fee === null || $fee === '' || ! is_numeric($fee) || (float) $fee < 1) {
+            return null;
+        }
+
+        return (float) $fee;
     }
 
     // ── Reject ─────────────────────────────────────────────────────────────────
     public function reject(Request $request, Order $order)
     {
-        if ($order->status !== Order::STATUS_PENDING) {
+        feature_or_fail('orders.admin_cancel');
+
+        if (! $order->canTransitionTo(Order::STATUS_REJECTED)) {
             return back()->with('error', __('app.order_action_not_allowed'));
         }
 
@@ -116,84 +186,35 @@ class OrderController extends Controller
         ]);
 
         $order->update([
-            'status'           => Order::STATUS_REJECTED,
+            'status' => Order::STATUS_REJECTED,
             'rejection_reason' => $request->input('rejection_reason'),
         ]);
+
+        $order->load('customer');
+        $this->notifications->notifyOrderStatus($order);
 
         return back()->with('success', __('app.order_rejected'));
     }
 
-    // ── Cancel (admin) ─────────────────────────────────────────────────────────
-    public function cancel(Request $request, Order $order)
-    {
-        $terminal = [
-            Order::STATUS_COMPLETED,
-            Order::STATUS_REJECTED,
-            Order::STATUS_CANCELLED,
-            Order::STATUS_CANCELLED_BY_ADMIN,
-            Order::STATUS_CANCELLED_BY_CUSTOMER,
-        ];
-
-        if (in_array($order->status, $terminal)) {
-            return back()->with('error', __('app.order_action_not_allowed'));
-        }
-
-        $order->update([
-            'status'       => Order::STATUS_CANCELLED_BY_ADMIN,
-            'cancelled_at' => now(),
-        ]);
-
-        return back()->with('success', __('app.order_cancelled'));
-    }
-
-    // ── Complete (legacy POST route — still valid from accepted state) ────────
-    public function complete(Request $request, Order $order)
-    {
-        $allowed = [Order::STATUS_ACCEPTED, Order::STATUS_READY, Order::STATUS_DELIVERED];
-        if (! in_array($order->status, $allowed)) {
-            return back()->with('error', __('app.order_action_not_allowed'));
-        }
-
-        $order->update([
-            'status'       => Order::STATUS_COMPLETED,
-            'completed_at' => now(),
-        ]);
-
-        return back()->with('success', __('app.order_completed'));
-    }
-
-    // ── Mark Preparing (accepted → preparing) ─────────────────────────────────
-    public function markPreparing(Order $order)
-    {
-        if ($order->status !== Order::STATUS_ACCEPTED) {
-            return back()->with('error', __('app.order_action_not_allowed'));
-        }
-
-        $order->update(['status' => Order::STATUS_PREPARING]);
-
-        return back()->with('success', __('app.order_marked_preparing'));
-    }
-
-    // ── Mark Ready (preparing → ready) ────────────────────────────────────────
+    // ── Mark Ready (accepted → ready) ─────────────────────────────────────────
     public function markReady(Order $order)
     {
-        if ($order->status !== Order::STATUS_PREPARING) {
+        if (! $order->canTransitionTo(Order::STATUS_READY)) {
             return back()->with('error', __('app.order_action_not_allowed'));
         }
 
         $order->update(['status' => Order::STATUS_READY]);
 
+        $order->load('customer');
+        $this->notifications->notifyOrderStatus($order);
+
         return back()->with('success', __('app.order_marked_ready'));
     }
 
-    // ── Mark Delivered (ready → delivered) — delivery orders only ─────────────
+    // ── Mark Delivered (ready → delivered) ────────────────────────────────────
     public function markDelivered(Order $order)
     {
-        if ($order->status !== Order::STATUS_READY) {
-            return back()->with('error', __('app.order_action_not_allowed'));
-        }
-
-        if ($order->order_type !== Order::TYPE_DELIVERY) {
+        if (! $order->canTransitionTo(Order::STATUS_DELIVERED)) {
             return back()->with('error', __('app.order_action_not_allowed'));
         }
 
@@ -202,36 +223,38 @@ class OrderController extends Controller
         return back()->with('success', __('app.order_marked_delivered'));
     }
 
-    // ── Mark Completed (ready for table/takeaway OR delivered for delivery) ────
+    // ── Mark Completed (delivered → completed) ────────────────────────────────
     public function markCompleted(Order $order)
     {
-        $allowed = [Order::STATUS_READY, Order::STATUS_DELIVERED];
-        if (! in_array($order->status, $allowed)) {
+        if (! $order->canTransitionTo(Order::STATUS_COMPLETED)) {
             return back()->with('error', __('app.order_action_not_allowed'));
         }
 
-        // Delivery orders must go through delivered first (unless admin forces it)
-        if ($order->order_type === Order::TYPE_DELIVERY
-            && $order->status === Order::STATUS_READY) {
-            return back()->with('error', __('app.order_action_not_allowed'));
+        // Payment must be recorded before an order can be completed.
+        if (! $order->is_paid) {
+            return back()->with('error', __('app.payment_required_before_completion'));
         }
 
         $order->update([
-            'status'       => Order::STATUS_COMPLETED,
+            'status' => Order::STATUS_COMPLETED,
             'completed_at' => now(),
         ]);
 
         return back()->with('success', __('app.order_completed'));
     }
 
-    // ── Mark Paid ─────────────────────────────────────────────────────────────
-    public function markPaid(Order $order)
+    // ── Mark As Paid (one-click cash payment) ─────────────────────────────────
+    public function markAsPaid(Order $order)
     {
-        if ($order->payment_status === Order::PAYMENT_PAID) {
+        // Prevent duplicate payment.
+        if ($order->is_paid) {
             return back()->with('info', __('app.already_paid'));
         }
 
         $order->update([
+            'is_paid' => true,
+            'paid_at' => now(),
+            // Keep the legacy fields in sync (read by dashboard / reports / SPA).
             'payment_status' => Order::PAYMENT_PAID,
             'payment_method' => 'cash',
         ]);
@@ -244,19 +267,65 @@ class OrderController extends Controller
     {
         $order->load('customer', 'items');
 
-        $restaurantName  = $this->config->getFirstText(
+        $restaurantName = $this->config->getFirstText(
             ['restaurant_name_ar', 'restaurant_name', 'restaurant_name_en', 'site_name'],
             config('app.name', '')
         );
-        $restaurantPhone = $this->config->getText('restaurant_phone');
-        $restaurantLogo  = $this->config->get('restaurant_logo');
+        $restaurantMobiles = array_values(array_filter([
+            $this->config->getText('restaurant_phone'),
+            $this->config->getText('restaurant_mobile_2'),
+        ]));
+        $restaurantLogo = $this->config->get('restaurant_logo');
 
         return view('admin.orders.invoice', compact(
             'order',
             'restaurantName',
-            'restaurantPhone',
+            'restaurantMobiles',
             'restaurantLogo'
         ));
     }
-}
 
+    // ── Test Push Notification ─────────────────────────────────────────────────
+    public function testNotification(Request $request): JsonResponse
+    {
+        $request->validate([
+            'fcm_token' => 'required_without:customer_id|string|max:255|nullable',
+            'customer_id' => 'required_without:fcm_token|integer|nullable',
+            'status' => 'in:accepted,rejected,ready',
+        ]);
+
+        $fcmToken = $request->input('fcm_token');
+
+        if (! $fcmToken && $customerId = $request->input('customer_id')) {
+            $fcmToken = Customer::find($customerId)?->fcm_token;
+            if (! $fcmToken) {
+                return response()->json(['success' => false, 'message' => 'Customer has no FCM token registered.'], 422);
+            }
+        }
+
+        $status = $request->input('status', 'accepted');
+        $titles = [
+            'accepted' => '✅ تم قبول طلبك',
+            'rejected' => '❌ تم رفض طلبك',
+            'ready' => '🎉 طلبك جاهز!',
+        ];
+        $bodies = [
+            'accepted' => 'يتم الآن تحضير طلبك — هذا إشعار تجريبي',
+            'rejected' => 'طلبك رقم TEST-0000 — هذا إشعار تجريبي',
+            'ready' => 'يمكنك الآن استلام طلبك — هذا إشعار تجريبي',
+        ];
+
+        try {
+            $this->notifications->sendFcm(
+                $fcmToken,
+                $titles[$status],
+                $bodies[$status],
+                ['status' => $status, 'test' => 'true'],
+            );
+
+            return response()->json(['success' => true, 'message' => 'Notification sent successfully.', 'fcm_token' => $fcmToken]);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+}

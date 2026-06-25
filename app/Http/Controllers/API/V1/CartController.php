@@ -24,7 +24,7 @@ class CartController extends Controller
     {
         $data = $request->validate([
             'product_id' => ['required', 'integer', 'min:1'],
-            'quantity'   => ['sometimes', 'integer', 'min:1'],
+            'quantity' => ['sometimes', 'integer', 'min:1'],
         ]);
 
         try {
@@ -32,11 +32,13 @@ class CartController extends Controller
                 (int) $data['product_id'],
                 (int) ($data['quantity'] ?? 1)
             );
+
             return $this->success($cart, __('app.cart_item_added'));
         } catch (\InvalidArgumentException $e) {
             return $this->error($e->getMessage(), 422);
         } catch (\Throwable $e) {
             report($e);
+
             return $this->error(__('app.server_error'), 500);
         }
     }
@@ -46,7 +48,7 @@ class CartController extends Controller
     {
         $data = $request->validate([
             'product_id' => ['required', 'integer', 'min:1'],
-            'quantity'   => ['required', 'integer', 'min:0'],
+            'quantity' => ['required', 'integer', 'min:0'],
         ]);
 
         try {
@@ -54,11 +56,13 @@ class CartController extends Controller
                 (int) $data['product_id'],
                 (int) $data['quantity']
             );
+
             return $this->success($cart, __('app.cart_item_updated'));
         } catch (\InvalidArgumentException $e) {
             return $this->error($e->getMessage(), 422);
         } catch (\Throwable $e) {
             report($e);
+
             return $this->error(__('app.server_error'), 500);
         }
     }
@@ -72,9 +76,11 @@ class CartController extends Controller
 
         try {
             $cart = $this->cartService->removeItem((int) $data['product_id']);
+
             return $this->success($cart, __('app.cart_item_removed'));
         } catch (\Throwable $e) {
             report($e);
+
             return $this->error(__('app.server_error'), 500);
         }
     }
@@ -84,11 +90,12 @@ class CartController extends Controller
     {
         try {
             $cart = $this->cartService->clearCart();
+
             return $this->success($cart, __('app.cart_cleared'));
         } catch (\Throwable $e) {
             report($e);
+
             return $this->error(__('app.server_error'), 500);
         }
     }
 }
-

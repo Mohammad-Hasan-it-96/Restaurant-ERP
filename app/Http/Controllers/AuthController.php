@@ -21,6 +21,7 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
+
             return redirect()->route('admin.dashboard');
         }
 
@@ -44,6 +45,7 @@ class AuthController extends Controller
         ]);
 
         Auth::login($user);
+
         return redirect()->route('admin.dashboard');
     }
 
@@ -52,6 +54,7 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect()->route('auth.view_login');
     }
 
@@ -80,7 +83,7 @@ class AuthController extends Controller
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user, $password) {
                 $user->forceFill([
-                    'password' => Hash::make($password)
+                    'password' => Hash::make($password),
                 ])->setRememberToken(Str::random(60));
 
                 $user->save();

@@ -10,11 +10,10 @@ class DeliveryZoneResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'            => $this->id,
-            'area_name'     => $this->area_name,
+            'id' => $this->id,
+            'area_name' => $this->area_name,
             'estimated_fee' => (float) $this->estimated_fee,
-            'sort_order'    => $this->sort_order,
+            'sort_order' => $this->sort_order,
         ];
     }
 }
-

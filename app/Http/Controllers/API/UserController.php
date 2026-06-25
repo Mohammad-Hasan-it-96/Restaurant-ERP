@@ -18,6 +18,7 @@ class UserController extends BaseController
     public function index()
     {
         $users = User::latest()->paginate(10);
+
         return view('admin.users.index', compact('users'));
     }
 
@@ -30,13 +31,13 @@ class UserController extends BaseController
     public function edit($id)
     {
         $user = User::findOrFail($id);
+
         return view('admin.users.edit', compact('user'));
     }
 
     /**
      * Update the specified user in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
      * @return \Illuminate\Http\RedirectResponse
      */
@@ -100,45 +101,45 @@ class UserController extends BaseController
 
         return redirect()->route('admin.users.index')->with('success', 'User deleted successfully');
     }
+
     /**
- * Show the form for creating a new user.
- *
- * @return \Illuminate\View\View
- */
-public function create()
-{
-    return view('admin.users.create');
-}
-
-/**
- * Store a newly created user in storage.
- *
- * @param  \Illuminate\Http\Request  $request
- * @return \Illuminate\Http\RedirectResponse
- */
-public function store(Request $request)
-{
-    $request->validate([
-        'name' => ['required', 'string', 'max:255'],
-        'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-        'password' => ['required', 'string', 'min:8', 'confirmed'],
-        'role' => ['required', 'string', Rule::in(['admin', 'user', 'moderator'])],
-        'profile_picture' => ['nullable', 'image', 'max:2048'], // Max 2MB
-    ]);
-
-    $user = new User();
-    $user->name = $request->name;
-    $user->email = $request->email;
-    $user->password = Hash::make($request->password);
-    $user->role = $request->role;
-
-    if ($request->hasFile('profile_picture')) {
-        $path = $request->file('profile_picture')->store('profile-pictures', 'public');
-        $user->profile_picture = $path;
+     * Show the form for creating a new user.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function create()
+    {
+        return view('admin.users.create');
     }
 
-    $user->save();
+    /**
+     * Store a newly created user in storage.
+     *
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'role' => ['required', 'string', Rule::in(['admin', 'user', 'moderator'])],
+            'profile_picture' => ['nullable', 'image', 'max:2048'], // Max 2MB
+        ]);
 
-    return redirect()->route('admin.users.index')->with('success', 'User created successfully');
-}
+        $user = new User;
+        $user->name = $request->name;
+        $user->email = $request->email;
+        $user->password = Hash::make($request->password);
+        $user->role = $request->role;
+
+        if ($request->hasFile('profile_picture')) {
+            $path = $request->file('profile_picture')->store('profile-pictures', 'public');
+            $user->profile_picture = $path;
+        }
+
+        $user->save();
+
+        return redirect()->route('admin.users.index')->with('success', 'User created successfully');
+    }
 }

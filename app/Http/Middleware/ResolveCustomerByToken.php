@@ -22,7 +22,7 @@ class ResolveCustomerByToken
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $token    = null;
+        $token = null;
         $customer = null;
 
         $header = $request->header('Authorization', '');
@@ -34,10 +34,10 @@ class ResolveCustomerByToken
             $customer = Customer::query()->where('token', $token)->first();
 
             if ($customer) {
-                Log::debug('customer.resolved', ['id' => $customer->id, 'token' => substr($token, 0, 8) . '...']);
+                Log::debug('customer.resolved', ['id' => $customer->id, 'token' => substr($token, 0, 8).'...']);
                 $request->attributes->set('customer', $customer);
             } else {
-                Log::debug('customer.token.invalid', ['token' => substr($token, 0, 8) . '...']);
+                Log::debug('customer.token.invalid', ['token' => substr($token, 0, 8).'...']);
             }
         } else {
             Log::debug('customer.session', ['id' => null]);
@@ -46,4 +46,3 @@ class ResolveCustomerByToken
         return $next($request);
     }
 }
-

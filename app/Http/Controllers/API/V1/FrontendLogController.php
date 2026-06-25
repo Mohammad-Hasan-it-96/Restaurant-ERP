@@ -19,20 +19,19 @@ class FrontendLogController extends Controller
     public function __invoke(Request $request): JsonResponse
     {
         $request->validate([
-            'type'    => ['required', 'string', 'max:100'],
+            'type' => ['required', 'string', 'max:100'],
             'message' => ['required', 'string', 'max:1000'],
-            'data'    => ['nullable', 'array'],
+            'data' => ['nullable', 'array'],
         ]);
 
         Log::warning('frontend.error', [
-            'type'       => $request->input('type'),
-            'message'    => $request->input('message'),
-            'data'       => $request->input('data', []),
-            'ip'         => $request->ip(),
+            'type' => $request->input('type'),
+            'message' => $request->input('message'),
+            'data' => $request->input('data', []),
+            'ip' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ]);
 
         return $this->success(null, 'logged');
     }
 }
-

@@ -1,10 +1,10 @@
 <?php
 
 use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\API\DashboardController;
 use App\Http\Controllers\API\LanguageController;
-use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\API\ProfileController;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\AuthController;
@@ -14,8 +14,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomeController::class, 'index'])->name('public.home');
 
 // Move the language change route outside the auth middleware
-Route::get('/language/{locale}', [LanguageController::class, 'changeLanguage'])->name('language.change');
-Route::get('/lang/{locale}', [LanguageController::class, 'changeLanguage'])->name('lang.change');
+Route::middleware('feature:localization.languages')->group(function () {
+    Route::get('/language/{locale}', [LanguageController::class, 'changeLanguage'])->name('language.change');
+    Route::get('/lang/{locale}', [LanguageController::class, 'changeLanguage'])->name('lang.change');
+});
 
 Route::group(['prefix' => 'auth', 'as' => 'auth.'], function () {
     Route::get('login', [AuthController::class, 'view_login'])->name('view_login');
@@ -32,11 +34,14 @@ Route::group(['prefix' => 'auth', 'as' => 'auth.'], function () {
 });
 
 Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], function () {
+    // Redirect bare /admin to dashboard
+    Route::get('', fn () => redirect()->route('admin.dashboard'))->name('index');
+
     // Dashboard - accessible by all authenticated users
     Route::get('dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
-
+    Route::get('system-secure-metrics-health-logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index']);
     // Reports & Analytics
-    Route::get('reports',        [ReportController::class, 'index']) ->name('reports');
+    Route::get('reports', [ReportController::class, 'index'])->name('reports');
     Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');
 
     // Products routes
@@ -74,8 +79,8 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
         Route::post('delete/{id}', [UserController::class, 'destroy'])->name('delete');
     });
 
-    // Languages routes
-    Route::group(['prefix' => 'languages', 'as' => 'languages.'], function () {
+    // Languages routes (gated by the localization feature)
+    Route::group(['prefix' => 'languages', 'as' => 'languages.', 'middleware' => 'feature:localization.languages'], function () {
         // List route - accessible by all authenticated users
         Route::get('', [LanguageController::class, 'index'])->name('index');
 
@@ -103,11 +108,11 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
 
     // Customers routes
     Route::group(['prefix' => 'customers', 'as' => 'customers.'], function () {
-        Route::get('',                              [CustomerController::class, 'index'])->name('index');
-        Route::get('{customer}',                    [CustomerController::class, 'show'])->name('show');
-        Route::post('{customer}/block',             [CustomerController::class, 'block'])->name('block');
-        Route::post('{customer}/unblock',           [CustomerController::class, 'unblock'])->name('unblock');
-        Route::post('{customer}/toggle-block',      [CustomerController::class, 'toggleBlock'])->name('toggle-block');
+        Route::get('', [CustomerController::class, 'index'])->name('index');
+        Route::get('{customer}', [CustomerController::class, 'show'])->name('show');
+        Route::post('{customer}/block', [CustomerController::class, 'block'])->name('block');
+        Route::post('{customer}/unblock', [CustomerController::class, 'unblock'])->name('unblock');
+        Route::post('{customer}/toggle-block', [CustomerController::class, 'toggleBlock'])->name('toggle-block');
     });
 
     // Orders routes
@@ -115,18 +120,20 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
         Route::get('', [App\Http\Controllers\Admin\OrderController::class, 'index'])->name('index');
         Route::get('{order}', [App\Http\Controllers\Admin\OrderController::class, 'show'])->name('show');
         Route::get('{order}/invoice', [App\Http\Controllers\Admin\OrderController::class, 'invoice'])->name('invoice');
-        Route::middleware(['moderator'])->group(function () {
-            Route::post('{order}/accept',   [App\Http\Controllers\Admin\OrderController::class, 'accept'])->name('accept');
-            Route::post('{order}/reject',   [App\Http\Controllers\Admin\OrderController::class, 'reject'])->name('reject');
-            Route::post('{order}/cancel',   [App\Http\Controllers\Admin\OrderController::class, 'cancel'])->name('cancel');
-            Route::post('{order}/complete', [App\Http\Controllers\Admin\OrderController::class, 'complete'])->name('complete');
-            // ── New workflow transitions ──────────────────────────────────────
-            Route::patch('{order}/preparing', [App\Http\Controllers\Admin\OrderController::class, 'markPreparing'])->name('preparing');
-            Route::patch('{order}/ready',     [App\Http\Controllers\Admin\OrderController::class, 'markReady']    )->name('ready');
-            Route::patch('{order}/delivered', [App\Http\Controllers\Admin\OrderController::class, 'markDelivered'])->name('delivered');
-            Route::patch('{order}/completed', [App\Http\Controllers\Admin\OrderController::class, 'markCompleted'])->name('completed');
-            Route::patch('{order}/mark-paid', [App\Http\Controllers\Admin\OrderController::class, 'markPaid']    )->name('mark-paid');
-        });
+        Route::post('{order}/accept', [App\Http\Controllers\Admin\OrderController::class, 'accept'])->name('accept');
+        Route::post('{order}/reject', [App\Http\Controllers\Admin\OrderController::class, 'reject'])
+            ->middleware('feature:orders.admin_cancel')
+            ->name('reject');
+        Route::patch('{order}/delivery-fee', [App\Http\Controllers\Admin\OrderController::class, 'setDeliveryFee'])->name('delivery-fee');
+        // ── Strict forward workflow transitions: accepted → ready → delivered → completed ──
+        Route::patch('{order}/ready', [App\Http\Controllers\Admin\OrderController::class, 'markReady'])->name('ready');
+        Route::patch('{order}/delivered', [App\Http\Controllers\Admin\OrderController::class, 'markDelivered'])->name('delivered');
+        Route::patch('{order}/completed', [App\Http\Controllers\Admin\OrderController::class, 'markCompleted'])->name('completed');
+        Route::patch('{order}/mark-paid', [App\Http\Controllers\Admin\OrderController::class, 'markAsPaid'])->name('mark-paid');
+        // ── Test push notification (admin-only dev/QA tool) ───────────────────
+        Route::post('test-notification', [App\Http\Controllers\Admin\OrderController::class, 'testNotification'])
+            ->middleware('admin')
+            ->name('test-notification');
     });
 
     // Delivery Zones routes
@@ -141,8 +148,8 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
         });
     });
 
-    // Weights routes
-    Route::group(['prefix' => 'weights', 'as' => 'weights.'], function () {
+    // Weights routes (gated by the weight-products feature)
+    Route::group(['prefix' => 'weights', 'as' => 'weights.', 'middleware' => 'feature:products.weight_products'], function () {
         Route::get('', [App\Http\Controllers\Admin\WeightController::class, 'index'])->name('index');
         Route::middleware(['moderator'])->group(function () {
             Route::get('create', [App\Http\Controllers\Admin\WeightController::class, 'create'])->name('create');
@@ -150,6 +157,18 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
             Route::get('{weight}/edit', [App\Http\Controllers\Admin\WeightController::class, 'edit'])->name('edit');
             Route::put('{weight}', [App\Http\Controllers\Admin\WeightController::class, 'update'])->name('update');
             Route::delete('{weight}', [App\Http\Controllers\Admin\WeightController::class, 'destroy'])->name('destroy');
+        });
+    });
+
+    // Options routes (product options like cutting type) — gated by feature
+    Route::group(['prefix' => 'options', 'as' => 'options.', 'middleware' => 'feature:products.options'], function () {
+        Route::get('', [App\Http\Controllers\Admin\OptionController::class, 'index'])->name('index');
+        Route::middleware(['moderator'])->group(function () {
+            Route::get('create', [App\Http\Controllers\Admin\OptionController::class, 'create'])->name('create');
+            Route::post('', [App\Http\Controllers\Admin\OptionController::class, 'store'])->name('store');
+            Route::get('{option}/edit', [App\Http\Controllers\Admin\OptionController::class, 'edit'])->name('edit');
+            Route::put('{option}', [App\Http\Controllers\Admin\OptionController::class, 'update'])->name('update');
+            Route::delete('{option}', [App\Http\Controllers\Admin\OptionController::class, 'destroy'])->name('destroy');
         });
     });
 

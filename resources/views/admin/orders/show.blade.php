@@ -21,21 +21,14 @@
             <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#acceptModal">
                 <i class="bi bi-check-lg me-1"></i>{{ __('app.accept') }}
             </button>
+            @feature('orders.admin_cancel')
             <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#rejectModal">
                 <i class="bi bi-x-lg me-1"></i>{{ __('app.reject') }}
             </button>
+            @endfeature
         @endif
 
         @if($order->status === 'accepted')
-            <form method="POST" action="{{ route('admin.orders.preparing', $order) }}" class="d-inline">
-                @csrf @method('PATCH')
-                <button type="submit" class="btn btn-warning btn-sm">
-                    <i class="bi bi-fire me-1"></i>{{ __('app.mark_preparing') }}
-                </button>
-            </form>
-        @endif
-
-        @if($order->status === 'preparing')
             <form method="POST" action="{{ route('admin.orders.ready', $order) }}" class="d-inline">
                 @csrf @method('PATCH')
                 <button type="submit" class="btn btn-info btn-sm text-white">
@@ -46,12 +39,14 @@
 
         @if($order->status === 'ready')
             @if($order->order_type === 'delivery')
+                @feature('core.delivery')
                 <form method="POST" action="{{ route('admin.orders.delivered', $order) }}" class="d-inline">
                     @csrf @method('PATCH')
                     <button type="submit" class="btn btn-primary btn-sm">
                         <i class="bi bi-truck me-1"></i>{{ __('app.mark_delivered') }}
                     </button>
                 </form>
+                @endfeature
             @else
                 <form method="POST" action="{{ route('admin.orders.completed', $order) }}" class="d-inline">
                     @csrf @method('PATCH')
@@ -69,12 +64,6 @@
                     <i class="bi bi-bag-check me-1"></i>{{ __('app.mark_completed') }}
                 </button>
             </form>
-        @endif
-
-        @if(!in_array($order->status, ['completed', 'rejected', 'cancelled', 'cancelled_by_admin', 'cancelled_by_customer']))
-            <button class="btn btn-outline-dark btn-sm" data-bs-toggle="modal" data-bs-target="#cancelModal">
-                <i class="bi bi-slash-circle me-1"></i>{{ __('app.cancel') }}
-            </button>
         @endif
 
         {{-- Print Invoice --}}
@@ -106,7 +95,9 @@
         <div class="col-lg-5">
 
             {{-- WhatsApp Notification Panel --}}
+            @feature('notifications.whatsapp_in_order_view')
             @include('admin.orders.partials.whatsapp-notify')
+            @endfeature
 
             {{-- Customer Card --}}
             <div class="card shadow-sm mb-4">
@@ -146,11 +137,14 @@
                         <dt class="col-6 text-muted">{{ __('app.order_type') }}</dt>
                         <dd class="col-6">{{ __('app.' . $order->order_type) }}</dd>
 
+                        @feature('core.table_ordering')
                         @if($order->order_type === 'table' && $order->table_number)
                         <dt class="col-6 text-muted">{{ __('app.table_number') }}</dt>
                         <dd class="col-6">{{ $order->table_number }}</dd>
                         @endif
+                        @endfeature
 
+                        @feature('core.delivery')
                         @if($order->order_type === 'delivery')
                         <dt class="col-6 text-muted">{{ __('app.address') }}</dt>
                         <dd class="col-6">{{ $order->address ?? '—' }}</dd>
@@ -163,6 +157,7 @@
                         <dd class="col-6">{{ $order->scheduled_at->format('Y-m-d H:i') }}</dd>
                         @endif
                         @endif
+                        @endfeature
 
                         @if($order->customer_note)
                         <dt class="col-6 text-muted">{{ __('app.customer_note') }}</dt>
@@ -262,6 +257,7 @@
                         <dt class="col-6 text-muted">{{ __('app.subtotal') }}</dt>
                         <dd class="col-6 text-end">{{ number_format($order->subtotal, 2) }}</dd>
 
+                        @feature('core.delivery')
                         @if($order->estimated_delivery_fee !== null)
                         <dt class="col-6 text-muted">{{ __('app.estimated_delivery_fee') }}</dt>
                         <dd class="col-6 text-end text-muted">{{ number_format($order->estimated_delivery_fee, 2) }}</dd>
@@ -269,6 +265,7 @@
 
                         <dt class="col-6 text-muted">{{ __('app.delivery_fee') }}</dt>
                         <dd class="col-6 text-end">{{ $order->delivery_fee !== null ? number_format($order->delivery_fee, 2) : '—' }}</dd>
+                        @endfeature
 
                         @if($order->discount)
                         <dt class="col-6 text-muted">{{ __('app.discount') }}</dt>
@@ -288,7 +285,7 @@
                             @elseif($ps === 'refunded')
                                 <span class="badge bg-warning text-dark">{{ __('app.refunded') }}</span>
                             @else
-                                @if(!in_array($order->status, ['rejected', 'cancelled', 'cancelled_by_admin', 'cancelled_by_customer']))
+                                @if(!in_array($order->status, ['rejected', 'cancelled_by_customer', 'modified']))
                                 <form method="POST" action="{{ route('admin.orders.mark-paid', $order) }}" class="d-inline">
                                     @csrf @method('PATCH')
                                     <button type="submit" class="btn btn-success btn-sm"

@@ -308,10 +308,12 @@
                                 $statusColors = [
                                     'pending'               => 'warning',
                                     'accepted'              => 'primary',
+                                    'ready'                 => 'info',
+                                    'delivered'             => 'primary',
                                     'completed'             => 'success',
                                     'rejected'              => 'danger',
-                                    'cancelled_by_admin'    => 'dark',
                                     'cancelled_by_customer' => 'secondary',
+                                    'modified'              => 'secondary',
                                 ];
                                 $color = $statusColors[$order->status] ?? 'secondary';
                             @endphp

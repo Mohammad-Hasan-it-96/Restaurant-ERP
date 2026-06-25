@@ -51,7 +51,7 @@ button {
 .main-content {
     max-width: 860px;
     margin: 0 auto;
-    padding-bottom: calc(var(--bnav-h) + 16px)
+    padding-bottom: calc(var(--bnav-h) + var(--app-banner-h, 0px) + 16px)
 }
 
 @media (min-width: 768px) {
@@ -520,7 +520,8 @@ button {
 
 .products-container {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
+    justify-content: center;
     padding: 0 12px;
     gap: 8px
 }
@@ -528,18 +529,24 @@ button {
 /* ── Product Card ──────────────────────────────────────────────────── */
 .product-card {
     display: flex;
-    align-items: center;
-    gap: 12px;
+    flex-direction: column;
     background: var(--card);
     border-radius: var(--radius-lg);
-    padding: 12px;
+    padding: 0;
     box-shadow: var(--shadow);
     cursor: pointer;
     transition: var(--transition);
     position: relative;
     border: none;
     text-align: start;
-    width: 100%
+    overflow: hidden;
+    width: calc(50% - 4px)
+}
+
+@media (min-width: 480px) {
+    .product-card {
+        width: calc(33.333% - 5.333px)
+    }
 }
 
 .product-card:hover {
@@ -556,18 +563,18 @@ button {
 }
 
 .product-thumb {
-    width: 80px;
-    height: 80px;
-    border-radius: var(--radius-md);
+    width: 100%;
+    height: 100px;
+    border-radius: 0;
     object-fit: cover;
     flex-shrink: 0;
     background: #f0ece8
 }
 
 .product-thumb-placeholder {
-    width: 80px;
-    height: 80px;
-    border-radius: var(--radius-md);
+    width: 100%;
+    height: 100px;
+    border-radius: 0;
     background: #f0ece8;
     display: flex;
     align-items: center;
@@ -579,16 +586,18 @@ button {
 .product-info {
     flex: 1;
     min-width: 0;
-    padding-inline-end: 44px
+    padding: 8px 10px;
+    padding-bottom: 38px
 }
 
 .product-name {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     margin-bottom: 3px;
-    white-space: nowrap;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
     color: var(--text)
 }
 
@@ -614,6 +623,12 @@ button {
     font-size: 14px;
     font-weight: 700;
     color: #16a34a
+}
+
+.product-price-unit {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-muted)
 }
 
 .product-price-old {
@@ -642,11 +657,12 @@ button {
 
 .product-add-btn {
     position: absolute;
-    inset-inline-end: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 36px;
-    height: 36px;
+    inset-inline-end: 8px;
+    bottom: 8px;
+    top: auto;
+    transform: none;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     border: 1.5px solid var(--border);
     background: #f5f0eb;
@@ -1384,6 +1400,58 @@ button {
     font-size: 13px;
 }
 
+/* ── Option selector (ProductModal) ─────────────────────────────────────── */
+.option-selector {
+    margin: 12px 0 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.option-group-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.option-values {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.option-value {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 100px;
+    border: 1.5px solid var(--border);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    background: #fafafa;
+}
+
+.option-value input[type="radio"] {
+    display: none;
+}
+
+.option-value:hover {
+    border-color: var(--primary);
+    background: #fff;
+}
+
+.option-value.selected {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #fff;
+}
+
 .product-sheet-per-kg {
     font-size: 12px;
     font-weight: 400;
@@ -1969,4 +2037,9 @@ button {
     to {
         transform: rotate(360deg)
     }
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }

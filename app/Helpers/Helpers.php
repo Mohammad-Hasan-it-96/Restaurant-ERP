@@ -3,7 +3,6 @@
 namespace App\Helpers;
 
 use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 
 class Helpers
@@ -21,7 +20,7 @@ class Helpers
     /**
      * Remove invalid characters from a string
      *
-     * @param string $str
+     * @param  string  $str
      * @return string
      */
     public static function remove_invalid_charcaters($str)
@@ -32,7 +31,7 @@ class Helpers
     /**
      * Translate a key to the current locale
      *
-     * @param string $key
+     * @param  string  $key
      * @return string
      */
     public static function translate($key, $replace = [], $locale = null)
@@ -52,6 +51,7 @@ class Helpers
             if ($translation === $key) {
                 // For debugging - log missing translations
                 Log::warning("Translation missing for key: $key in locale: $locale");
+
                 return $key;
             }
         }

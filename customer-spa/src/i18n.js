@@ -149,6 +149,10 @@ export const STRINGS = {
     selectWeight: 'اختر الوزن',
     weightRequired: 'يرجى اختيار الوزن',
     perKg: '/ كغ',
+    selectOption: 'اختر الخيار',
+    optionRequired: 'يرجى اختيار خيار',
+    contactWhatsapp: 'تواصل عبر واتساب',
+    whatsappOrderMsg: 'مرحباً، لدي استفسار عن طلبي رقم',
   },
   en: {
     documentTitle: 'Restaurant Menu',
@@ -289,6 +293,10 @@ export const STRINGS = {
     selectWeight: 'Select Weight',
     weightRequired: 'Please select a weight',
     perKg: '/ kg',
+    selectOption: 'Select Option',
+    optionRequired: 'Please select an option',
+    contactWhatsapp: 'Contact via WhatsApp',
+    whatsappOrderMsg: 'Hello, I have a question about my order #',
   },
 };
 

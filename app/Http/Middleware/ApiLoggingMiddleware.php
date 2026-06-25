@@ -15,9 +15,9 @@ class ApiLoggingMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         $context = [
-            'method'     => $request->method(),
-            'url'        => $request->fullUrl(),
-            'ip'         => $request->ip(),
+            'method' => $request->method(),
+            'url' => $request->fullUrl(),
+            'ip' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ];
 
@@ -34,11 +34,10 @@ class ApiLoggingMiddleware
 
         Log::info('api.response', [
             'method' => $request->method(),
-            'url'    => $request->fullUrl(),
+            'url' => $request->fullUrl(),
             'status' => $response->getStatusCode(),
         ]);
 
         return $response;
     }
 }
-

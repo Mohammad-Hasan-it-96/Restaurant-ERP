@@ -13,8 +13,8 @@ class CustomerController extends Controller
      */
     public function index(Request $request)
     {
-        $allowed   = ['created_at', 'full_name', 'orders_count', 'orders_sum_total'];
-        $sortBy    = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'created_at';
+        $allowed = ['created_at', 'full_name', 'orders_count', 'orders_sum_total'];
+        $sortBy = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'created_at';
         $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
 
         $query = Customer::withCount('orders')
@@ -25,7 +25,7 @@ class CustomerController extends Controller
         if ($search = trim((string) $request->input('search'))) {
             $query->where(function ($q) use ($search) {
                 $q->where('full_name', 'like', "%{$search}%")
-                  ->orWhere('phone',   'like', "%{$search}%");
+                    ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 
@@ -39,10 +39,10 @@ class CustomerController extends Controller
      */
     public function show(Request $request, Customer $customer)
     {
-        $orders      = $customer->orders()->latest()->paginate(10);
+        $orders = $customer->orders()->latest()->paginate(10);
         $ordersCount = $customer->orders()->count();
-        $totalSpent  = (float) $customer->orders()->sum('total');
-        $lastOrder   = $customer->orders()->latest()->first();
+        $totalSpent = (float) $customer->orders()->sum('total');
+        $lastOrder = $customer->orders()->latest()->first();
 
         $back = $request->headers->get('referer', route('admin.customers.index'));
 
@@ -60,7 +60,7 @@ class CustomerController extends Controller
         ]);
 
         $customer->update([
-            'is_blocked'     => true,
+            'is_blocked' => true,
             'blocked_reason' => $request->input('blocked_reason') ?: null,
         ]);
 
@@ -73,7 +73,7 @@ class CustomerController extends Controller
     public function unblock(Customer $customer)
     {
         $customer->update([
-            'is_blocked'     => false,
+            'is_blocked' => false,
             'blocked_reason' => null,
         ]);
 
@@ -93,7 +93,7 @@ class CustomerController extends Controller
         $nowBlocked = ! $customer->is_blocked;
 
         $customer->update([
-            'is_blocked'     => $nowBlocked,
+            'is_blocked' => $nowBlocked,
             'blocked_reason' => $nowBlocked ? ($request->input('blocked_reason') ?: null) : null,
         ]);
 
@@ -104,4 +104,3 @@ class CustomerController extends Controller
         return back()->with('success', $msg);
     }
 }
-

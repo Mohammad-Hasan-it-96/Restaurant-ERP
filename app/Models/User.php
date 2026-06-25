@@ -8,7 +8,7 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    use  HasFactory, Notifiable;
+    use HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -35,8 +35,6 @@ class User extends Authenticatable
 
     /**
      * Get the attributes that should be cast.
-     *
-     * @return array
      */
     protected function casts(): array
     {
@@ -49,7 +47,7 @@ class User extends Authenticatable
     /**
      * Check if user has a specific role
      *
-     * @param string $role
+     * @param  string  $role
      * @return bool
      */
     public function hasRole($role)
@@ -74,8 +72,8 @@ class User extends Authenticatable
      */
     public function getProfilePictureUrl()
     {
-        if ($this->profile_picture && file_exists(public_path('storage/' . $this->profile_picture))) {
-            return asset('storage/' . $this->profile_picture);
+        if ($this->profile_picture && file_exists(public_path('storage/'.$this->profile_picture))) {
+            return asset('storage/'.$this->profile_picture);
         }
 
         return asset('images/default-avatar.png');

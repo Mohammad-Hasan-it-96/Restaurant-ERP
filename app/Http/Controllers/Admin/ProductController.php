@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Option;
 use App\Models\Product;
 use App\Models\Weight;
+use App\Services\ImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -22,7 +24,7 @@ class ProductController extends Controller
     private function authorizeProductAction($product, $action): void
     {
         if (! Gate::allows($action, $product)) {
-            throw new AccessDeniedHttpException('You do not have permission to ' . $action . ' this product.');
+            throw new AccessDeniedHttpException('You do not have permission to '.$action.' this product.');
         }
     }
 
@@ -34,21 +36,29 @@ class ProductController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name_ar', 'like', "%{$search}%")
-                  ->orWhere('name_en', 'like', "%{$search}%")
-                  ->orWhere('name', 'like', "%{$search}%");
+                    ->orWhere('name_en', 'like', "%{$search}%")
+                    ->orWhere('name', 'like', "%{$search}%");
             });
         }
 
         // Filter by category
         if ($categoryId = $request->input('category_id')) {
-            $query->where('category_id', $categoryId);
+            $categories_ids = Category::query()->select('id')
+                ->where('id', $categoryId)
+                ->orWhere('parent_id', $categoryId)->get()->toArray();
+            $query->whereIn('category_id', $categories_ids);
+        }
+        // Filter by activation
+        $is_available = $request->input('is_available');
+        if ($is_available !== null && $is_available !== 'All') {
+            $query->where('is_available', $is_available);
         }
 
-        $allowed   = ['id', 'name_ar', 'price', 'discount_price', 'sort_order', 'created_at'];
-        $sortBy    = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'created_at';
+        $allowed = ['id', 'name_ar', 'price', 'discount_price', 'sort_order', 'created_at'];
+        $sortBy = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'created_at';
         $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
 
-        $products   = $query->orderBy($sortBy, $direction)->paginate(15)->withQueryString();
+        $products = $query->orderBy($sortBy, $direction)->paginate(15)->withQueryString();
         $categories = Category::query()->orderBy('name_ar')->get();
 
         // Keep legacy users list for export dropdown
@@ -61,8 +71,10 @@ class ProductController extends Controller
     {
         $this->authorizeProductAction(Product::class, 'create');
         $categories = Category::orderBy('name_ar')->get();
-        $weights    = Weight::active()->orderBy('sort_order')->get();
-        return view('admin.products.create', compact('categories', 'weights'));
+        $weights = Weight::active()->orderBy('sort_order')->get();
+        $options = Option::active()->with('values')->orderBy('name')->get();
+
+        return view('admin.products.create', compact('categories', 'weights', 'options'));
     }
 
     public function store(Request $request)
@@ -72,30 +84,32 @@ class ProductController extends Controller
         $isWeightBased = $request->boolean('is_weight_based');
 
         $validated = $request->validate([
-            'name_ar'         => 'required|string|max:255',
-            'name_en'         => 'nullable|string|max:255',
-            'price'           => $isWeightBased ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
-            'discount_price'  => 'nullable|numeric|min:0',
-            'price_per_kg'    => $isWeightBased ? 'required|numeric|min:0' : 'nullable|numeric|min:0',
+            'name_ar' => 'required|string|max:255',
+            'name_en' => 'nullable|string|max:255',
+            'price' => $isWeightBased ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
+            'discount_price' => 'nullable|numeric|min:0',
+            'price_per_kg' => $isWeightBased ? 'required|numeric|min:0' : 'nullable|numeric|min:0',
             'is_weight_based' => 'boolean',
-            'weights'         => 'nullable|array',
-            'weights.*'       => 'exists:weights,id',
-            'category_id'     => 'nullable|exists:categories,id',
-            'image'           => 'nullable|image|max:2048',
-            'is_available'    => 'boolean',
-            'is_featured'     => 'boolean',
-            'sort_order'      => 'nullable|integer',
-            'is_active'       => 'boolean',
+            'weights' => 'nullable|array',
+            'weights.*' => 'exists:weights,id',
+            'option_values' => 'nullable|array',
+            'option_values.*' => 'exists:option_values,id',
+            'category_id' => 'nullable|exists:categories,id',
+            'image' => 'nullable|image|max:2048',
+            'is_available' => 'boolean',
+            'is_featured' => 'boolean',
+            'sort_order' => 'nullable|integer',
+            'is_active' => 'boolean',
             // Legacy fields (optional)
-            'name'            => 'nullable|string|max:255',
-            'details'         => 'nullable|string',
-            'quantity'        => 'nullable|integer|min:0',
+            'name' => 'nullable|string|max:255',
+            'details' => 'nullable|string',
+            'quantity' => 'nullable|integer|min:0',
         ]);
 
         // Handle checkboxes
-        $validated['is_available']    = $request->boolean('is_available');
-        $validated['is_featured']     = $request->boolean('is_featured');
-        $validated['is_active']       = $request->boolean('is_active');
+        $validated['is_available'] = $request->boolean('is_available');
+        $validated['is_featured'] = $request->boolean('is_featured');
+        $validated['is_active'] = $request->boolean('is_active');
         $validated['is_weight_based'] = $isWeightBased;
 
         // For weight-based products use price_per_kg as the base price too
@@ -103,9 +117,9 @@ class ProductController extends Controller
             $validated['price'] = $validated['price_per_kg'];
         }
 
-        // Handle image upload
+        // Handle image upload (compressed + downscaled on the way in)
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('products', 'public');
+            $validated['image'] = app(ImageService::class)->store($request->file('image'), 'products');
         }
 
         // Fallback legacy name
@@ -116,11 +130,12 @@ class ProductController extends Controller
         // Ensure legacy quantity always has a value (DB column has no default)
         $validated['quantity'] = $validated['quantity'] ?? 0;
 
-        $product          = new Product($validated);
+        $product = new Product($validated);
         $product->user_id = Auth::id();
         $product->save();
 
         $product->weights()->sync($isWeightBased ? ($validated['weights'] ?? []) : []);
+        $product->optionValues()->sync($isWeightBased ? ($validated['option_values'] ?? []) : []);
 
         return redirect()
             ->route('admin.products.index')
@@ -129,16 +144,21 @@ class ProductController extends Controller
 
     public function edit(Request $request, $id)
     {
-        $product = Product::with('weights')->findOrFail($id);
+        $product = Product::with('weights', 'optionValues')->findOrFail($id);
         $this->authorizeProductAction($product, 'update');
-        $categories    = Category::query()->orderBy('name_ar')->get();
-        $weights       = Weight::active()->orderBy('sort_order')->get();
+        $categories = Category::query()->orderBy('name_ar')->get();
+        $weights = Weight::active()->orderBy('sort_order')->get();
         $selectedWeights = $product->weights->pluck('id')->toArray();
+        $options = Option::active()->with('values')->orderBy('name')->get();
+        $selectedOptionValues = $product->optionValues->pluck('id')->toArray();
 
         // Remember which page of the index the user came from so we can return there after save
         $back = $request->headers->get('referer', route('admin.products.index'));
 
-        return view('admin.products.edit', compact('product', 'categories', 'weights', 'selectedWeights', 'back'));
+        return view('admin.products.edit', compact(
+            'product', 'categories', 'weights', 'selectedWeights',
+            'options', 'selectedOptionValues', 'back'
+        ));
     }
 
     public function update(Request $request, $id)
@@ -149,29 +169,31 @@ class ProductController extends Controller
         $isWeightBased = $request->boolean('is_weight_based');
 
         $validated = $request->validate([
-            'name_ar'         => 'required|string|max:255',
-            'name_en'         => 'nullable|string|max:255',
-            'price'           => $isWeightBased ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
-            'discount_price'  => 'nullable|numeric|min:0',
-            'price_per_kg'    => $isWeightBased ? 'required|numeric|min:0' : 'nullable|numeric|min:0',
+            'name_ar' => 'required|string|max:255',
+            'name_en' => 'nullable|string|max:255',
+            'price' => $isWeightBased ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
+            'discount_price' => 'nullable|numeric|min:0',
+            'price_per_kg' => $isWeightBased ? 'required|numeric|min:0' : 'nullable|numeric|min:0',
             'is_weight_based' => 'boolean',
-            'weights'         => 'nullable|array',
-            'weights.*'       => 'exists:weights,id',
-            'category_id'     => 'nullable|exists:categories,id',
-            'image'           => 'nullable|image|max:2048',
-            'is_available'    => 'boolean',
-            'is_featured'     => 'boolean',
-            'sort_order'      => 'nullable|integer',
-            'is_active'       => 'boolean',
+            'weights' => 'nullable|array',
+            'weights.*' => 'exists:weights,id',
+            'option_values' => 'nullable|array',
+            'option_values.*' => 'exists:option_values,id',
+            'category_id' => 'nullable|exists:categories,id',
+            'image' => 'nullable|image|max:2048',
+            'is_available' => 'boolean',
+            'is_featured' => 'boolean',
+            'sort_order' => 'nullable|integer',
+            'is_active' => 'boolean',
             // Legacy fields
-            'name'            => 'nullable|string|max:255',
-            'details'         => 'nullable|string',
-            'quantity'        => 'nullable|integer|min:0',
+            'name' => 'nullable|string|max:255',
+            'details' => 'nullable|string',
+            'quantity' => 'nullable|integer|min:0',
         ]);
 
-        $validated['is_available']    = $request->boolean('is_available');
-        $validated['is_featured']     = $request->boolean('is_featured');
-        $validated['is_active']       = $request->boolean('is_active');
+        $validated['is_available'] = $request->boolean('is_available');
+        $validated['is_featured'] = $request->boolean('is_featured');
+        $validated['is_active'] = $request->boolean('is_active');
         $validated['is_weight_based'] = $isWeightBased;
 
         if ($isWeightBased) {
@@ -183,7 +205,7 @@ class ProductController extends Controller
             if ($product->image) {
                 Storage::disk('public')->delete($product->image);
             }
-            $validated['image'] = $request->file('image')->store('products', 'public');
+            $validated['image'] = app(ImageService::class)->store($request->file('image'), 'products');
         }
 
         // Sync legacy name
@@ -197,6 +219,7 @@ class ProductController extends Controller
         $product->update($validated);
 
         $product->weights()->sync($isWeightBased ? ($validated['weights'] ?? []) : []);
+        $product->optionValues()->sync($isWeightBased ? ($validated['option_values'] ?? []) : []);
 
         $back = $request->input('_back', route('admin.products.index'));
 
@@ -239,8 +262,8 @@ class ProductController extends Controller
     {
         $products = Product::with('category')->orderBy('sort_order')->orderBy('id')->get();
 
-        $spreadsheet = new Spreadsheet();
-        $sheet       = $spreadsheet->getActiveSheet();
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Products');
 
         // ── Headers ───────────────────────────────────────────────
@@ -264,8 +287,8 @@ class ProductController extends Controller
 
         // Style the header row
         $headerStyle = [
-            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']],
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
         ];
         $sheet->getStyle('A1:K1')->applyFromArray($headerStyle);
@@ -286,13 +309,13 @@ class ProductController extends Controller
             $sheet->setCellValue("F{$row}", $product->discount_price);
             $sheet->setCellValue("G{$row}", $product->category_id);
             $sheet->setCellValue("H{$row}", $product->is_available ? 1 : 0);
-            $sheet->setCellValue("I{$row}", $product->is_featured  ? 1 : 0);
-            $sheet->setCellValue("J{$row}", $product->is_active    ? 1 : 0);
+            $sheet->setCellValue("I{$row}", $product->is_featured ? 1 : 0);
+            $sheet->setCellValue("J{$row}", $product->is_active ? 1 : 0);
             $sheet->setCellValue("K{$row}", $product->sort_order);
             $row++;
         }
 
-        $filename = 'products_export_' . now()->format('Y-m-d') . '.xlsx';
+        $filename = 'products_export_'.now()->format('Y-m-d').'.xlsx';
 
         return $this->streamXlsx($spreadsheet, $filename);
     }
@@ -301,8 +324,8 @@ class ProductController extends Controller
 
     public function downloadTemplate()
     {
-        $spreadsheet = new Spreadsheet();
-        $sheet       = $spreadsheet->getActiveSheet();
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Products Import Template');
 
         $headers = [
@@ -324,8 +347,8 @@ class ProductController extends Controller
         }
 
         $headerStyle = [
-            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']],
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
         ];
         $sheet->getStyle('A1:K1')->applyFromArray($headerStyle);
@@ -364,18 +387,19 @@ class ProductController extends Controller
         ]);
 
         try {
-            $path        = $request->file('excel_file')->getRealPath();
+            $path = $request->file('excel_file')->getRealPath();
             $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($path);
-            $sheet       = $spreadsheet->getActiveSheet();
-            $rows        = $sheet->toArray(null, true, true, true);  // assoc by column letter
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray(null, true, true, true);  // assoc by column letter
         } catch (\Throwable $e) {
             Log::error('Product import - could not read file', ['error' => $e->getMessage()]);
-            return back()->with('error', __('app.import_file_error') . ': ' . $e->getMessage());
+
+            return back()->with('error', __('app.import_file_error').': '.$e->getMessage());
         }
 
         $imported = 0;
-        $skipped  = 0;
-        $errors   = [];
+        $skipped = 0;
+        $errors = [];
 
         foreach ($rows as $lineNo => $row) {
             // Skip header row
@@ -388,6 +412,7 @@ class ProductController extends Controller
             // Skip completely empty rows
             if ($nameAr === '') {
                 $skipped++;
+
                 continue;
             }
 
@@ -395,6 +420,7 @@ class ProductController extends Controller
             if ($price <= 0) {
                 $errors[] = "Row {$lineNo}: name_ar='{$nameAr}' skipped — price must be > 0";
                 $skipped++;
+
                 continue;
             }
 
@@ -404,31 +430,31 @@ class ProductController extends Controller
                 Product::updateOrCreate(
                     ['name_ar' => $nameAr],
                     [
-                        'name'           => $nameAr,
-                        'name_en'        => trim((string) ($row['B'] ?? '')) ?: null,
+                        'name' => $nameAr,
+                        'name_en' => trim((string) ($row['B'] ?? '')) ?: null,
                         'description_ar' => trim((string) ($row['C'] ?? '')) ?: null,
                         'description_en' => trim((string) ($row['D'] ?? '')) ?: null,
-                        'price'          => $price,
+                        'price' => $price,
                         'discount_price' => $row['F'] !== '' && $row['F'] !== null ? (float) $row['F'] : null,
-                        'category_id'    => $categoryId,
-                        'is_available'   => (bool) ($row['H'] ?? 1),
-                        'is_featured'    => (bool) ($row['I'] ?? 0),
-                        'is_active'      => (bool) ($row['J'] ?? 1),
-                        'sort_order'     => (int)  ($row['K'] ?? 0),
-                        'quantity'       => 0,
-                        'user_id'        => Auth::id(),
+                        'category_id' => $categoryId,
+                        'is_available' => (bool) ($row['H'] ?? 1),
+                        'is_featured' => (bool) ($row['I'] ?? 0),
+                        'is_active' => (bool) ($row['J'] ?? 1),
+                        'sort_order' => (int) ($row['K'] ?? 0),
+                        'quantity' => 0,
+                        'user_id' => Auth::id(),
                     ]
                 );
                 $imported++;
             } catch (\Throwable $e) {
                 Log::error("Product import - row {$lineNo} failed", ['error' => $e->getMessage()]);
-                $errors[] = "Row {$lineNo}: '{$nameAr}' — " . $e->getMessage();
+                $errors[] = "Row {$lineNo}: '{$nameAr}' — ".$e->getMessage();
             }
         }
 
         $message = __('app.import_success_count', ['count' => $imported]);
         if ($skipped) {
-            $message .= ' ' . __('app.import_skipped_count', ['count' => $skipped]);
+            $message .= ' '.__('app.import_skipped_count', ['count' => $skipped]);
         }
         if (! empty($errors)) {
             return back()
@@ -451,11 +477,10 @@ class ProductController extends Controller
             },
             $filename,
             [
-                'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'Cache-Control'       => 'max-age=0',
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Cache-Control' => 'max-age=0',
                 'Content-Disposition' => "attachment; filename=\"{$filename}\"",
             ]
         );
     }
 }
-

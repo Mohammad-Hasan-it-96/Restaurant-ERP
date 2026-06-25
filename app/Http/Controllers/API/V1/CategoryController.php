@@ -24,4 +24,3 @@ class CategoryController extends Controller
         return $this->success(CategoryResource::collection($categories));
     }
 }
-

@@ -30,4 +30,3 @@ class CustomerSession
         return app(StartSession::class)->handle($request, $next);
     }
 }
-

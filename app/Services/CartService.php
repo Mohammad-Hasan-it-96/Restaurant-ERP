@@ -26,7 +26,7 @@ class CartService
         $items = session()->get(self::SESSION_KEY, []);
 
         return [
-            'items'    => array_values($items),
+            'items' => array_values($items),
             'subtotal' => $this->calculateSubtotal($items),
         ];
     }
@@ -34,7 +34,7 @@ class CartService
     /**
      * Add a product to the cart or increase its quantity if already present.
      *
-     * @throws \InvalidArgumentException  When the product is not found or unavailable.
+     * @throws \InvalidArgumentException When the product is not found or unavailable.
      */
     public function addItem(int $productId, int $quantity): array
     {
@@ -52,7 +52,7 @@ class CartService
 
         Log::info('cart.item_added', [
             'product_id' => $productId,
-            'quantity'   => $quantity,
+            'quantity' => $quantity,
         ]);
 
         return $this->buildResponse($items);
@@ -62,7 +62,7 @@ class CartService
      * Set the quantity of a cart item explicitly.
      * Passing quantity = 0 removes the item.
      *
-     * @throws \InvalidArgumentException  When the product is not found or unavailable.
+     * @throws \InvalidArgumentException When the product is not found or unavailable.
      */
     public function updateItem(int $productId, int $quantity): array
     {
@@ -83,7 +83,7 @@ class CartService
 
         Log::info('cart.item_updated', [
             'product_id' => $productId,
-            'quantity'   => $quantity,
+            'quantity' => $quantity,
         ]);
 
         return $this->buildResponse($items);
@@ -149,10 +149,10 @@ class CartService
     {
         return [
             'product_id' => $product->id,
-            'name'       => $product->display_name,
-            'price'      => (float) $product->effective_price,
-            'quantity'   => $quantity,
-            'image'      => $product->image,
+            'name' => $product->display_name,
+            'price' => (float) $product->effective_price,
+            'quantity' => $quantity,
+            'image' => $product->image,
         ];
     }
 
@@ -163,7 +163,7 @@ class CartService
     {
         return round(
             array_sum(
-                array_map(fn($item) => $item['price'] * $item['quantity'], $items)
+                array_map(fn ($item) => $item['price'] * $item['quantity'], $items)
             ),
             2
         );
@@ -177,9 +177,8 @@ class CartService
     private function buildResponse(array $items): array
     {
         return [
-            'items'    => array_values($items),
+            'items' => array_values($items),
             'subtotal' => $this->calculateSubtotal($items),
         ];
     }
 }
-

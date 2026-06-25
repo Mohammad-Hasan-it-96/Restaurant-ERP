@@ -140,14 +140,12 @@
                                 $statusColors = [
                                     'pending'               => 'warning',
                                     'accepted'              => 'primary',
-                                    'preparing'             => 'info',
                                     'ready'                 => 'info',
                                     'delivered'             => 'primary',
                                     'completed'             => 'success',
                                     'rejected'              => 'danger',
-                                    'cancelled'             => 'secondary',
-                                    'cancelled_by_admin'    => 'dark',
                                     'cancelled_by_customer' => 'secondary',
+                                    'modified'              => 'secondary',
                                 ];
                                 $color = $statusColors[$order->status] ?? 'secondary';
                                 $paymentColors = [

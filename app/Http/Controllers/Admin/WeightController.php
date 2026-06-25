@@ -13,11 +13,11 @@ class WeightController extends Controller
         $query = Weight::query();
 
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+            $query->where('name', 'like', '%'.$request->search.'%');
         }
 
-        $allowed   = ['id', 'name', 'value_kg', 'sort_order'];
-        $sortBy    = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'sort_order';
+        $allowed = ['id', 'name', 'value_kg', 'sort_order'];
+        $sortBy = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'sort_order';
         $direction = $request->input('direction') === 'desc' ? 'desc' : 'asc';
 
         $weights = $query->orderBy($sortBy, $direction)->paginate(20)->withQueryString();
@@ -33,14 +33,14 @@ class WeightController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'       => 'required|string|max:255',
-            'value_kg'   => 'required|numeric|min:0.001',
+            'name' => 'required|string|max:255',
+            'value_kg' => 'required|numeric|min:0.001',
             'sort_order' => 'nullable|integer|min:0',
-            'is_active'  => 'nullable|boolean',
+            'is_active' => 'nullable|boolean',
         ]);
 
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
-        $validated['is_active']  = $request->boolean('is_active');
+        $validated['is_active'] = $request->boolean('is_active');
 
         Weight::create($validated);
 
@@ -58,14 +58,14 @@ class WeightController extends Controller
     public function update(Request $request, Weight $weight)
     {
         $validated = $request->validate([
-            'name'       => 'required|string|max:255',
-            'value_kg'   => 'required|numeric|min:0.001',
+            'name' => 'required|string|max:255',
+            'value_kg' => 'required|numeric|min:0.001',
             'sort_order' => 'nullable|integer|min:0',
-            'is_active'  => 'nullable|boolean',
+            'is_active' => 'nullable|boolean',
         ]);
 
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
-        $validated['is_active']  = $request->boolean('is_active');
+        $validated['is_active'] = $request->boolean('is_active');
 
         $weight->update($validated);
 

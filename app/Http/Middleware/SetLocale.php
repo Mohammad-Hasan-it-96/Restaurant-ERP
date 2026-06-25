@@ -3,9 +3,9 @@
 namespace App\Http\Middleware;
 
 use App\Models\Language;
+use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
-use Closure;
 
 class SetLocale
 {
@@ -52,13 +52,15 @@ class SetLocale
     private function parseAcceptLanguage(Request $request): ?string
     {
         $header = $request->header('Accept-Language', '');
-        if (! $header) return null;
+        if (! $header) {
+            return null;
+        }
 
         // Get list of active language codes (lowercase) from DB
         $activeCodes = Language::query()
             ->where('status', 1)
             ->pluck('code')
-            ->map(fn($c) => strtolower($c))
+            ->map(fn ($c) => strtolower($c))
             ->toArray();
 
         foreach (explode(',', $header) as $part) {
@@ -69,12 +71,14 @@ class SetLocale
                 return $short;
             }
         }
+
         return null;
     }
 
     private function dbDefault(): ?string
     {
         $lang = Language::query()->where('is_default', 1)->first();
+
         return $lang ? strtolower($lang->code) : null;
     }
 }

@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { CloseIcon, TrashIcon, PlusIcon, MinusIcon, ImageIcon } from './Icons';
 import { formatPrice, localName } from '../utils/format';
+import { featureEnabled } from '../utils/features';
 import { useI18n } from '../i18n';
 
 export default function CartDrawer({
@@ -11,6 +12,7 @@ export default function CartDrawer({
   onClear,
   onCheckout,
   modifyingOrder,
+  settings,
 }) {
   const { t, dir, lang } = useI18n();
   const [open, setOpen] = useState(false);
@@ -131,8 +133,16 @@ export default function CartDrawer({
                 <div className="cart-item-info">
                   <div className="cart-item-name">
                     {lineName}
-                    {item.weight_name && (
+                    {featureEnabled(settings, 'products.weight_products') && item.weight_name && (
                       <span className="cart-item-weight-badge">{item.weight_name}</span>
+                    )}
+                    {item.option_name && (
+                      <span
+                        className="cart-item-weight-badge"
+                        style={{ background: 'var(--primary-light, #dbeafe)', color: 'var(--primary)' }}
+                      >
+                        {item.option_name}
+                      </span>
                     )}
                   </div>
                   <div className="cart-item-price">

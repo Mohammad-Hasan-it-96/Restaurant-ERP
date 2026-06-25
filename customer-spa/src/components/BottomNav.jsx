@@ -10,11 +10,14 @@ export default function BottomNav({
   cartCount,
   cartTotal,
   onCartClick,
+  showOrders = true,
+  showProfile = true,
 }) {
   const { t } = useI18n();
   return (
     <nav className="bottom-nav" aria-label={t('mainNavAria')}>
       {/* طلباتي */}
+      {showOrders && (
       <button
         type="button"
         className={`bottom-nav-item${activePage === 'orders' ? ' active' : ''}`}
@@ -23,6 +26,7 @@ export default function BottomNav({
         <ClipboardIcon size={22} />
         <span>{t('ordersPage')}</span>
       </button>
+      )}
 
       {/* السلة — وسط */}
       <button
@@ -40,6 +44,7 @@ export default function BottomNav({
       </button>
 
       {/* حسابي */}
+      {showProfile && (
       <button
         type="button"
         className={`bottom-nav-item${activePage === 'profile' ? ' active' : ''}`}
@@ -48,6 +53,7 @@ export default function BottomNav({
         <PersonIcon size={22} />
         <span>{t('profile')}</span>
       </button>
+      )}
     </nav>
   );
 }

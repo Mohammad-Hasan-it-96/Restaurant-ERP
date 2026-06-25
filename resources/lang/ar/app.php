@@ -507,6 +507,7 @@ return [
     'order_unavailable_message'   => 'عذراً، لا يمكننا استقبال الطلبات حالياً.',
     'some_products_not_found'        => 'أحد المنتجات المختارة غير موجود.',
     'weight_required_for_product'    => 'يرجى تحديد الوزن لكل منتج مبني على الوزن.',
+    'order_type_unavailable'         => 'نوع الطلب المحدد غير متاح حالياً.',
     'product_not_active'          => 'المنتج ":name" غير متاح حالياً.',
     'product_not_available'       => 'المنتج ":name" نفذت كميته.',
     'restaurant_closed_message'   => 'نعتذر، المطعم مغلق حالياً. يرجى المحاولة لاحقاً.',

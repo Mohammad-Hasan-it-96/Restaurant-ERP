@@ -31,7 +31,7 @@ class ConfigController extends Controller
     /**
      * Display configurations for a specific group.
      *
-     * @param string $group
+     * @param  string  $group
      * @return \Illuminate\View\View
      */
     public function group($group)
@@ -52,7 +52,6 @@ class ConfigController extends Controller
     /**
      * Update system configurations.
      *
-     * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request)
@@ -65,7 +64,7 @@ class ConfigController extends Controller
         if ($request->hasFile('restaurant_logo_file')) {
             $file = $request->file('restaurant_logo_file');
             $request->validate(['restaurant_logo_file' => 'image|max:2048']);
-            $path   = $file->store('logos', 'public');
+            $path = $file->store('logos', 'public');
             $config = SystemConfig::where('key', 'restaurant_logo')->first();
             if ($config) {
                 $config->value = $path;
@@ -79,7 +78,7 @@ class ConfigController extends Controller
 
         foreach ($data as $key => $value) {
             // Skip keys that don't start with 'config_'
-            if (!str_starts_with($key, 'config_')) {
+            if (! str_starts_with($key, 'config_')) {
                 continue;
             }
 
@@ -115,7 +114,6 @@ class ConfigController extends Controller
     /**
      * Create a new system configuration.
      *
-     * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
@@ -128,7 +126,7 @@ class ConfigController extends Controller
         $validator = Validator::make(
             array_merge($request->all(), ['group' => $group]),
             [
-                'key'   => 'required|string|max:255|unique:system_configs',
+                'key' => 'required|string|max:255|unique:system_configs',
                 'value' => 'nullable|string',
                 'group' => 'required|string|max:255',
             ]
@@ -139,7 +137,7 @@ class ConfigController extends Controller
         }
 
         SystemConfig::create([
-            'key'   => $request->key,
+            'key' => $request->key,
             'value' => $request->value,
             'group' => $group,
         ]);
@@ -152,7 +150,7 @@ class ConfigController extends Controller
     /**
      * Delete a system configuration.
      *
-     * @param int $id
+     * @param  int  $id
      * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy($id)

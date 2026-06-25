@@ -13,11 +13,11 @@ class DeliveryZoneController extends Controller
         $query = DeliveryZone::query();
 
         if ($search = $request->input('search')) {
-            $query->where('area_name', 'like', '%' . $search . '%');
+            $query->where('area_name', 'like', '%'.$search.'%');
         }
 
-        $allowed   = ['id', 'area_name', 'estimated_fee', 'sort_order', 'created_at'];
-        $sortBy    = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'created_at';
+        $allowed = ['id', 'area_name', 'estimated_fee', 'sort_order', 'created_at'];
+        $sortBy = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'created_at';
         $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
 
         $zones = $query->orderBy($sortBy, $direction)->paginate(15)->withQueryString();
@@ -33,14 +33,14 @@ class DeliveryZoneController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'area_name'    => 'required|string|max:255',
-            'estimated_fee'=> 'required|numeric|min:0',
-            'sort_order'   => 'nullable|integer|min:0',
-            'is_active'    => 'nullable|boolean',
+            'area_name' => 'required|string|max:255',
+            'estimated_fee' => 'required|numeric|min:0',
+            'sort_order' => 'nullable|integer|min:0',
+            'is_active' => 'nullable|boolean',
         ]);
 
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
-        $validated['is_active']  = $request->boolean('is_active');
+        $validated['is_active'] = $request->boolean('is_active');
 
         DeliveryZone::create($validated);
 
@@ -56,14 +56,14 @@ class DeliveryZoneController extends Controller
     public function update(Request $request, DeliveryZone $deliveryZone)
     {
         $validated = $request->validate([
-            'area_name'    => 'required|string|max:255',
-            'estimated_fee'=> 'required|numeric|min:0',
-            'sort_order'   => 'nullable|integer|min:0',
-            'is_active'    => 'nullable|boolean',
+            'area_name' => 'required|string|max:255',
+            'estimated_fee' => 'required|numeric|min:0',
+            'sort_order' => 'nullable|integer|min:0',
+            'is_active' => 'nullable|boolean',
         ]);
 
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
-        $validated['is_active']  = $request->boolean('is_active');
+        $validated['is_active'] = $request->boolean('is_active');
 
         $deliveryZone->update($validated);
 
@@ -79,4 +79,3 @@ class DeliveryZoneController extends Controller
             ->with('success', __('app.delivery_zone_deleted'));
     }
 }
-

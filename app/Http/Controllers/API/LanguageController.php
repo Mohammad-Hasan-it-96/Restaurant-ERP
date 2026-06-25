@@ -19,6 +19,7 @@ class LanguageController extends Controller
     public function index()
     {
         $languages = Language::latest()->paginate(10);
+
         return view('admin.languages.index', compact('languages'));
     }
 
@@ -35,7 +36,6 @@ class LanguageController extends Controller
     /**
      * Store a newly created language in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
@@ -59,7 +59,7 @@ class LanguageController extends Controller
         if ($request->is_default) {
             Language::where('is_default', 1)->update(['is_default' => 0]);
         }
-        $language = new Language();
+        $language = new Language;
         $language->name = $request->name;
         $language->code = $request->code;
         $language->status = $request->status;
@@ -85,13 +85,13 @@ class LanguageController extends Controller
     public function edit($id)
     {
         $language = Language::findOrFail($id);
+
         return view('admin.languages.edit', compact('language'));
     }
 
     /**
      * Update the specified language in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
      * @return \Illuminate\Http\RedirectResponse
      */
@@ -119,7 +119,7 @@ class LanguageController extends Controller
         } else {
             // Ensure at least one language is default
             $defaultExists = Language::where('is_default', 1)->where('id', '!=', $language->id)->exists();
-            if (!$defaultExists) {
+            if (! $defaultExists) {
                 return redirect()->back()->with('error', 'At least one language must be set as default')->withInput();
             }
         }
@@ -187,7 +187,7 @@ class LanguageController extends Controller
             ->where('status', 1)
             ->first();
 
-        if (!$language) {
+        if (! $language) {
             // If language not found or not active, use default
             $defaultLanguage = Language::query()->where('is_default', 1)->first();
 

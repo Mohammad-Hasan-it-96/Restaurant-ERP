@@ -14,53 +14,83 @@ class ProductController extends Controller
     use ApiResponse;
 
     /**
+     * Columns the ProductResource + its accessors actually read. Limiting the
+     * SELECT to these keeps the payload identical while skipping unused columns
+     * (user_id, quantity, timestamps). `name`/`name_ar`/`name_en` feed the
+     * display_name accessor; `price`/`discount_price` feed effective_price.
+     */
+    private const LIST_COLUMNS = [
+        'id', 'category_id', 'name', 'name_ar', 'name_en', 'details',
+        'description_ar', 'description_en', 'price', 'discount_price',
+        'price_per_kg', 'is_weight_based', 'image', 'slug',
+        'is_available', 'is_featured', 'is_active', 'sort_order',
+    ];
+
+    /**
      * GET /api/v1/products
      *
      * Supports: category_id, featured=1, search, per_page
+     *
+     * Responses are cached for 5 minutes, keyed per distinct query (and per
+     * locale, since display_name/category name are locale-dependent). The cache
+     * is flushed on any product create/update/delete via Product model events.
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Product::with(['category', 'weights'])
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->orderBy('id');
+        // Key per query + locale, namespaced by the list-cache version so a
+        // write (which bumps the version on non-taggable stores) invalidates all.
+        $cacheKey = 'products.'
+            .Product::listCacheVersion().'.'
+            .app()->getLocale().'.'
+            .md5(json_encode($request->all()));
 
-        if ($categoryId = $request->input('category_id')) {
-            $query->where('category_id', $categoryId);
-        }
+        $data = Product::rememberList($cacheKey, 300, function () use ($request) {
+            $query = Product::query()
+                ->select(self::LIST_COLUMNS)
+                ->with(['category:id,name_ar,name_en', 'weights', 'optionValues.option'])
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('id');
 
-        if ($request->boolean('featured')) {
-            $query->where('is_featured', true);
-        }
+            if ($categoryId = $request->input('category_id')) {
+                $query->where('category_id', $categoryId);
+            }
 
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name_ar', 'like', '%' . $search . '%')
-                  ->orWhere('name_en', 'like', '%' . $search . '%')
-                  ->orWhere('name',    'like', '%' . $search . '%');
-            });
-        }
+            if ($request->boolean('featured')) {
+                $query->where('is_featured', true);
+            }
 
-        $perPage = (int) $request->input('per_page', 0);
+            if ($search = $request->input('search')) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name_ar', 'like', '%'.$search.'%')
+                        ->orWhere('name_en', 'like', '%'.$search.'%')
+                        ->orWhere('name', 'like', '%'.$search.'%');
+                });
+            }
 
-        if ($perPage > 0) {
-            $paginated = $query->paginate(min($perPage, 100));
-            return $this->success([
-                'items'        => ProductResource::collection($paginated->items()),
-                'current_page' => $paginated->currentPage(),
-                'last_page'    => $paginated->lastPage(),
-                'total'        => $paginated->total(),
-                'per_page'     => $paginated->perPage(),
+            $perPage = (int) $request->input('per_page', 0);
+
+            if ($perPage > 0) {
+                $paginated = $query->paginate(min($perPage, 100));
+
+                return [
+                    'items' => ProductResource::collection($paginated->items())->resolve($request),
+                    'current_page' => $paginated->currentPage(),
+                    'last_page' => $paginated->lastPage(),
+                    'total' => $paginated->total(),
+                    'per_page' => $paginated->perPage(),
+                ];
+            }
+
+            $products = $query->get();
+
+            Log::debug('products.list', [
+                'count' => $products->count(),
             ]);
-        }
 
-        $products = $query->get();
+            return ProductResource::collection($products)->resolve($request);
+        });
 
-        Log::debug('products.list', [
-            'count' => $products->count(),
-        ]);
-
-        return $this->success(ProductResource::collection($products));
+        return $this->success($data);
     }
 }
-

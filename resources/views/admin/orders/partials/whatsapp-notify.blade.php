@@ -45,11 +45,6 @@
             'reason'     => $order->rejection_reason ?? '',
             'restaurant' => $rName,
         ]),
-        'preparing' => __('app.wa_msg_preparing', [
-            'name'       => $custName,
-            'order'      => $orderNo,
-            'restaurant' => $rName,
-        ]),
         'ready' => $order->order_type === 'delivery'
             ? __('app.wa_msg_ready_delivery', [
                 'name'       => $custName,
@@ -71,15 +66,10 @@
             'order'      => $orderNo,
             'restaurant' => $rName,
         ]),
-        'cancelled_by_admin' => __('app.wa_msg_cancelled', [
-            'name'       => $custName,
-            'order'      => $orderNo,
-            'restaurant' => $rName,
-        ]),
     ];
 
     $currentStatus = $order->status;
-    $relevantStatuses = ['accepted', 'rejected', 'preparing', 'ready', 'delivered', 'completed', 'cancelled_by_admin'];
+    $relevantStatuses = ['accepted', 'rejected', 'ready', 'delivered', 'completed'];
 @endphp
 
 <div class="card shadow-sm mb-4 border-success">
