@@ -5,7 +5,6 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class HealthController extends Controller
 {
@@ -26,7 +25,7 @@ class HealthController extends Controller
             DB::select('select 1');
         } catch (\Throwable $e) {
             $db = false;
-            Log::error('health.db_failure', ['error' => $e->getMessage()]);
+            logService()->error('health.db_failure', [], $e);
         }
 
         return response()->json([

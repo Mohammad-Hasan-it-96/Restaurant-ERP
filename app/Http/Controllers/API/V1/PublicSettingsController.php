@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Services\SystemConfigService;
 use App\Support\Feature;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Log;
 
 class PublicSettingsController extends Controller
 {
@@ -36,8 +35,6 @@ class PublicSettingsController extends Controller
             // Whitelisted feature flags only — admin-only flags are never exposed.
             'features' => Feature::clientSafe(),
         ];
-
-        Log::debug('settings.public.response', $payload);
 
         return $this->success($payload);
     }

@@ -5,7 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Customer;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Context;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -34,13 +34,12 @@ class ResolveCustomerByToken
             $customer = Customer::query()->where('token', $token)->first();
 
             if ($customer) {
-                Log::debug('customer.resolved', ['id' => $customer->id, 'token' => substr($token, 0, 8).'...']);
+                // Enrich every subsequent log line in this request with the
+                // resolved customer (see InjectLogContext for the rest of the
+                // shared context).
+                Context::add('customer_id', $customer->id);
                 $request->attributes->set('customer', $customer);
-            } else {
-                Log::debug('customer.token.invalid', ['token' => substr($token, 0, 8).'...']);
             }
-        } else {
-            Log::debug('customer.session', ['id' => null]);
         }
 
         return $next($request);

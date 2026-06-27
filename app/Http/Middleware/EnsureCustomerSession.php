@@ -5,7 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Customer;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Context;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -27,12 +27,13 @@ class EnsureCustomerSession
     {
         $customerId = session()->get('customer_id');
 
-        Log::debug('customer.session', ['id' => $customerId ?? null]);
-
         if ($customerId) {
             $customer = Customer::findOrFail($customerId);
 
             if ($customer) {
+                // Enrich every subsequent log line in this request with the
+                // resolved customer (see InjectLogContext for the rest).
+                Context::add('customer_id', $customer->id);
                 // Make the model available throughout the request lifecycle
                 $request->merge(['_resolved_customer' => $customer]);
                 // Also attach via request macro-style attribute for convenience

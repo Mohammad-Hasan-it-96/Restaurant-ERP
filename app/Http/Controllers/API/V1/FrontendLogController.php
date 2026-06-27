@@ -5,7 +5,6 @@ namespace App\Http\Controllers\API\V1;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class FrontendLogController extends Controller
 {
@@ -24,12 +23,12 @@ class FrontendLogController extends Controller
             'data' => ['nullable', 'array'],
         ]);
 
-        Log::warning('frontend.error', [
+        // ip / user_agent / request_id are auto-attached via InjectLogContext,
+        // so a browser-side error correlates to its backend request.
+        logService()->warning('frontend.error', [
             'type' => $request->input('type'),
             'message' => $request->input('message'),
             'data' => $request->input('data', []),
-            'ip' => $request->ip(),
-            'user_agent' => $request->userAgent(),
         ]);
 
         return $this->success(null, 'logged');

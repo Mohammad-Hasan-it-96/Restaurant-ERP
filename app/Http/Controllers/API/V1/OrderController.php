@@ -12,7 +12,6 @@ use App\Services\SystemConfigService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
@@ -62,11 +61,6 @@ class OrderController extends Controller
     public function show($orderNumber, Request $request)
     {
         $customer = $request->attributes->get('customer');
-
-        Log::debug('order.access', [
-            'order_number' => $orderNumber,
-            'customer_id' => $customer->id ?? null,
-        ]);
 
         if (! $customer) {
             return $this->error('Unauthorized', 403);

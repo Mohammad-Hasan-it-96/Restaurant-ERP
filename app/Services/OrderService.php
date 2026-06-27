@@ -11,7 +11,6 @@ use App\Support\Feature;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -30,7 +29,7 @@ class OrderService
      */
     public function createOrder(array $data): Order
     {
-        Log::info('order.create.start', [
+        logService()->info('order.create.start', [
             'customer_phone' => $data['customer_phone'],
             'order_type' => $data['order_type'],
             'items_count' => count($data['items']),
@@ -56,7 +55,7 @@ class OrderService
         );
 
         if (Cache::has($dupKey)) {
-            Log::warning('order.create.duplicate', [
+            logService()->warning('order.create.duplicate', [
                 'customer_phone' => $data['customer_phone'],
             ]);
             throw ValidationException::withMessages([
@@ -121,7 +120,7 @@ class OrderService
                     $customer->fill($customerChanges)->save();
 
                     if (isset($customerChanges['token'])) {
-                        Log::debug('customer.token.generated', ['customer_id' => $customer->id]);
+                        logService()->info('customer.token.generated', ['customer_id' => $customer->id]);
                     }
                 }
 
@@ -204,7 +203,7 @@ class OrderService
             // ── Persist customer binding in session (outside transaction) ──
             session()->put('customer_id', $order->customer_id);
 
-            Log::info('order.create.success', [
+            logService()->info('order.create.success', [
                 'customer_id' => $order->customer_id,
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
@@ -217,10 +216,12 @@ class OrderService
             // Release the duplicate-guard lock on real errors so the user can retry
             Cache::forget($dupKey);
 
-            Log::error('order.create.failed', [
-                'error' => $e->getMessage(),
-                'payload' => $data,
-            ]);
+            // Log only non-sensitive shape of the payload (no PII / full body);
+            // the exception summary is attached by LogService.
+            logService()->error('order.create.failed', [
+                'order_type' => $data['order_type'] ?? null,
+                'items_count' => isset($data['items']) ? count($data['items']) : 0,
+            ], $e);
 
             throw $e;
         }
@@ -304,7 +305,7 @@ class OrderService
             }
         }
 
-        Log::info('order.modify.start', [
+        logService()->info('order.modify.start', [
             'old_order_id' => $oldOrder->id,
             'old_order_number' => $oldOrder->order_number,
             'customer_id' => $customer->id,
@@ -366,7 +367,7 @@ class OrderService
             return $newOrder->fresh('items', 'customer');
         });
 
-        Log::info('order.modify.success', [
+        logService()->info('order.modify.success', [
             'customer_id' => $customer->id,
             'old_order_id' => $oldOrder->id,
             'new_order_id' => $newOrder->id,

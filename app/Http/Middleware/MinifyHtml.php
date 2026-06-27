@@ -4,7 +4,6 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Log;
 
 class MinifyHtml
 {
@@ -46,7 +45,7 @@ class MinifyHtml
             $minified = preg_replace(array_keys($patterns), array_values($patterns), (string) $content);
 
             if ($minified === null) {
-                Log::error('MinifyHtml: preg_replace returned null');
+                logService()->error('minify_html.preg_replace_null');
                 $minified = (string) $content;
             }
 

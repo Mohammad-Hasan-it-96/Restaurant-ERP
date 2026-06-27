@@ -5,7 +5,6 @@ namespace App\Jobs;
 use App\Services\NotificationService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Log;
 
 class SendPushNotificationJob implements ShouldQueue
 {
@@ -40,7 +39,7 @@ class SendPushNotificationJob implements ShouldQueue
         } catch (\Throwable $e) {
             // Mirror the original swallow-and-log behaviour: a bad token or a
             // transient FCM failure must never crash the worker.
-            Log::warning('FCM notification failed', [
+            logService()->warning('fcm.notification.failed', [
                 'data' => $this->data,
                 'error' => $e->getMessage(),
             ]);

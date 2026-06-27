@@ -11,7 +11,23 @@
 |
 */
 
+use App\Services\LogService;
 use App\Support\Feature;
+
+if (! function_exists('logService')) {
+    /**
+     * Resolve the central LogService singleton.
+     *
+     * Terse entry point for structured application logging that goes through
+     * the standard levels and benefits from the globally-injected request
+     * context (see App\Http\Middleware\InjectLogContext):
+     *   logService()->error('order.create.failed', ['order_id' => $id], $e);
+     */
+    function logService(): LogService
+    {
+        return app(LogService::class);
+    }
+}
 
 if (! function_exists('feature')) {
     /**

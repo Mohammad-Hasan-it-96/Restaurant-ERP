@@ -193,6 +193,18 @@ Registered in `bootstrap/app.php` (not `Kernel.php` — this is Laravel 12's sli
 - `MinifyHtml` is **appended globally to the `web` group** — strips whitespace/comments from HTML responses while preserving `<script>`/`<style>` blocks. Skips JSON and non-HTML responses.
 - `cache.headers` is a route-middleware alias (`SetCacheHeaders`) taking an optional max-age: `cache.headers:600`. Adds `Cache-Control: public` + `Vary: Accept-Language` to successful GET/HEAD responses only. The `Vary` is critical — cached product/category payloads are locale-dependent.
 - `SetLocale` and `ApiLoggingMiddleware` are appended to the `api` group; `SetLocale` is also on `web`.
+- `InjectLogContext` is appended to **both** the `web` and `api` groups, **before** `SetLocale`/`ApiLoggingMiddleware` (see Logging below).
+
+### Logging
+
+**All application logging goes through `App\Services\LogService`** (the global `logService()` helper) — never call the `Log` facade directly. The facade is used in exactly one place, inside `LogService`.
+
+- **Levels**: `info`, `warning`, `error`, `critical` only. `error()`/`critical()` take an optional `?\Throwable $e` third argument; LogService folds a compact, non-sensitive summary (`class`, `message`, `file:line`) into the context — never log full stack traces or request payloads.
+- **Event names** use the established dot convention, e.g. `order.create.failed`, `cart.item_added`, `frontend.error`.
+- **Shared context is auto-attached**, not repeated per call. `App\Http\Middleware\InjectLogContext` populates Laravel's `Context` facade so **every** log line (app, framework, uncaught exception) carries: `request_id`, `route`, `ip`, `user_agent`, `user_id`. `customer_id` is added by `ResolveCustomerByToken` / `EnsureCustomerSession` once resolved. `order_id` is passed per-call. The `request_id` is also returned as the `X-Request-Id` response header so SPA/browser errors (`POST /api/v1/logs`) correlate to the backend request.
+- **Daily rotation**: the default `LOG_CHANNEL=app` is a stack over the `daily` channel (`storage/logs/laravel-YYYY-MM-DD.log`, retention `LOG_DAILY_DAYS`, default 14). The standard line formatter is kept so the log viewer at `/admin/system-secure-metrics-health-logs` still parses it.
+- **Telegram alerting (future seam, not implemented)**: the `telegram` channel is added to the `app` stack only when `LOG_TELEGRAM_ENABLED=true`, routing `error`+`critical` (≥ `LOG_TELEGRAM_LEVEL`) to Telegram. Enabling it means implementing `App\Logging\TelegramHandler` (dispatch a queued job, like `SendPushNotificationJob`) + setting `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`, then `php artisan config:cache`. No application code changes are needed — routing is by Monolog level.
+- **Prod**: re-run `php artisan config:cache` after changing `config/logging.php` or any `LOG_*` env var.
 
 ### Health Checks
 

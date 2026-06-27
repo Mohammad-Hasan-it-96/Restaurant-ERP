@@ -18,7 +18,7 @@ return [
     |
     */
 
-    'default' => env('LOG_CHANNEL', 'stack'),
+    'default' => env('LOG_CHANNEL', 'app'),
 
     /*
     |--------------------------------------------------------------------------
@@ -52,6 +52,28 @@ return [
 
     'channels' => [
 
+        /*
+        |----------------------------------------------------------------------
+        | Application stack (default)
+        |----------------------------------------------------------------------
+        |
+        | Production-grade default: writes to a daily-rotating file and, when
+        | LOG_TELEGRAM_ENABLED=true, ALSO fans error+critical records out to the
+        | Telegram channel below. The Telegram channel (and its handler class)
+        | is only resolved when the flag is on, so it stays a zero-cost seam
+        | until you turn it on.
+        |
+        */
+
+        'app' => [
+            'driver' => 'stack',
+            'channels' => array_values(array_filter([
+                'daily',
+                env('LOG_TELEGRAM_ENABLED', false) ? 'telegram' : null,
+            ])),
+            'ignore_exceptions' => false,
+        ],
+
         'stack' => [
             'driver' => 'stack',
             'channels' => explode(',', env('LOG_STACK', 'single')),
@@ -71,6 +93,26 @@ return [
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
             'replace_placeholders' => true,
+        ],
+
+        /*
+        |----------------------------------------------------------------------
+        | Telegram alert sink (future integration)
+        |----------------------------------------------------------------------
+        |
+        | Drop-in seam: error+critical records are pushed to Telegram once
+        | App\Logging\TelegramHandler is implemented and LOG_TELEGRAM_ENABLED is
+        | true (see config('logging.channels.app')). Routing is by Monolog
+        | level, so no application code changes are required to enable it —
+        | LogService::error()/critical() reach Telegram automatically.
+        |
+        */
+
+        'telegram' => [
+            'driver' => 'monolog',
+            'handler' => App\Logging\TelegramHandler::class,
+            'level' => env('LOG_TELEGRAM_LEVEL', 'error'),
+            'handler_with' => [],
         ],
 
         'slack' => [

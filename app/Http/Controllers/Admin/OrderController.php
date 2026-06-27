@@ -10,7 +10,6 @@ use App\Services\NotificationService;
 use App\Services\SystemConfigService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -145,11 +144,11 @@ class OrderController extends Controller
             'total' => (float) $order->subtotal + $newFee,
         ]);
 
-        Log::info('delivery_fee_updated', [
+        // user_id (the acting admin) is auto-attached via InjectLogContext.
+        logService()->info('order.delivery_fee.updated', [
             'order_id' => $order->id,
             'old_fee' => $oldFee,
             'new_fee' => $newFee,
-            'admin_id' => auth()->id(),
         ]);
 
         return back()->with('success', __('app.delivery_fee_updated'));

@@ -3,7 +3,6 @@
 namespace App\Helpers;
 
 use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\Log;
 
 class Helpers
 {
@@ -50,7 +49,10 @@ class Helpers
             // If still not found, return the key itself
             if ($translation === $key) {
                 // For debugging - log missing translations
-                Log::warning("Translation missing for key: $key in locale: $locale");
+                logService()->warning('translation.missing', [
+                    'key' => $key,
+                    'locale' => $locale,
+                ]);
 
                 return $key;
             }

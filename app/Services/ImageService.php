@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -115,7 +114,7 @@ class ImageService
 
         Storage::disk('public')->put($storePath, $binary);
 
-        Log::debug('image.compressed', [
+        logService()->info('image.compressed', [
             'dir' => $dir,
             'original_bytes' => (int) @filesize($path),
             'stored_bytes' => strlen($binary),

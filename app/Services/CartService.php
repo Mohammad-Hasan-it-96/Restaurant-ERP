@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Product;
-use Illuminate\Support\Facades\Log;
 
 class CartService
 {
@@ -50,7 +49,7 @@ class CartService
 
         session()->put(self::SESSION_KEY, $items);
 
-        Log::info('cart.item_added', [
+        logService()->info('cart.item_added', [
             'product_id' => $productId,
             'quantity' => $quantity,
         ]);
@@ -81,7 +80,7 @@ class CartService
 
         session()->put(self::SESSION_KEY, $items);
 
-        Log::info('cart.item_updated', [
+        logService()->info('cart.item_updated', [
             'product_id' => $productId,
             'quantity' => $quantity,
         ]);
@@ -100,7 +99,7 @@ class CartService
 
         session()->put(self::SESSION_KEY, $items);
 
-        Log::info('cart.item_removed', ['product_id' => $productId]);
+        logService()->info('cart.item_removed', ['product_id' => $productId]);
 
         return $this->buildResponse($items);
     }
@@ -112,7 +111,7 @@ class CartService
     {
         session()->forget(self::SESSION_KEY);
 
-        Log::info('cart.cleared');
+        logService()->info('cart.cleared');
 
         return $this->buildResponse([]);
     }

@@ -7,7 +7,6 @@ use App\Models\Customer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -107,7 +106,7 @@ class CustomerController extends Controller
         if ($customer->fcm_token !== $validated['fcm_token']) {
             $customer->update(['fcm_token' => $validated['fcm_token']]);
 
-            Log::info('FCM token updated', [
+            logService()->info('fcm.token.updated', [
                 'customer_id' => $customer->id,
                 'token_prefix' => substr($validated['fcm_token'], 0, 12), // never log the full token
             ]);

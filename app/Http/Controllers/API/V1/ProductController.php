@@ -7,7 +7,6 @@ use App\Http\Resources\V1\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
@@ -83,10 +82,6 @@ class ProductController extends Controller
             }
 
             $products = $query->get();
-
-            Log::debug('products.list', [
-                'count' => $products->count(),
-            ]);
 
             return ProductResource::collection($products)->resolve($request);
         });

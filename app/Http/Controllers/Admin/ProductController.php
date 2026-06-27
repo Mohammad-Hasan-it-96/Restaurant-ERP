@@ -11,7 +11,6 @@ use App\Services\ImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -392,7 +391,7 @@ class ProductController extends Controller
             $sheet = $spreadsheet->getActiveSheet();
             $rows = $sheet->toArray(null, true, true, true);  // assoc by column letter
         } catch (\Throwable $e) {
-            Log::error('Product import - could not read file', ['error' => $e->getMessage()]);
+            logService()->error('product.import.read_failed', [], $e);
 
             return back()->with('error', __('app.import_file_error').': '.$e->getMessage());
         }
@@ -447,7 +446,7 @@ class ProductController extends Controller
                 );
                 $imported++;
             } catch (\Throwable $e) {
-                Log::error("Product import - row {$lineNo} failed", ['error' => $e->getMessage()]);
+                logService()->warning('product.import.row_failed', ['row' => $lineNo], $e);
                 $errors[] = "Row {$lineNo}: '{$nameAr}' — ".$e->getMessage();
             }
         }
