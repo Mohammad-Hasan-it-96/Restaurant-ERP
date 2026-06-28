@@ -172,15 +172,13 @@ class SystemConfig extends Model
         } elseif ($group) {
             Cache::forget(self::$cachePrefix.'group_'.$group);
         } else {
-            // Clear all system config cache
-            $keys = self::all()->pluck('key')->toArray();
-            foreach ($keys as $k) {
+            // Clear all system config cache. Pluck only the columns we need
+            // (SELECT key / DISTINCT group) instead of hydrating every full row.
+            foreach (self::query()->pluck('key') as $k) {
                 Cache::forget(self::$cachePrefix.$k);
             }
 
-            // Clear all group caches
-            $groups = self::distinct()->pluck('group')->toArray();
-            foreach ($groups as $g) {
+            foreach (self::query()->distinct()->pluck('group') as $g) {
                 Cache::forget(self::$cachePrefix.'group_'.$g);
             }
         }

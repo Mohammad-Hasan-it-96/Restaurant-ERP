@@ -10,6 +10,7 @@ use App\Services\NotificationService;
 use App\Services\SystemConfigService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class OrderController extends Controller
 {
@@ -55,10 +56,10 @@ class OrderController extends Controller
 
         $orders = $query->paginate(20)->withQueryString();
 
-        // Counts per status for tab badges
-        $counts = Order::selectRaw('status, count(*) as total')
+        // Counts per status for tab badges (cached; flushed by Order model events).
+        $counts = Cache::remember(Order::STATUS_COUNTS_CACHE_KEY, 300, fn () => Order::selectRaw('status, count(*) as total')
             ->groupBy('status')
-            ->pluck('total', 'status');
+            ->pluck('total', 'status'));
 
         // Latest order ID for JS polling baseline
         $latestId = Order::max('id') ?? 0;

@@ -17,13 +17,15 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(function () {
 
     // ── Public (no session required) ─────────────────────────────────────────
-    Route::get('settings/public', PublicSettingsController::class)->name('settings.public');
-    Route::get('version', \App\Http\Controllers\API\V1\VersionController::class)->name('version');
-
-    Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
-    Route::get('products', [\App\Http\Controllers\API\V1\ProductController::class, 'index'])->name('products.index');
-
-    Route::get('delivery-zones', [DeliveryZoneController::class, 'index'])->name('delivery-zones.index');
+    // Browser/CDN cache (5 min) on the read-only public GETs. cache.headers adds
+    // Cache-Control: public + Vary: Accept-Language (payloads are locale-dependent).
+    Route::middleware('cache.headers:300')->group(function () {
+        Route::get('settings/public', PublicSettingsController::class)->name('settings.public');
+        Route::get('version', \App\Http\Controllers\API\V1\VersionController::class)->name('version');
+        Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
+        Route::get('products', [\App\Http\Controllers\API\V1\ProductController::class, 'index'])->name('products.index');
+        Route::get('delivery-zones', [DeliveryZoneController::class, 'index'])->name('delivery-zones.index');
+    });
 
     // Frontend structured logging — { message, level?, context? }. Relaxed
     // throttle (30/min/IP) that replaces the group throttle (no double-count).

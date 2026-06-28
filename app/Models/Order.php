@@ -9,19 +9,31 @@ use Illuminate\Support\Facades\Cache;
 
 class Order extends Model
 {
-    /** Cache key for the admin dashboard summary stats. */
+    /** Cache key for the admin dashboard summary stat cards. */
     const DASHBOARD_STATS_CACHE_KEY = 'dashboard.stats';
 
+    /** Cache key for the heavier dashboard aggregates (charts, top lists). */
+    const DASHBOARD_DETAILED_STATS_CACHE_KEY = 'dashboard.detailed_stats';
+
+    /** Cache key for the order index status badge counts. */
+    const STATUS_COUNTS_CACHE_KEY = 'orders.status_counts';
+
     /**
-     * Flush the cached dashboard stats whenever an order is created, updated
-     * (e.g. a status change), or deleted. Every write path goes through
-     * Eloquent (Order::create / $order->update), so the saved/deleted events
-     * cover them all in one place.
+     * Flush the cached dashboard stats + order status counts whenever an order is
+     * created, updated (e.g. a status change), or deleted. Every write path goes
+     * through Eloquent (Order::create / $order->update), so the saved/deleted
+     * events cover them all in one place.
      */
     protected static function booted(): void
     {
-        static::saved(fn () => Cache::forget(self::DASHBOARD_STATS_CACHE_KEY));
-        static::deleted(fn () => Cache::forget(self::DASHBOARD_STATS_CACHE_KEY));
+        $flush = function () {
+            Cache::forget(self::DASHBOARD_STATS_CACHE_KEY);
+            Cache::forget(self::DASHBOARD_DETAILED_STATS_CACHE_KEY);
+            Cache::forget(self::STATUS_COUNTS_CACHE_KEY);
+        };
+
+        static::saved($flush);
+        static::deleted($flush);
     }
 
     // ??? Order type constants ??????????????????????????????????????

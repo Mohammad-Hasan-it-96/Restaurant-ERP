@@ -55,8 +55,8 @@ class CustomerController extends Controller
     /**
      * GET /api/v1/customer/orders
      *
-     * Returns all orders belonging to the session customer.
-     * Returns empty array when no session.
+     * Returns the session customer's recent orders (most recent first, capped so
+     * the payload can't grow unbounded with history). Empty array when no session.
      */
     public function orders(Request $request): JsonResponse
     {
@@ -69,6 +69,7 @@ class CustomerController extends Controller
         $orders = \App\Models\Order::query()->where('customer_id', $customer->id)
             ->with('items')
             ->latest()
+            ->limit(50)
             ->get();
 
         return $this->success(OrderResource::collection($orders));

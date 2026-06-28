@@ -171,11 +171,8 @@
                             </h6>
                         </div>
                         <div class="card-body d-flex flex-column justify-content-center">
-                            @php
-                                $typeTable    = \App\Models\Order::where('order_type', \App\Models\Order::TYPE_TABLE)->count();
-                                $typeDelivery = \App\Models\Order::where('order_type', \App\Models\Order::TYPE_DELIVERY)->count();
-                                $typeTakeaway = \App\Models\Order::where('order_type', \App\Models\Order::TYPE_TAKEAWAY)->count();
-                            @endphp
+                            {{-- $typeTable / $typeDelivery / $typeTakeaway come from the
+                                 cached dashboard aggregates (DashboardController). --}}
                             <canvas id="orderTypeChart" height="220"></canvas>
                         </div>
                     </div>

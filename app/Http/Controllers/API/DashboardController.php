@@ -44,39 +44,60 @@ class DashboardController extends BaseController
             ->limit(10)
             ->get();
 
-        // ── Statuses excluded from sales/product totals (not real sales) ──────
-        $excludedStatuses = [
-            Order::STATUS_CANCELLED_BY_CUSTOMER,
-            Order::STATUS_REJECTED,
-            Order::STATUS_MODIFIED,
-        ];
+        // ── Heavier aggregates: cached 300s, flushed by Order model events ─────
+        $detailed = Cache::remember(Order::DASHBOARD_DETAILED_STATS_CACHE_KEY, 300, function () {
+            $excludedStatuses = [
+                Order::STATUS_CANCELLED_BY_CUSTOMER,
+                Order::STATUS_REJECTED,
+                Order::STATUS_MODIFIED,
+            ];
 
-        // ── Total customers (stat card) ───────────────────────────────────────
-        $totalCustomers = Customer::count();
+            // Order-type breakdown — one grouped query (was 3 count()s in the view).
+            $typeCounts = Order::selectRaw('order_type, COUNT(*) as cnt')
+                ->groupBy('order_type')
+                ->pluck('cnt', 'order_type');
 
-        // ── Top 5 customers by order count ────────────────────────────────────
-        $topCustomers = Customer::withCount('orders')
-            ->orderByDesc('orders_count')
-            ->limit(5)
-            ->get();
+            // Weekly chart — one grouped query (was 7 separate per-day counts).
+            $weekStart = Carbon::today()->subDays(6)->startOfDay();
+            $daily = Order::where('created_at', '>=', $weekStart)
+                ->selectRaw('DATE(created_at) as d, COUNT(*) as cnt')
+                ->groupBy('d')
+                ->pluck('cnt', 'd');
 
-        // ── Top 5 products by quantity sold ───────────────────────────────────
-        $topProducts = OrderItem::query()
-            ->selectRaw('product_name, SUM(quantity) as total_sold')
-            ->whereHas('order', fn ($q) => $q->whereNotIn('status', $excludedStatuses))
-            ->groupBy('product_name')
-            ->orderByDesc('total_sold')
-            ->limit(5)
-            ->get();
+            $weekLabels = [];
+            $weekCounts = [];
+            for ($i = 6; $i >= 0; $i--) {
+                $day = Carbon::today()->subDays($i);
+                $weekLabels[] = $day->format('D');
+                $weekCounts[] = (int) ($daily[$day->format('Y-m-d')] ?? 0);
+            }
 
-        // ── Weekly orders chart (last 7 days, oldest → newest) ────────────────
-        $weekLabels = [];
-        $weekCounts = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $day = Carbon::today()->subDays($i);
-            $weekLabels[] = $day->format('D');
-            $weekCounts[] = Order::whereDate('created_at', $day)->count();
-        }
+            return [
+                'totalCustomers' => Customer::count(),
+                'topCustomers' => Customer::withCount('orders')
+                    ->orderByDesc('orders_count')->limit(5)->get(),
+                'topProducts' => OrderItem::query()
+                    ->selectRaw('product_name, SUM(quantity) as total_sold')
+                    ->whereHas('order', fn ($q) => $q->whereNotIn('status', $excludedStatuses))
+                    ->groupBy('product_name')->orderByDesc('total_sold')->limit(5)->get(),
+                'weekLabels' => $weekLabels,
+                'weekCounts' => $weekCounts,
+                'typeTable' => (int) ($typeCounts[Order::TYPE_TABLE] ?? 0),
+                'typeDelivery' => (int) ($typeCounts[Order::TYPE_DELIVERY] ?? 0),
+                'typeTakeaway' => (int) ($typeCounts[Order::TYPE_TAKEAWAY] ?? 0),
+            ];
+        });
+
+        [
+            'totalCustomers' => $totalCustomers,
+            'topCustomers' => $topCustomers,
+            'topProducts' => $topProducts,
+            'weekLabels' => $weekLabels,
+            'weekCounts' => $weekCounts,
+            'typeTable' => $typeTable,
+            'typeDelivery' => $typeDelivery,
+            'typeTakeaway' => $typeTakeaway,
+        ] = $detailed;
 
         // ── Restaurant branding (shown in the dashboard banner) ───────────────
         $restaurantName = $this->config->getFirstText(
@@ -97,6 +118,9 @@ class DashboardController extends BaseController
             'topProducts',
             'weekLabels',
             'weekCounts',
+            'typeTable',
+            'typeDelivery',
+            'typeTakeaway',
             'restaurantName',
             'restaurantNameAr',
             'restaurantNameEn',

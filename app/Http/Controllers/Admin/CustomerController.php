@@ -40,9 +40,13 @@ class CustomerController extends Controller
     public function show(Request $request, Customer $customer)
     {
         $orders = $customer->orders()->latest()->paginate(10);
-        $ordersCount = $customer->orders()->count();
+        // Derive count + latest order from the paginator (no extra queries on
+        // page 1); only the all-time sum needs its own aggregate query.
+        $ordersCount = $orders->total();
         $totalSpent = (float) $customer->orders()->sum('total');
-        $lastOrder = $customer->orders()->latest()->first();
+        $lastOrder = $orders->currentPage() === 1
+            ? $orders->first()
+            : $customer->orders()->latest()->first();
 
         $back = $request->headers->get('referer', route('admin.customers.index'));
 

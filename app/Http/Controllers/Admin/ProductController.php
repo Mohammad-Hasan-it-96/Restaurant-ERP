@@ -265,7 +265,10 @@ class ProductController extends Controller
 
     public function export(Request $request)
     {
-        $products = Product::with('category')->orderBy('sort_order')->orderBy('id')->get();
+        // Only the columns the export actually writes (no category relation — the
+        // sheet emits the raw category_id). Chunked below to bound memory.
+        $exportColumns = ['id', 'name_ar', 'name_en', 'description_ar', 'description_en',
+            'price', 'discount_price', 'category_id', 'is_available', 'is_featured', 'is_active', 'sort_order'];
 
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
@@ -303,22 +306,25 @@ class ProductController extends Controller
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
-        // ── Data rows ─────────────────────────────────────────────
+        // ── Data rows (chunked so a large catalogue isn't all hydrated at once) ──
         $row = 2;
-        foreach ($products as $product) {
-            $sheet->setCellValue("A{$row}", $product->name_ar);
-            $sheet->setCellValue("B{$row}", $product->name_en);
-            $sheet->setCellValue("C{$row}", $product->description_ar);
-            $sheet->setCellValue("D{$row}", $product->description_en);
-            $sheet->setCellValue("E{$row}", $product->price);
-            $sheet->setCellValue("F{$row}", $product->discount_price);
-            $sheet->setCellValue("G{$row}", $product->category_id);
-            $sheet->setCellValue("H{$row}", $product->is_available ? 1 : 0);
-            $sheet->setCellValue("I{$row}", $product->is_featured ? 1 : 0);
-            $sheet->setCellValue("J{$row}", $product->is_active ? 1 : 0);
-            $sheet->setCellValue("K{$row}", $product->sort_order);
-            $row++;
-        }
+        Product::select($exportColumns)->orderBy('sort_order')->orderBy('id')
+            ->chunk(1000, function ($products) use ($sheet, &$row) {
+                foreach ($products as $product) {
+                    $sheet->setCellValue("A{$row}", $product->name_ar);
+                    $sheet->setCellValue("B{$row}", $product->name_en);
+                    $sheet->setCellValue("C{$row}", $product->description_ar);
+                    $sheet->setCellValue("D{$row}", $product->description_en);
+                    $sheet->setCellValue("E{$row}", $product->price);
+                    $sheet->setCellValue("F{$row}", $product->discount_price);
+                    $sheet->setCellValue("G{$row}", $product->category_id);
+                    $sheet->setCellValue("H{$row}", $product->is_available ? 1 : 0);
+                    $sheet->setCellValue("I{$row}", $product->is_featured ? 1 : 0);
+                    $sheet->setCellValue("J{$row}", $product->is_active ? 1 : 0);
+                    $sheet->setCellValue("K{$row}", $product->sort_order);
+                    $row++;
+                }
+            });
 
         $filename = 'products_export_'.now()->format('Y-m-d').'.xlsx';
 
