@@ -125,6 +125,8 @@ class OrderController extends Controller
             'cancelled_at' => now(),
         ]);
 
+        activity()->log('order.cancelled', $order, 'Order #'.$order->order_number, [], $customer);
+
         return $this->success(null, __('app.order_cancelled_by_customer'));
     }
 

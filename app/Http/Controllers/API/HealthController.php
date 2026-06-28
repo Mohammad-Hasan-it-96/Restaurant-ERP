@@ -3,35 +3,26 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Services\HealthService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 
 class HealthController extends Controller
 {
     /**
      * GET /api/health
      *
-     * Liveness/readiness probe for monitoring. Verifies the DB connection and
-     * returns 200 when healthy, 503 when the DB is unreachable so uptime tooling
-     * can detect the failure. Intentionally unthrottled and session-less.
+     * Comprehensive, admin-gated health report: database, cache, queue, storage,
+     * disk usage, plus PHP/Laravel versions. Returns 503 when a critical subsystem
+     * (database/cache/storage) is down, otherwise 200 (including "degraded").
+     *
+     * Note: this route is gated by auth+admin (see routes/web.php). Automated
+     * external liveness should use the public, dependency-free /up route instead,
+     * since a DB outage fails auth here before this controller runs.
      */
-    public function __invoke(): JsonResponse
+    public function __invoke(HealthService $health): JsonResponse
     {
-        $db = true;
+        $report = $health->report();
 
-        try {
-            // Cheap round-trip that actually exercises the connection.
-            DB::connection()->getPdo();
-            DB::select('select 1');
-        } catch (\Throwable $e) {
-            $db = false;
-            logService()->error('health.db_failure', [], $e);
-        }
-
-        return response()->json([
-            'status' => $db ? 'ok' : 'error',
-            'db' => $db,
-            'time' => now()->toIso8601String(),
-        ], $db ? 200 : 503);
+        return response()->json($report, $report['status'] === 'error' ? 503 : 200);
     }
 }

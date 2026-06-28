@@ -136,6 +136,8 @@ class ProductController extends Controller
         $product->weights()->sync($isWeightBased ? ($validated['weights'] ?? []) : []);
         $product->optionValues()->sync($isWeightBased ? ($validated['option_values'] ?? []) : []);
 
+        activity()->log('product.created', $product, 'Product created: '.$product->name_ar);
+
         return redirect()
             ->route('admin.products.index')
             ->with('success', __('app.product_created'));
@@ -220,6 +222,8 @@ class ProductController extends Controller
         $product->weights()->sync($isWeightBased ? ($validated['weights'] ?? []) : []);
         $product->optionValues()->sync($isWeightBased ? ($validated['option_values'] ?? []) : []);
 
+        activity()->log('product.updated', $product, 'Product updated: '.$product->name_ar);
+
         $back = $request->input('_back', route('admin.products.index'));
 
         return redirect($back)->with('success', __('app.product_updated'));
@@ -244,6 +248,8 @@ class ProductController extends Controller
         }
 
         $product->delete();
+
+        activity()->log('product.deleted', $product, 'Product deleted: '.$product->name_ar);
 
         return redirect()
             ->route('admin.products.index')

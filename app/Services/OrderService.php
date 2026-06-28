@@ -210,6 +210,11 @@ class OrderService
                 'total' => $order->total,
             ]);
 
+            activity()->log('order.placed', $order, 'Order #'.$order->order_number, [
+                'order_type' => $order->order_type,
+                'total' => $order->total,
+            ], $order->customer);
+
             return $order;
 
         } catch (\Throwable $e) {
@@ -373,6 +378,10 @@ class OrderService
             'new_order_id' => $newOrder->id,
             'new_order_num' => $newOrder->order_number,
         ]);
+
+        activity()->log('order.modified', $newOrder, 'Order #'.$newOrder->order_number.' (from #'.$oldOrder->order_number.')', [
+            'old_order_number' => $oldOrder->order_number,
+        ], $customer);
 
         return $newOrder;
     }

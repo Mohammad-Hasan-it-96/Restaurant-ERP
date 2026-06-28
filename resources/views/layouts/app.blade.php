@@ -700,6 +700,16 @@
                         <i class="bi bi-file-text me-3"></i>
                         <span>سجلات النظام</span>
                     </a>
+                    <a href="{{ route('admin.activity-logs.index') }}"
+                       class="nav-link d-flex align-items-center py-3 px-3 rounded-3 mb-1 {{ request()->routeIs('admin.activity-logs.*') ? 'active' : '' }}">
+                        <i class="bi bi-clock-history me-3"></i>
+                        <span>{{ __('app.activity_log') }}</span>
+                    </a>
+                    <a href="{{ url('api/health') }}" target="_blank"
+                       class="nav-link d-flex align-items-center py-3 px-3 rounded-3 mb-1">
+                        <i class="bi bi-heart-pulse me-3"></i>
+                        <span>{{ __('app.health_check') }}</span>
+                    </a>
                     @endif
                 </div>
             </div>

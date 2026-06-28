@@ -63,6 +63,13 @@ return [
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
+            // Used by spatie/laravel-backup's mysqldump. Set DB_DUMP_BINARY_PATH
+            // to the MySQL bin directory when mysqldump is not on PATH (e.g. Windows
+            // dev), otherwise leave empty.
+            'dump' => [
+                'dump_binary_path' => env('DB_DUMP_BINARY_PATH', ''),
+                'use_single_transaction' => true,
+            ],
         ],
 
         'mariadb' => [

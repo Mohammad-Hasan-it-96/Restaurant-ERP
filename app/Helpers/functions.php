@@ -11,8 +11,23 @@
 |
 */
 
+use App\Services\ActivityLogger;
 use App\Services\LogService;
 use App\Support\Feature;
+
+if (! function_exists('activity')) {
+    /**
+     * Resolve the ActivityLogger for recording business audit events.
+     *
+     * Records curated business events (admin and customer) to the activity_logs
+     * table, separate from LogService's technical logs:
+     *   activity()->log('order.accepted', $order, 'Order #'.$order->order_number);
+     */
+    function activity(): ActivityLogger
+    {
+        return app(ActivityLogger::class);
+    }
+}
 
 if (! function_exists('logService')) {
     /**

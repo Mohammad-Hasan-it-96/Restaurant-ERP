@@ -64,6 +64,10 @@ class CustomerController extends Controller
             'blocked_reason' => $request->input('blocked_reason') ?: null,
         ]);
 
+        activity()->log('customer.blocked', $customer, 'Customer blocked: '.$customer->full_name, [
+            'reason' => $customer->blocked_reason,
+        ]);
+
         return back()->with('success', __('app.customer_blocked_success'));
     }
 
@@ -76,6 +80,8 @@ class CustomerController extends Controller
             'is_blocked' => false,
             'blocked_reason' => null,
         ]);
+
+        activity()->log('customer.unblocked', $customer, 'Customer unblocked: '.$customer->full_name);
 
         return back()->with('success', __('app.customer_unblocked_success'));
     }
@@ -96,6 +102,13 @@ class CustomerController extends Controller
             'is_blocked' => $nowBlocked,
             'blocked_reason' => $nowBlocked ? ($request->input('blocked_reason') ?: null) : null,
         ]);
+
+        activity()->log(
+            $nowBlocked ? 'customer.blocked' : 'customer.unblocked',
+            $customer,
+            ($nowBlocked ? 'Customer blocked: ' : 'Customer unblocked: ').$customer->full_name,
+            $nowBlocked ? ['reason' => $customer->blocked_reason] : [],
+        );
 
         $msg = $nowBlocked
             ? __('app.customer_blocked_success')

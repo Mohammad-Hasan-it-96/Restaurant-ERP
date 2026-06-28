@@ -59,6 +59,7 @@ class ConfigController extends Controller
         $data = $request->except('_token', '_method');
 
         $affectedGroups = [];
+        $changedKeys = [];
 
         // ── Handle restaurant_logo file upload ─────────────────────────
         if ($request->hasFile('restaurant_logo_file')) {
@@ -71,6 +72,7 @@ class ConfigController extends Controller
                 $config->save();
                 SystemConfig::clearCache('restaurant_logo');
                 $affectedGroups[] = $config->group;
+                $changedKeys[] = 'restaurant_logo';
             }
             // Overwrite the text-input value so it won't be saved again below
             $data['config_restaurant_logo'] = $path;
@@ -100,12 +102,20 @@ class ConfigController extends Controller
                 // Clear the cache for this config
                 SystemConfig::clearCache($configKey);
                 $affectedGroups[] = $config->group;
+                $changedKeys[] = $configKey;
             }
         }
 
         // Also clear group-level caches so any cached groups are invalidated
         foreach (array_unique($affectedGroups) as $grp) {
             SystemConfig::clearCache(null, $grp);
+        }
+
+        if (! empty($changedKeys)) {
+            activity()->log('settings.updated', null, 'System settings updated', [
+                'keys' => array_values(array_unique($changedKeys)),
+                'groups' => array_values(array_unique($affectedGroups)),
+            ]);
         }
 
         return redirect()->back()->with('success', __('app.configs_updated'));
@@ -136,11 +146,13 @@ class ConfigController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        SystemConfig::create([
+        $config = SystemConfig::create([
             'key' => $request->key,
             'value' => $request->value,
             'group' => $group,
         ]);
+
+        activity()->log('settings.created', $config, 'Config created: '.$config->key);
 
         return redirect()
             ->route('admin.configs.group', $group)
@@ -162,6 +174,8 @@ class ConfigController extends Controller
         SystemConfig::clearCache($config->key);
 
         $config->delete();
+
+        activity()->log('settings.deleted', $config, 'Config deleted: '.$config->key);
 
         return redirect()
             ->route('admin.configs.group', $group)

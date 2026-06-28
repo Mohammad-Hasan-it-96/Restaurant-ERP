@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\API\HealthController;
 use App\Http\Controllers\API\V1\CartController;
 use App\Http\Controllers\API\V1\CategoryController;
 use App\Http\Controllers\API\V1\CustomerController;
@@ -10,17 +9,8 @@ use App\Http\Controllers\API\V1\OrderController;
 use App\Http\Controllers\API\V1\PublicSettingsController;
 use Illuminate\Support\Facades\Route;
 
-// ── Health check ──────────────────────────────────────────────────────────────
-// Unthrottled, session-less monitoring probe. 200 when healthy, 503 if DB down.
-// Skip SetLocale (it queries the DB for active languages — would 500 the probe
-// before our controlled try/catch when the DB is down) and ApiLoggingMiddleware
-// (monitors poll often; no need to log every hit).
-Route::get('health', HealthController::class)
-    ->withoutMiddleware([
-        \App\Http\Middleware\SetLocale::class,
-        \App\Http\Middleware\ApiLoggingMiddleware::class,
-    ])
-    ->name('api.health');
+// NOTE: The comprehensive GET /api/health report is registered in routes/web.php
+// (admin-gated, needs a session). Automated external liveness uses Laravel's /up.
 
 // ── V1 Public API ─────────────────────────────────────────────────────────────
 // throttle:60,1 → max 60 requests per IP per minute across all v1 routes

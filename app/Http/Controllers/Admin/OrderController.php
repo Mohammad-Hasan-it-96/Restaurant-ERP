@@ -115,6 +115,11 @@ class OrderController extends Controller
         $order->load('customer');
         $this->notifications->notifyOrderStatus($order);
 
+        activity()->log('order.accepted', $order, 'Order #'.$order->order_number, [
+            'to' => Order::STATUS_ACCEPTED,
+            'delivery_fee' => $deliveryFee,
+        ]);
+
         return back()->with('success', __('app.order_accepted'));
     }
 
@@ -192,6 +197,10 @@ class OrderController extends Controller
         $order->load('customer');
         $this->notifications->notifyOrderStatus($order);
 
+        activity()->log('order.rejected', $order, 'Order #'.$order->order_number, [
+            'reason' => $order->rejection_reason,
+        ]);
+
         return back()->with('success', __('app.order_rejected'));
     }
 
@@ -207,6 +216,8 @@ class OrderController extends Controller
         $order->load('customer');
         $this->notifications->notifyOrderStatus($order);
 
+        activity()->log('order.ready', $order, 'Order #'.$order->order_number);
+
         return back()->with('success', __('app.order_marked_ready'));
     }
 
@@ -218,6 +229,8 @@ class OrderController extends Controller
         }
 
         $order->update(['status' => Order::STATUS_DELIVERED]);
+
+        activity()->log('order.delivered', $order, 'Order #'.$order->order_number);
 
         return back()->with('success', __('app.order_marked_delivered'));
     }
@@ -239,6 +252,8 @@ class OrderController extends Controller
             'completed_at' => now(),
         ]);
 
+        activity()->log('order.completed', $order, 'Order #'.$order->order_number);
+
         return back()->with('success', __('app.order_completed'));
     }
 
@@ -256,6 +271,10 @@ class OrderController extends Controller
             // Keep the legacy fields in sync (read by dashboard / reports / SPA).
             'payment_status' => Order::PAYMENT_PAID,
             'payment_method' => 'cash',
+        ]);
+
+        activity()->log('order.paid', $order, 'Order #'.$order->order_number, [
+            'method' => 'cash',
         ]);
 
         return back()->with('success', __('app.order_marked_paid'));

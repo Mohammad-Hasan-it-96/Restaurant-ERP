@@ -13,6 +13,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('public.home');
 
+// Comprehensive health report (database, cache, queue, storage, disk, versions).
+// Admin-gated via the web session — automated external liveness must use /up.
+Route::get('api/health', \App\Http\Controllers\API\HealthController::class)
+    ->middleware(['auth', 'admin'])
+    ->name('api.health');
+
 // Move the language change route outside the auth middleware
 Route::middleware('feature:localization.languages')->group(function () {
     Route::get('/language/{locale}', [LanguageController::class, 'changeLanguage'])->name('language.change');
@@ -40,6 +46,11 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
     // Dashboard - accessible by all authenticated users
     Route::get('dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
     Route::get('system-secure-metrics-health-logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index']);
+
+    // Activity Log (business audit trail) — admin only
+    Route::get('activity-logs', [\App\Http\Controllers\Admin\ActivityLogController::class, 'index'])
+        ->middleware('admin')
+        ->name('activity-logs.index');
     // Reports & Analytics
     Route::get('reports', [ReportController::class, 'index'])->name('reports');
     Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');

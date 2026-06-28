@@ -203,10 +203,34 @@ Registered in `bootstrap/app.php` (not `Kernel.php` — this is Laravel 12's sli
 - **Event names** use the established dot convention, e.g. `order.create.failed`, `cart.item_added`, `frontend.error`.
 - **Shared context is auto-attached**, not repeated per call. `App\Http\Middleware\InjectLogContext` populates Laravel's `Context` facade so **every** log line (app, framework, uncaught exception) carries: `request_id`, `route`, `ip`, `user_agent`, `user_id`. `customer_id` is added by `ResolveCustomerByToken` / `EnsureCustomerSession` once resolved. `order_id` is passed per-call. The `request_id` is also returned as the `X-Request-Id` response header so SPA/browser errors (`POST /api/v1/logs`) correlate to the backend request.
 - **Daily rotation**: the default `LOG_CHANNEL=app` is a stack over the `daily` channel (`storage/logs/laravel-YYYY-MM-DD.log`, retention `LOG_DAILY_DAYS`, default 14). The standard line formatter is kept so the log viewer at `/admin/system-secure-metrics-health-logs` still parses it.
-- **Telegram alerting (future seam, not implemented)**: the `telegram` channel is added to the `app` stack only when `LOG_TELEGRAM_ENABLED=true`, routing `error`+`critical` (≥ `LOG_TELEGRAM_LEVEL`) to Telegram. Enabling it means implementing `App\Logging\TelegramHandler` (dispatch a queued job, like `SendPushNotificationJob`) + setting `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`, then `php artisan config:cache`. No application code changes are needed — routing is by Monolog level.
+- **Telegram alerting (implemented)**: when `LOG_TELEGRAM_ENABLED=true`, the `telegram` channel (`App\Logging\TelegramHandler`) feeds error+critical records to `App\Services\TelegramAlertGate`, which sends only curated categories — **critical exceptions, failed payments (`payment.*`), queue failures (`queue.*`), database failures (`db.*`/`QueryException`/`PDOException`), and fatal/uncaught errors** — to Telegram. Routine `error()` logs stay silent (hybrid rule: every `critical()` alerts; `error()` alerts only on the allowlist). The gate adds **env-awareness** (`config('alerts.environments')`), **dedup** (cache fingerprint), **per-category rate limiting** (`RateLimiter`), and **multi-bot routing** (`config/alerts.php` `bots[]`, each subscribing to categories). Infra categories (queue/database/fatal) send synchronously (queue/DB may be down); others dispatch `SendTelegramAlertJob`. Delivery self-failures log at **warning** (below the floor) so a Telegram outage never loops. Wiring: `Queue::failing` → `queue.job.failed` (AppServiceProvider); `withExceptions` reporter → fatal (bootstrap/app.php). Set `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`, then `php artisan config:cache`.
 - **Prod**: re-run `php artisan config:cache` after changing `config/logging.php` or any `LOG_*` env var.
 
 ### Health Checks
 
-- `GET /api/health` (`HealthController`) — session-less, unthrottled probe that runs `select 1`; returns 200 `{status: ok}` or 503 when the DB is unreachable. Exempt from `SetLocale` and `ApiLoggingMiddleware`.
-- `/up` — Laravel's built-in health route (configured in `bootstrap/app.php`).
+- `/up` — Laravel's built-in, public, dependency-free liveness route (configured in `bootstrap/app.php`). **Use this for load balancers / external uptime monitors.**
+- `GET /api/health` (`HealthController` → `App\Services\HealthService`) — **admin-session-gated** (registered in `routes/web.php` with `auth`+`admin`) comprehensive report covering **database, cache, queue, storage, disk usage, and PHP/Laravel versions**. Each probe is isolated in its own try/catch and logs failures via `health.*` events. Status codes: `200 ok`; `503 error` when a **critical** subsystem (database/cache/storage) is down; `200 degraded` for capacity warnings (disk usage ≥ `HEALTH_DISK_WARN_PERCENT`, failed jobs > `HEALTH_FAILED_JOBS_WARN`) — see `config/health.php`. Trade-off (by design): a DB outage fails the admin auth here (login redirect, not a clean 503), so automated liveness relies on `/up`.
+
+### Activity Log (business audit trail)
+
+Curated **business** events (who did what), separate from the file-based `LogService`. Written **only** via the `activity()` helper → `App\Services\ActivityLogger` (`activity()->log($action, $subject, $description, $properties, $causer)`), never observers — so only intended events are recorded.
+
+- **Storage**: `activity_logs` table. Polymorphic `causer` (User | Customer | system/null) and `subject` columns carry **no FK** + denormalized `causer_label`/`subject_label`, so rows survive subject/causer deletion (e.g. `product.deleted`). Rows are immutable (no `updated_at`). `request_id`/`ip` pulled from the `Context` facade.
+- **Events**: admin actions (`product.created/updated/deleted`, `order.accepted/rejected/ready/delivered/completed/paid`, `settings.updated/created/deleted`, `customer.blocked/unblocked`) and customer-initiated (`order.placed/modified/cancelled`). Action constants live on `App\Models\ActivityLog`.
+- **Dashboard**: `GET /admin/activity-logs` (`ActivityLogController`, **admin only**) — searchable/filterable (search, action, date range) + sortable, mirroring the Orders index. Action labels are localized via the `app.activity_actions.*` lang map.
+- **Retention**: `activitylog:prune` (scheduled daily) deletes rows older than `ACTIVITYLOG_RETENTION_DAYS` (default 365). Toggle with `ACTIVITYLOG_ENABLED`.
+
+### Backups
+
+Automatic backups via **`spatie/laravel-backup`** (`config/backup.php`). One scheduled job bundles the **database** (mysqldump), **uploaded images** (`storage/app/public`), and **`.env`** into a single AES-256 **encrypted** zip (`BACKUP_ARCHIVE_PASSWORD`).
+
+- **Schedule** (`bootstrap/app.php` `withSchedule`): `backup:run` daily 02:00, `backup:clean` daily 01:30. Retention is 7 days (`cleanup.default_strategy.keep_all_backups_for_days = 7`, all longer-term keeps set to 0).
+- **Destination**: `BACKUP_DESTINATION_DISK` (default `local` → `storage/app/private`, not web-served). For off-host, add `'s3'` to `config/backup.php` `destination.disks` and set `AWS_*` — the S3 driver is already installed. No code change.
+- **mysqldump**: set `DB_DUMP_BINARY_PATH` to the MySQL `bin` dir when it isn't on `PATH` (e.g. Windows dev: `C:/xampp/mysql/bin`) — see `config/database.php` `mysql.dump`.
+- **Health → logs**: spatie's success/failure events are bridged to `LogService` (`backup.completed` / `backup.failed`) in `AppServiceProvider` (mail is disabled). This is also the seam for routing failures to the Telegram alert channel.
+- **Restore** is manual: unzip (with the password) → import the `db-dumps/*.sql` → copy images back to `storage/app/public` → restore `.env`.
+- **Prod**: requires the scheduler running (`php artisan schedule:run` via cron/Supervisor) and a queue worker; re-run `php artisan config:cache` after changing `config/backup.php` or `BACKUP_*`/`AWS_*` env vars.
+
+### Supplementary Docs
+
+Root `README.md` is a stub. The substantive supplementary docs live at the repo root and are indexed by `README_DOCUMENTATION.md`: `IMPLEMENTATION_SUMMARY.md`, `DEBUGGING_GUIDE.md`, `TECHNICAL_FIXES.md`, `TESTING_GUIDE.md` — they focus on the customer home page feature and SPA debugging/testing scenarios. Consult them for that area; this file remains the authoritative architecture overview.
