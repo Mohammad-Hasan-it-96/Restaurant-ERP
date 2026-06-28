@@ -38,6 +38,7 @@ class HealthService
             'timestamp' => now()->toIso8601String(),
             'checks' => $checks,
             'versions' => [
+                'app' => \App\Support\Version::current(),
                 'php' => PHP_VERSION,
                 'laravel' => app()->version(),
             ],

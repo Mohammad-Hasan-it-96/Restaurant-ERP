@@ -730,6 +730,12 @@
                     <form id="logout-form" action="{{ route('auth.logout') }}" method="POST" class="d-none">
                         @csrf
                     </form>
+                    {{-- App version → release notes --}}
+                    <a href="{{ route('admin.release-notes.index') }}"
+                       class="nav-link d-flex align-items-center py-2 px-3 rounded-3 text-muted small {{ request()->routeIs('admin.release-notes.*') ? 'active' : '' }}">
+                        <i class="bi bi-rocket-takeoff me-3"></i>
+                        <span>v{{ app_version() }}</span>
+                    </a>
                 </div>
             </div>
         </div>

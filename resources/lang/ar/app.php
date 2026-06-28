@@ -35,6 +35,8 @@ return [
     'top_customers'         => 'أفضل العملاء',
     'sold'                  => 'مباع',
     'no_data'               => 'لا توجد بيانات',
+    'release_notes'         => 'ملاحظات الإصدار',
+    'current_version'       => 'الإصدار الحالي',
     'sales_today'           => 'مبيعات اليوم',
     'total_customers_count' => 'إجمالي العملاء',
     'pending_orders'        => 'طلبات قيد الانتظار',

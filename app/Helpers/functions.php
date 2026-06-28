@@ -15,6 +15,7 @@ use App\Services\ActivityLogger;
 use App\Services\LogService;
 use App\Services\SystemConfigService;
 use App\Support\Feature;
+use App\Support\Version;
 
 if (! function_exists('activity')) {
     /**
@@ -66,6 +67,19 @@ if (! function_exists('currency_symbol')) {
     function currency_symbol(): string
     {
         return app(SystemConfigService::class)->currency()['symbol'];
+    }
+}
+
+if (! function_exists('app_version')) {
+    /**
+     * The application's current semantic version, e.g. "1.0.0".
+     *
+     * Named app_version() (not version()) to avoid confusion with Laravel's
+     * framework version via app()->version(). Use in Blade: v{{ app_version() }}.
+     */
+    function app_version(): string
+    {
+        return Version::current();
     }
 }
 

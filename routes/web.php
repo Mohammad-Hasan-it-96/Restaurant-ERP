@@ -69,6 +69,11 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
     Route::get('activity-logs', [\App\Http\Controllers\Admin\ActivityLogController::class, 'index'])
         ->middleware('admin')
         ->name('activity-logs.index');
+
+    // Release / upgrade notes — admin only
+    Route::get('release-notes', [\App\Http\Controllers\Admin\ReleaseNotesController::class, 'index'])
+        ->middleware('admin')
+        ->name('release-notes.index');
     // Reports & Analytics
     Route::get('reports', [ReportController::class, 'index'])->name('reports');
     Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');

@@ -241,6 +241,17 @@ Curated **business** events (who did what), separate from the file-based `LogSer
 - **Dashboard**: `GET /admin/activity-logs` (`ActivityLogController`, **admin only**) — searchable/filterable (search, action, date range) + sortable, mirroring the Orders index. Action labels are localized via the `app.activity_actions.*` lang map.
 - **Retention**: `activitylog:prune` (scheduled daily) deletes rows older than `ACTIVITYLOG_RETENTION_DAYS` (default 365). Toggle with `ACTIVITYLOG_ENABLED`.
 
+### Version System
+
+Semantic app version (MAJOR.MINOR.PATCH) + upgrade notes, config-only (no DB).
+
+- **Source of truth**: `config/version.php` — committed literal `current` + `released_at` + `releases[]` (newest first). **Read everything through `App\Support\Version`** (`current()`/`releasedAt()`/`releases()`/`latest()`) — never `config('version.*')` directly. Bump it in a PR alongside `CHANGELOG.md` (the developer-facing mirror).
+- **Helper**: `app_version()` (in `app/Helpers/functions.php`) → `Version::current()`. Named to avoid confusion with Laravel's framework `app()->version()`.
+- **Public endpoint**: `GET /api/v1/version` (`API\V1\VersionController`, throttled with the v1 group) → `{version, released_at}`. Only version + date are public.
+- **Health**: `HealthService::report()` `versions` includes `app` alongside `php`/`laravel`.
+- **Admin UI**: version badge in the dashboard banner + a `v<x.y.z>` link in the sidebar Account section (app-wide), both linking to **`GET /admin/release-notes`** (`Admin\ReleaseNotesController`, **admin only**) which renders `config('version.releases')`.
+- **Prod**: re-run `php artisan config:cache` after bumping `config/version.php`.
+
 ### Backups
 
 Automatic backups via **`spatie/laravel-backup`** (`config/backup.php`). One scheduled job bundles the **database** (mysqldump), **uploaded images** (`storage/app/public`), and **`.env`** into a single AES-256 **encrypted** zip (`BACKUP_ARCHIVE_PASSWORD`).

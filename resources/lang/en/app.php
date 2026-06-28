@@ -528,6 +528,8 @@ return [
     'top_products'  => 'Top Selling Products',
     'sold'                  => 'sold',
     'no_data'               => 'No data available',
+    'release_notes'         => 'Release Notes',
+    'current_version'       => 'Current version',
     'sales_today'           => 'Sales Today',
     'total_customers_count' => 'Total Customers',
     'pending_orders'        => 'Pending Orders',

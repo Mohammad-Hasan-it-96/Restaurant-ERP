@@ -18,6 +18,7 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
 
     // ── Public (no session required) ─────────────────────────────────────────
     Route::get('settings/public', PublicSettingsController::class)->name('settings.public');
+    Route::get('version', \App\Http\Controllers\API\V1\VersionController::class)->name('version');
 
     Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
     Route::get('products', [\App\Http\Controllers\API\V1\ProductController::class, 'index'])->name('products.index');

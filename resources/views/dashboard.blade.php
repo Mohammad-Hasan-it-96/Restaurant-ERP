@@ -35,11 +35,19 @@
                         <i class="bi bi-speedometer2 me-1"></i>{{ \App\Helpers\Helpers::translate('dashboard') }}
                     </p>
                 </div>
-                {{-- Action button --}}
-                <div class="ms-auto">
+                {{-- Action button + version --}}
+                <div class="ms-auto text-end">
                     <a href="{{ route('admin.orders.index') }}" class="btn btn-light btn-sm opacity-90">
                         <i class="bi bi-receipt me-1"></i>{{ \App\Helpers\Helpers::translate('view_all') }}
                     </a>
+                    <div class="mt-2">
+                        <a href="{{ route('admin.release-notes.index') }}"
+                           class="badge text-decoration-none"
+                           style="background:rgba(255,255,255,.2);color:#fff;"
+                           title="{{ \App\Helpers\Helpers::translate('release_notes') }}">
+                            v{{ app_version() }}
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
