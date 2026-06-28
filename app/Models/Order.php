@@ -187,11 +187,12 @@ class Order extends Model
 
     /**
      * Generate a unique order number like ORD-20260503-0001.
+     * The leading prefix is configurable via config/orders.php (ORDER_NUMBER_PREFIX).
      */
     public static function generateOrderNumber(): string
     {
         $today = now()->format('Ymd');
-        $prefix = 'ORD-'.$today.'-';
+        $prefix = config('orders.number_prefix', 'ORD-').$today.'-';
         $last = self::where('order_number', 'like', $prefix.'%')
             ->orderByDesc('id')
             ->value('order_number');

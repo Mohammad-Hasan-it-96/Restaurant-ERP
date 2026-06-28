@@ -63,8 +63,8 @@ class OrderService
             ]);
         }
 
-        // Mark this combination as "in-flight" for 5 seconds
-        Cache::put($dupKey, true, now()->addSeconds(5));
+        // Mark this combination as "in-flight" for the configured guard window.
+        Cache::put($dupKey, true, now()->addSeconds(config('orders.duplicate_guard_seconds', 5)));
 
         try {
             $order = DB::transaction(function () use ($data) {

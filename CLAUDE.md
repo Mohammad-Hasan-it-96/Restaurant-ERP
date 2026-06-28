@@ -121,7 +121,7 @@ Parallel terminal states:
 
 The `preparing`, `cancelled`, `cancelled_by_admin` statuses no longer exist (removed in migration `2026_06_17_000000`).
 
-Order numbers format: `ORD-YYYYMMDD-0001` (sequential per day). Order types: `delivery`, `takeaway`, `table` — each gated by the corresponding `core.*` feature flag.
+Order numbers format: `ORD-YYYYMMDD-0001` (sequential per day) — the `ORD-` prefix and the duplicate-submission guard window are configurable in `config/orders.php` (`ORDER_NUMBER_PREFIX`, `ORDER_DUPLICATE_GUARD_SECONDS`). Order types: `delivery`, `takeaway`, `table` — each gated by the corresponding `core.*` feature flag.
 
 ### Product Options
 
