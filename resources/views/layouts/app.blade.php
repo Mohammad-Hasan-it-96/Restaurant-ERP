@@ -26,8 +26,8 @@
     <!-- Main layout: sidebar + content offsets -->
     <style>
         :root {
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
+            --primary: {{ config('theme.primary') }};
+            --primary-hover: {{ config('theme.primary_dark') }};
             --secondary: #64748b;
             --success: #10b981;
             --danger: #ef4444;

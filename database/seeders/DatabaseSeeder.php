@@ -17,7 +17,7 @@ class DatabaseSeeder extends Seeder
 
         User::factory()->create([
             'name' => 'Super Admin',
-            'email' => 'admin@Alghadeer.com',
+            'email' => 'admin@example.com',
             'password' => bcrypt('password'), // Change this to a secure password in production
             'role' => 'admin',
         ]);
@@ -26,8 +26,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             SystemConfigSeeder::class,
             LanguageSeeder::class,
-//            CategorySeeder::class,
-//            ProductSeeder::class,
+            //            CategorySeeder::class,
+            //            ProductSeeder::class,
             DeliveryZoneSeeder::class,
         ]);
     }

@@ -94,7 +94,7 @@
                                 </td>
                                 <td class="fw-semibold text-success">
                                     {{ number_format($customer->orders_sum_total ?? 0, 2) }}
-                                    <small class="text-muted">{{ __('app.currency') }}</small>
+                                    <small class="text-muted">{{ currency_symbol() }}</small>
                                 </td>
                                 <td class="small text-muted">
                                     {{ $customer->orders_max_created_at

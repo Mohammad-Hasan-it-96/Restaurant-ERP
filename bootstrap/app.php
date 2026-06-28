@@ -3,6 +3,7 @@
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\ApiLoggingMiddleware;
 use App\Http\Middleware\Authenticate;
+use App\Http\Middleware\EnsureInstalled;
 use App\Http\Middleware\InjectLogContext;
 use App\Http\Middleware\MinifyHtml;
 use App\Http\Middleware\ModeratorMiddleware;
@@ -30,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [
+            EnsureInstalled::class,
             InjectLogContext::class,
             SetLocale::class,
             MinifyHtml::class,

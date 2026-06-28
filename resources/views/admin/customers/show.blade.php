@@ -76,7 +76,7 @@
                         <div class="text-muted small mb-1">{{ __('app.total_spent') }}</div>
                         <div class="fw-semibold fs-5 text-success">
                             {{ number_format($totalSpent, 2) }}
-                            <small class="text-muted fs-6">{{ __('app.currency') }}</small>
+                            <small class="text-muted fs-6">{{ currency_symbol() }}</small>
                         </div>
                     </div>
                 </div>
@@ -169,7 +169,7 @@
                                 </td>
                                 <td class="fw-semibold">
                                     {{ number_format($order->total, 2) }}
-                                    <small class="text-muted">{{ __('app.currency') }}</small>
+                                    <small class="text-muted">{{ currency_symbol() }}</small>
                                 </td>
                                 <td>
                                 <span class="badge bg-{{ $payColor }}">

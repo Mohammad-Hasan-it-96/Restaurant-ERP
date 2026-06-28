@@ -37,10 +37,31 @@ npm run build        # outputs to ../public/spa/
 
 ```bash
 php artisan migrate
-php artisan db:seed   # creates admin@Alghadeer.com / password + system configs
+php artisan db:seed   # creates admin@example.com / password + system configs
 ```
 
 Database: MySQL (`restaurant_erp_db`). Sessions, cache, and queues all use the database driver. **Tests also run against MySQL** — the SQLite/in-memory lines in `phpunit.xml` are commented out.
+
+### Installer Wizard (fresh-domain setup, no manual .env editing)
+
+On a fresh deploy, visiting any URL redirects to **`/install`** (`App\Http\Controllers\InstallController`), a 5-step wizard: **Database → App URL → Restaurant info → Admin account → Finish**. It writes `.env`, migrates, seeds defaults, creates the admin, and locks itself. The **Restaurant info** step now also captures **currency** (code/symbol/position/decimals), **timezone**, **default language** (ar/en), and **primary brand colour** — so a new restaurant is configured entirely through the wizard + admin Settings, with **zero source edits** (see "Reusable branding" below).
+
+- **Install state**: `App\Support\Installer` — a lock file at `storage/installed` (gitignored). `isInstalled()` **self-heals**: an app configured before the wizard existed (APP_KEY set + DB reachable + `users` table) is auto-marked installed, so existing deployments are unaffected.
+- **Pre-DB mode**: `App\Providers\InstallerServiceProvider` (registered first) — while not installed, forces `session.driver=file`, `cache.default=array`, `queue.default=sync`, and **generates+persists `APP_KEY`** on first request (the encrypter/CSRF need it). Runs in `boot()`. `App\Http\Middleware\SetLocale` early-returns when not installed (it queries the DB).
+- **Gate**: `App\Http\Middleware\EnsureInstalled` (web group) redirects all traffic to `/install` until installed, then locks `/install` (redirects home).
+- **`.env` writes**: `App\Support\EnvWriter` (the only thing that writes `.env`; injectable path for tests).
+- **Finish** writes `.env` (incl. `APP_TIMEZONE` + `THEME_PRIMARY`), repoints the live DB connection (`DB::purge`/`reconnect`), runs `migrate` + **only** `SystemConfigSeeder`/`LanguageSeeder`/`DeliveryZoneSeeder` (never `DatabaseSeeder`, which hardcodes a Super Admin), `storage:link`, creates the admin from input (`User` password cast hashes), overrides restaurant + currency configs via `SystemConfigService::set()`, flips the chosen `Language.is_default`, writes the lock, and redirects to `/auth/login`.
+- **Generic seed defaults**: `SystemConfigSeeder` seeds **unbranded** placeholders (`My Restaurant`, empty phone/whatsapp, `USD`/`$` currency) via `firstOrCreate` (never clobbers operator values on re-run); `DeliveryZoneSeeder` seeds **no** zones (location-specific — added at `/admin/delivery-zones`).
+- **Re-install**: delete `storage/installed`.
+
+### Reusable branding (currency & theme — "config-only" new restaurant)
+
+Restaurant-specific values are consolidated into configuration so standing up a new restaurant needs **no source edits**:
+
+- **Currency**: SystemConfig keys (group `general`) `currency_code`, `currency_symbol`, `currency_position` (`prefix`|`suffix`), `currency_decimals`. Read via `SystemConfigService::currency()` / `formatMoney()`. Use the **`money($amount)`** global helper (full formatting) or **`currency_symbol()`** (bare symbol) in Blade — never hardcode a currency string. Exposed to the SPA in the `/api/v1/settings/public` `currency` key; the SPA's `formatPrice` (in `customer-spa/src/utils/format.js`) renders it (set once via `setCurrency()`; counts use `formatNumber()`).
+- **Theme**: single source of truth in **`config/theme.php`** (`primary`/`primary_dark`/`primary_light`, env-overridable via `THEME_*`). The admin layout echoes it into its `:root {}`; the SPA receives it in the settings payload `theme` key and applies it to `:root` at boot (`customer-spa/src/utils/theme.js`), with `index.css` values as fallback. **No per-restaurant admin colour UI** — change `THEME_*` + `php artisan config:cache`.
+- **Identity** (name/logo/phone/whatsapp/messages/hours) stays in SystemConfig (admin-editable at `/admin/configs`). Restaurant strings are **not** duplicated in `resources/lang/*` anymore.
+- **Prod**: re-run `php artisan config:cache` after changing `config/theme.php` or `THEME_*`.
 
 ## Architecture
 

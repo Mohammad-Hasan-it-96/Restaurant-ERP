@@ -13,6 +13,7 @@
 
 use App\Services\ActivityLogger;
 use App\Services\LogService;
+use App\Services\SystemConfigService;
 use App\Support\Feature;
 
 if (! function_exists('activity')) {
@@ -41,6 +42,30 @@ if (! function_exists('logService')) {
     function logService(): LogService
     {
         return app(LogService::class);
+    }
+}
+
+if (! function_exists('money')) {
+    /**
+     * Format an amount with the configured currency (symbol, position, decimals).
+     *
+     * Single formatting path for restaurant-tunable currency in Blade:
+     *   {{ money($order->total) }}
+     */
+    function money(int|float|string|null $amount): string
+    {
+        return app(SystemConfigService::class)->formatMoney($amount);
+    }
+}
+
+if (! function_exists('currency_symbol')) {
+    /**
+     * The configured currency symbol on its own (for labels next to a number
+     * that is formatted separately): {{ currency_symbol() }}.
+     */
+    function currency_symbol(): string
+    {
+        return app(SystemConfigService::class)->currency()['symbol'];
     }
 }
 

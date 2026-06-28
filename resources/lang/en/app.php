@@ -2,7 +2,7 @@
 
 return [
     // General
-    'app_name' => 'Laravel MuscleHub',
+    'app_name' => 'Restaurant ERP',
 
     // Customer Home (Public Page)
     'menu'                       => 'Menu',
@@ -405,10 +405,7 @@ return [
 
     // Restaurant settings
     'restaurant'                    => 'Restaurant',
-    'restaurant_name'               => 'ملحمة الغدير',
     'restaurant_logo'               => 'Restaurant Logo',
-    'restaurant_phone'              => '0983820430',
-    'restaurant_whatsapp'           => '+963 983 820 430',
     'opening_hours'                 => '8 AM to 12 PM',
     'is_accepting_orders'           => 'Accepting Orders',
     'rejection_reasons'             => 'Rejection Reasons',
@@ -500,7 +497,6 @@ return [
     'delivery'                    => 'Delivery',
     'takeaway'                    => 'Takeaway',
     'yes_cancel'                  => 'Yes, Cancel',
-    'currency'                    => 'SYP',
     'cancelled_by_admin'          => 'Cancelled by Admin',
     'cancelled_by_customer'       => 'Cancelled by Customer',
 

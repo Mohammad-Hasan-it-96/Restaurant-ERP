@@ -1,5 +1,5 @@
 ﻿import { BellIcon, CartIcon, ClipboardIcon, ForkKnifeIcon, PersonIcon } from './Icons';
-import { formatPrice } from '../utils/format';
+import { formatNumber } from '../utils/format';
 import { featureEnabled } from '../utils/features';
 import { switchLanguage, useI18n } from '../i18n';
 
@@ -110,7 +110,7 @@ export default function Header({ settings, cartCount, onCartClick, activePage, o
             <span>{t('cart')}</span>
             {cartCount > 0 && (
               <span className="cart-badge-header">
-                {formatPrice(cartCount)}
+                {formatNumber(cartCount)}
               </span>
             )}
           </button>

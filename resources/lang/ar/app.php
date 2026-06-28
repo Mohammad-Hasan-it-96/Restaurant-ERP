@@ -2,7 +2,7 @@
 
 return [
     // General
-    'app_name' => 'ملحمة ومعجنات الغدير',
+    'app_name' => 'نظام إدارة المطعم',
     'dashboard' => 'لوحة التحكم',
     'profile' => 'الملف الشخصي',
     'settings' => 'الإعدادات',
@@ -429,10 +429,7 @@ return [
     'delivery_zone_deleted'          => 'تم حذف منطقة التوصيل بنجاح',
     // Restaurant settings
     'restaurant'                     => 'المطعم',
-    'restaurant_name'                => 'ملحمة ومعجنات الغدير',
     'restaurant_logo'                => 'شعار المطعم',
-    'restaurant_phone'               => '0983820430',
-    'restaurant_whatsapp'            => '+963 983 820 430',
     'opening_hours'                  => '8 صباحاً حتى 12 ليلاً',
     'is_accepting_orders'            => 'استقبال الطلبات',
     'rejection_reasons'              => 'أسباب الرفض',
@@ -523,7 +520,6 @@ return [
     'delivery'                    => 'توصيل',
     'takeaway'                    => 'سفري',
     'yes_cancel'                  => 'نعم، ألغِ',
-    'currency'                    => 'ل.س',
     'cancelled_by_admin'          => 'ملغى من الإدارة',
     'cancelled_by_customer'       => 'ملغى من الزبون',
     // Orders API

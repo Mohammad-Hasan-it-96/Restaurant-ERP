@@ -19,6 +19,24 @@ Route::get('api/health', \App\Http\Controllers\API\HealthController::class)
     ->middleware(['auth', 'admin'])
     ->name('api.health');
 
+// ── Installer wizard ────────────────────────────────────────────────────────
+// Reachable only while not installed (gated by EnsureInstalled). Runs before the
+// DB/.env are configured; see the "Installer Wizard" section in CLAUDE.md.
+Route::prefix('install')->name('install.')
+    ->controller(\App\Http\Controllers\InstallController::class)
+    ->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('database', 'database')->name('database');
+        Route::post('database', 'storeDatabase')->name('database.store');
+        Route::get('app', 'appUrl')->name('app');
+        Route::post('app', 'storeApp')->name('app.store');
+        Route::get('restaurant', 'restaurant')->name('restaurant');
+        Route::post('restaurant', 'storeRestaurant')->name('restaurant.store');
+        Route::get('admin', 'admin')->name('admin');
+        Route::post('admin', 'storeAdmin')->name('admin.store');
+        Route::get('finish', 'finish')->name('finish');
+    });
+
 // Move the language change route outside the auth middleware
 Route::middleware('feature:localization.languages')->group(function () {
     Route::get('/language/{locale}', [LanguageController::class, 'changeLanguage'])->name('language.change');
