@@ -57,7 +57,7 @@ class ProductController extends Controller
         $sortBy = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'created_at';
         $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
 
-        $products = $query->orderBy($sortBy, $direction)->paginate(15)->withQueryString();
+        $products = $query->orderBy($sortBy, $direction)->paginate(config('pagination.products'))->withQueryString();
         $categories = Category::query()->orderBy('name_ar')->get();
 
         // Keep legacy users list for export dropdown

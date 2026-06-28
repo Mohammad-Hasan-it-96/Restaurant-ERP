@@ -43,7 +43,7 @@ class ProductController extends Controller
             .app()->getLocale().'.'
             .md5(json_encode($request->all()));
 
-        $data = Product::rememberList($cacheKey, 300, function () use ($request) {
+        $data = Product::rememberList($cacheKey, config('api.product_list_ttl'), function () use ($request) {
             $query = Product::query()
                 ->select(self::LIST_COLUMNS)
                 ->with(['category:id,name_ar,name_en', 'weights', 'optionValues.option'])
@@ -70,7 +70,7 @@ class ProductController extends Controller
             $perPage = (int) $request->input('per_page', 0);
 
             if ($perPage > 0) {
-                $paginated = $query->paginate(min($perPage, 100));
+                $paginated = $query->paginate(min($perPage, config('api.max_per_page')));
 
                 return [
                     'items' => ProductResource::collection($paginated->items())->resolve($request),

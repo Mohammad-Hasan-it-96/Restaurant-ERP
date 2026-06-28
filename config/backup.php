@@ -2,6 +2,16 @@
 
 return [
 
+    /*
+     * Daily schedule times (HH:MM) for the backup commands, wired in
+     * bootstrap/app.php. Kept here (not env() in bootstrap) so they survive
+     * config:cache.
+     */
+    'schedule' => [
+        'clean_at' => env('BACKUP_CLEAN_AT', '01:30'),
+        'run_at' => env('BACKUP_RUN_AT', '02:00'),
+    ],
+
     'backup' => [
         /*
          * The name of this application. You can use this name to monitor

@@ -21,8 +21,9 @@ class SetCacheHeaders
      * via the Accept-Language header — and we must not let a shared cache serve
      * one language's response for another.
      */
-    public function handle(Request $request, Closure $next, int $maxAge = 300): Response
+    public function handle(Request $request, Closure $next, ?int $maxAge = null): Response
     {
+        $maxAge ??= (int) config('api.http_cache_max_age', 300);
         $response = $next($request);
 
         if (! $request->isMethodCacheable() || ! $response->isSuccessful()) {

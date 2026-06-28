@@ -19,7 +19,7 @@ class DashboardController extends BaseController
     public function dashboard(Request $request)
     {
         // ── Summary cards (cached 120s; flushed by Order model events) ────────
-        $stats = Cache::remember(Order::DASHBOARD_STATS_CACHE_KEY, 120, function () {
+        $stats = Cache::remember(Order::DASHBOARD_STATS_CACHE_KEY, config('dashboard.stats_ttl'), function () {
             $today = Carbon::today();
 
             return [
@@ -41,11 +41,11 @@ class DashboardController extends BaseController
 
         // ── Recent orders (kept live — cheap latest-10, should always be fresh) ─
         $recentOrders = Order::latest()
-            ->limit(10)
+            ->limit(config('dashboard.recent_orders'))
             ->get();
 
-        // ── Heavier aggregates: cached 300s, flushed by Order model events ─────
-        $detailed = Cache::remember(Order::DASHBOARD_DETAILED_STATS_CACHE_KEY, 300, function () {
+        // ── Heavier aggregates: cached, flushed by Order model events ──────────
+        $detailed = Cache::remember(Order::DASHBOARD_DETAILED_STATS_CACHE_KEY, config('dashboard.detailed_stats_ttl'), function () {
             $excludedStatuses = [
                 Order::STATUS_CANCELLED_BY_CUSTOMER,
                 Order::STATUS_REJECTED,
@@ -57,8 +57,9 @@ class DashboardController extends BaseController
                 ->groupBy('order_type')
                 ->pluck('cnt', 'order_type');
 
-            // Weekly chart — one grouped query (was 7 separate per-day counts).
-            $weekStart = Carbon::today()->subDays(6)->startOfDay();
+            // Weekly chart — one grouped query (was N separate per-day counts).
+            $chartDays = (int) config('dashboard.chart_days', 7);
+            $weekStart = Carbon::today()->subDays($chartDays - 1)->startOfDay();
             $daily = Order::where('created_at', '>=', $weekStart)
                 ->selectRaw('DATE(created_at) as d, COUNT(*) as cnt')
                 ->groupBy('d')
@@ -66,7 +67,7 @@ class DashboardController extends BaseController
 
             $weekLabels = [];
             $weekCounts = [];
-            for ($i = 6; $i >= 0; $i--) {
+            for ($i = $chartDays - 1; $i >= 0; $i--) {
                 $day = Carbon::today()->subDays($i);
                 $weekLabels[] = $day->format('D');
                 $weekCounts[] = (int) ($daily[$day->format('Y-m-d')] ?? 0);
@@ -75,11 +76,12 @@ class DashboardController extends BaseController
             return [
                 'totalCustomers' => Customer::count(),
                 'topCustomers' => Customer::withCount('orders')
-                    ->orderByDesc('orders_count')->limit(5)->get(),
+                    ->orderByDesc('orders_count')->limit(config('dashboard.top_customers'))->get(),
                 'topProducts' => OrderItem::query()
                     ->selectRaw('product_name, SUM(quantity) as total_sold')
                     ->whereHas('order', fn ($q) => $q->whereNotIn('status', $excludedStatuses))
-                    ->groupBy('product_name')->orderByDesc('total_sold')->limit(5)->get(),
+                    ->groupBy('product_name')->orderByDesc('total_sold')
+                    ->limit(config('dashboard.top_products'))->get(),
                 'weekLabels' => $weekLabels,
                 'weekCounts' => $weekCounts,
                 'typeTable' => (int) ($typeCounts[Order::TYPE_TABLE] ?? 0),

@@ -26,8 +26,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('activitylog:prune')->daily();
 
         // Daily encrypted backup (DB + uploaded images + .env) and cleanup.
-        $schedule->command('backup:clean')->daily()->at('01:30');
-        $schedule->command('backup:run')->daily()->at('02:00');
+        $schedule->command('backup:clean')->daily()->at(config('backup.schedule.clean_at', '01:30'));
+        $schedule->command('backup:run')->daily()->at(config('backup.schedule.run_at', '02:00'));
     })
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [

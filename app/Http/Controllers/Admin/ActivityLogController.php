@@ -23,7 +23,7 @@ class ActivityLogController extends Controller
             ->between($request->input('from'), $request->input('to'))
             ->search($request->input('search'))
             ->orderBy($sortBy, $direction)
-            ->paginate(20)
+            ->paginate(config('pagination.activity_logs'))
             ->withQueryString();
 
         // Distinct actions for the filter dropdown.

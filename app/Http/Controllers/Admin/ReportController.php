@@ -95,13 +95,13 @@ class ReportController extends Controller
             ')
             ->groupBy('order_items.product_name')
             ->orderByDesc('total_quantity')
-            ->limit(10)
+            ->limit(config('dashboard.report_top_products'))
             ->get();
 
         // ── Paginated orders table ────────────────────────────────────────────
         $orders = $this->applyFilters(Order::with('customer'), $filters)
             ->orderByDesc('created_at')
-            ->paginate(20)
+            ->paginate(config('pagination.reports'))
             ->withQueryString();
 
         return view('admin.reports.index', compact(

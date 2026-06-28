@@ -18,7 +18,7 @@ class LanguageController extends Controller
      */
     public function index()
     {
-        $languages = Language::latest()->paginate(10);
+        $languages = Language::latest()->paginate(config('pagination.languages'));
 
         return view('admin.languages.index', compact('languages'));
     }

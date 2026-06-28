@@ -29,7 +29,7 @@ class CustomerController extends Controller
             });
         }
 
-        $customers = $query->paginate(15)->withQueryString();
+        $customers = $query->paginate(config('pagination.customers'))->withQueryString();
 
         return view('admin.customers.index', compact('customers'));
     }
@@ -39,7 +39,7 @@ class CustomerController extends Controller
      */
     public function show(Request $request, Customer $customer)
     {
-        $orders = $customer->orders()->latest()->paginate(10);
+        $orders = $customer->orders()->latest()->paginate(config('pagination.customer_orders'));
         // Derive count + latest order from the paginator (no extra queries on
         // page 1); only the all-time sum needs its own aggregate query.
         $ordersCount = $orders->total();

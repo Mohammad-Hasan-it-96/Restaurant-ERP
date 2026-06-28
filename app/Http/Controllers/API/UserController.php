@@ -17,7 +17,7 @@ class UserController extends BaseController
      */
     public function index()
     {
-        $users = User::latest()->paginate(10);
+        $users = User::latest()->paginate(config('pagination.users'));
 
         return view('admin.users.index', compact('users'));
     }

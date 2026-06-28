@@ -13,13 +13,13 @@ use Illuminate\Support\Facades\Route;
 // (admin-gated, needs a session). Automated external liveness uses Laravel's /up.
 
 // ── V1 Public API ─────────────────────────────────────────────────────────────
-// throttle:60,1 → max 60 requests per IP per minute across all v1 routes
-Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(function () {
+// Rate limits + HTTP cache max-age are configurable in config/api.php.
+Route::prefix('v1')->name('api.v1.')->middleware('throttle:'.config('api.throttle.default'))->group(function () {
 
     // ── Public (no session required) ─────────────────────────────────────────
-    // Browser/CDN cache (5 min) on the read-only public GETs. cache.headers adds
+    // Browser/CDN cache on the read-only public GETs. cache.headers adds
     // Cache-Control: public + Vary: Accept-Language (payloads are locale-dependent).
-    Route::middleware('cache.headers:300')->group(function () {
+    Route::middleware('cache.headers:'.config('api.http_cache_max_age'))->group(function () {
         Route::get('settings/public', PublicSettingsController::class)->name('settings.public');
         Route::get('version', \App\Http\Controllers\API\V1\VersionController::class)->name('version');
         Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
@@ -30,8 +30,8 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
     // Frontend structured logging — { message, level?, context? }. Relaxed
     // throttle (30/min/IP) that replaces the group throttle (no double-count).
     Route::post('logs', FrontendLogController::class)
-        ->withoutMiddleware('throttle:60,1')
-        ->middleware('throttle:30,1')
+        ->withoutMiddleware('throttle:'.config('api.throttle.default'))
+        ->middleware('throttle:'.config('api.throttle.logs'))
         ->name('logs.store');
 
     // ── Guest customer creation (no auth — visitor allowing notifications) ──────
@@ -39,8 +39,8 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
     // this once, so 10/min/IP stops the endpoint being used to flood guest rows.
     // Replaces (not stacks on) the group throttle so the IP counter isn't hit twice.
     Route::post('customer/guest', [CustomerController::class, 'createGuest'])
-        ->withoutMiddleware('throttle:60,1')
-        ->middleware(['throttle:10,1', 'feature:notifications.push'])
+        ->withoutMiddleware('throttle:'.config('api.throttle.default'))
+        ->middleware(['throttle:'.config('api.throttle.guest'), 'feature:notifications.push'])
         ->name('customer.guest');
 
     // ── Order placement (separate customer session, isolated from admin) ────────
@@ -48,8 +48,8 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
         // 20/min/IP — generous for real ordering, blocks bulk-order spam. Replaces
         // the group throttle so this route's writes get their own independent budget.
         Route::post('orders', [OrderController::class, 'store'])
-            ->withoutMiddleware('throttle:60,1')
-            ->middleware('throttle:20,1')
+            ->withoutMiddleware('throttle:'.config('api.throttle.default'))
+            ->middleware('throttle:'.config('api.throttle.orders'))
             ->name('orders.store');
     });
 
@@ -76,9 +76,9 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:60,1')->group(functio
             ->name('customer.fcm-token');
     });
 
-    // Cart (session-based as before) — inherits the group throttle:60,1, which is
-    // exactly the intended cart limit; no per-route override needed (a duplicate
-    // throttle:60,1 would double-count against the same IP key).
+    // Cart (session-based as before) — inherits the group throttle (api.throttle.default),
+    // which is exactly the intended cart limit; no per-route override needed (a duplicate
+    // throttle would double-count against the same IP key).
     Route::middleware(['customer.start', 'customer.session'])->group(function () {
         Route::get('cart', [CartController::class, 'index'])->name('cart.index');
         Route::post('cart/add', [CartController::class, 'add'])->name('cart.add');

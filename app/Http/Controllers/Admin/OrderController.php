@@ -54,10 +54,10 @@ class OrderController extends Controller
             });
         }
 
-        $orders = $query->paginate(20)->withQueryString();
+        $orders = $query->paginate(config('pagination.orders'))->withQueryString();
 
         // Counts per status for tab badges (cached; flushed by Order model events).
-        $counts = Cache::remember(Order::STATUS_COUNTS_CACHE_KEY, 300, fn () => Order::selectRaw('status, count(*) as total')
+        $counts = Cache::remember(Order::STATUS_COUNTS_CACHE_KEY, config('dashboard.status_counts_ttl'), fn () => Order::selectRaw('status, count(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status'));
 
