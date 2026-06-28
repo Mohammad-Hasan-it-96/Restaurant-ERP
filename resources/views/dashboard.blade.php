@@ -7,7 +7,7 @@
 
         {{-- ── Restaurant Branding Banner ─────────────────────────────────────── --}}
         <div class="card border-0 shadow-sm mb-4"
-             style="background:linear-gradient(135deg,var(--primary) 0%,#7c3aed 100%);color:#fff;">
+             style="background:linear-gradient(135deg,var(--primary) 0%,var(--primary-hover) 100%);color:#fff;">
             <div class="card-body d-flex align-items-center gap-4 py-3">
                 {{-- Logo --}}
                 @if($restaurantLogo)
@@ -385,6 +385,9 @@
                 const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
                 const gridColor = isDark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.06)';
                 const labelColor = isDark ? '#94a3b8' : '#64748b';
+                // Brand primary from the config-driven CSS variable (see config/theme.php).
+                const primaryColor = getComputedStyle(document.documentElement)
+                    .getPropertyValue('--primary').trim() || '#C0392B';
 
                 // ── Weekly Orders Bar Chart ─────────────────────────────────────────────
                 const weekLabels = @json($weekLabels);
@@ -397,8 +400,8 @@
                         datasets: [{
                             label: '{{ __('app.orders') }}',
                             data: weekCounts,
-                            backgroundColor: 'rgba(79,70,229,.75)',
-                            borderColor: '#4f46e5',
+                            backgroundColor: primaryColor,
+                            borderColor: primaryColor,
                             borderWidth: 1,
                             borderRadius: 6,
                             borderSkipped: false,
@@ -436,7 +439,7 @@
                         labels: ['{{ __('app.table') }}', '{{ __('app.delivery') }}', '{{ __('app.takeaway') }}'],
                         datasets: [{
                             data: [{{ $typeTable }}, {{ $typeDelivery }}, {{ $typeTakeaway }}],
-                            backgroundColor: ['#4f46e5', '#10b981', '#f59e0b'],
+                            backgroundColor: [primaryColor, '#10b981', '#f59e0b'],
                             borderWidth: 0,
                         }]
                     },

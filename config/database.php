@@ -57,9 +57,10 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            // Keep MySQL session timezone aligned with the PHP app timezone so
-            // TIMESTAMP columns are converted consistently (UTC storage, local read).
-            'timezone' => '+03:00',
+            // MySQL session timezone. Defaults to UTC (store in UTC, let the app
+            // convert for display via APP_TIMEZONE). Set DB_TIMEZONE to a fixed
+            // offset (e.g. "+03:00") only if you need the DB session in local time.
+            'timezone' => env('DB_TIMEZONE', '+00:00'),
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
