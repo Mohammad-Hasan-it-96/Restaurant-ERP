@@ -17,8 +17,11 @@ class OrderConfigTest extends TestCase
 
         $number = Order::generateOrderNumber();
 
-        $this->assertStringStartsWith('INV-'.Carbon::now()->format('Ymd').'-', $number);
-        $this->assertStringEndsWith('0001', $number);
+        // Format: <prefix><Ymd>-<0001 sequence>-<random suffix>.
+        $this->assertMatchesRegularExpression(
+            '/^INV-'.Carbon::now()->format('Ymd').'-0001-[A-Z0-9]{4}$/',
+            $number
+        );
     }
 
     public function test_order_number_defaults_to_ord_prefix(): void

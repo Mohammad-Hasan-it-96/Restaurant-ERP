@@ -54,27 +54,31 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:'.config('api.throttl
     });
 
     // ── Token-protected routes ────────────────────────────────────────────────
-    // Authorization: Bearer <customer_token>
-    Route::middleware(['customer.token'])->group(function () {
-        Route::get('orders/{order_number}', [OrderController::class, 'show'])->name('orders.show');
-        Route::post('orders/{order_number}/cancel', [OrderController::class, 'cancel'])
-            ->middleware('feature:orders.customer_cancellation')
-            ->name('orders.cancel');
-        Route::post('orders/{order_number}/modify', [OrderController::class, 'modify'])
-            ->middleware('feature:orders.modification')
-            ->name('orders.modify');
+    // Authorization: Bearer <customer_token>. Throttle is keyed on the token
+    // (per-customer) instead of the group's IP limiter, so shared-NAT customers
+    // don't share a budget — replaces (doesn't stack on) the group throttle.
+    Route::middleware(['customer.token', 'throttle:customer_api'])
+        ->withoutMiddleware('throttle:'.config('api.throttle.default'))
+        ->group(function () {
+            Route::get('orders/{order_number}', [OrderController::class, 'show'])->name('orders.show');
+            Route::post('orders/{order_number}/cancel', [OrderController::class, 'cancel'])
+                ->middleware('feature:orders.customer_cancellation')
+                ->name('orders.cancel');
+            Route::post('orders/{order_number}/modify', [OrderController::class, 'modify'])
+                ->middleware('feature:orders.modification')
+                ->name('orders.modify');
 
-        Route::get('customer/me', [CustomerController::class, 'me'])->name('customer.me');
-        Route::get('customer/orders', [CustomerController::class, 'orders'])
-            ->middleware('feature:customer.order_history')
-            ->name('customer.orders');
-        Route::post('customer/update', [CustomerController::class, 'update'])
-            ->middleware('feature:customer.profile')
-            ->name('customer.update');
-        Route::post('customer/fcm-token', [CustomerController::class, 'saveFcmToken'])
-            ->middleware('feature:notifications.push')
-            ->name('customer.fcm-token');
-    });
+            Route::get('customer/me', [CustomerController::class, 'me'])->name('customer.me');
+            Route::get('customer/orders', [CustomerController::class, 'orders'])
+                ->middleware('feature:customer.order_history')
+                ->name('customer.orders');
+            Route::post('customer/update', [CustomerController::class, 'update'])
+                ->middleware('feature:customer.profile')
+                ->name('customer.update');
+            Route::post('customer/fcm-token', [CustomerController::class, 'saveFcmToken'])
+                ->middleware('feature:notifications.push')
+                ->name('customer.fcm-token');
+        });
 
     // Cart (session-based as before) — inherits the group throttle (api.throttle.default),
     // which is exactly the intended cart limit; no per-route override needed (a duplicate

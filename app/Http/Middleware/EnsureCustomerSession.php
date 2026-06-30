@@ -28,7 +28,9 @@ class EnsureCustomerSession
         $customerId = session()->get('customer_id');
 
         if ($customerId) {
-            $customer = Customer::findOrFail($customerId);
+            // find() (not findOrFail) so a stale/deleted customer_id falls through
+            // to the guest-cleanup branch below instead of throwing a 500.
+            $customer = Customer::find($customerId);
 
             if ($customer) {
                 // Enrich every subsequent log line in this request with the

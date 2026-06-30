@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 class Order extends Model
 {
@@ -186,8 +187,11 @@ class Order extends Model
     }
 
     /**
-     * Generate a unique order number like ORD-20260503-0001.
+     * Generate a unique order number like ORD-20260503-0001-A1B2.
      * The leading prefix is configurable via config/orders.php (ORDER_NUMBER_PREFIX).
+     * A random suffix is appended so order numbers aren't trivially guessable /
+     * enumerable (the daily sequence stays internal-friendly but no longer leaks
+     * order volume to anyone who can read one number).
      */
     public static function generateOrderNumber(): string
     {
@@ -196,8 +200,15 @@ class Order extends Model
         $last = self::where('order_number', 'like', $prefix.'%')
             ->orderByDesc('id')
             ->value('order_number');
-        $seq = $last ? ((int) substr($last, -4)) + 1 : 1;
 
-        return $prefix.str_pad($seq, 4, '0', STR_PAD_LEFT);
+        // The 4-digit sequence sits immediately after the prefix; read it from
+        // there (not the end of the string) since a random suffix now follows it.
+        // Handles legacy numbers (no suffix) too.
+        $seq = 1;
+        if ($last !== null) {
+            $seq = ((int) substr($last, strlen($prefix), 4)) + 1;
+        }
+
+        return $prefix.str_pad($seq, 4, '0', STR_PAD_LEFT).'-'.strtoupper(Str::random(4));
     }
 }

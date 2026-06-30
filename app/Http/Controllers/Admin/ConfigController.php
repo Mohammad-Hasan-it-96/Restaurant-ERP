@@ -9,6 +9,15 @@ use Illuminate\Support\Facades\Validator;
 
 class ConfigController extends Controller
 {
+    /** Config keys whose value must be numeric (downstream getNumber casts rely on it). */
+    private const NUMERIC_CONFIG_KEYS = [
+        'currency_decimals',
+        'customer_cancel_before_minutes',
+    ];
+
+    /** Upper bound on a single config value's length (bounds oversized/abusive writes). */
+    private const MAX_CONFIG_VALUE_LENGTH = 20000;
+
     /**
      * Display a listing of all system configurations.
      *
@@ -60,6 +69,7 @@ class ConfigController extends Controller
 
         $affectedGroups = [];
         $changedKeys = [];
+        $errors = [];
 
         // ── Handle restaurant_logo file upload ─────────────────────────
         if ($request->hasFile('restaurant_logo_file')) {
@@ -92,6 +102,22 @@ class ConfigController extends Controller
                 continue;
             }
 
+            // Per-key validation: bound the length of every value and enforce the
+            // numeric type on keys whose downstream casts (getNumber/currency())
+            // depend on it — reject (don't persist) bad values instead of letting
+            // them break those casts later.
+            $strValue = is_scalar($value) ? (string) $value : '';
+            if (mb_strlen($strValue) > self::MAX_CONFIG_VALUE_LENGTH) {
+                $errors[] = $configKey.': value too long';
+
+                continue;
+            }
+            if (in_array($configKey, self::NUMERIC_CONFIG_KEYS, true) && $strValue !== '' && ! is_numeric($strValue)) {
+                $errors[] = $configKey.': must be a number';
+
+                continue;
+            }
+
             // Get the config to update
             $config = SystemConfig::where('key', $configKey)->first();
 
@@ -118,7 +144,9 @@ class ConfigController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', __('app.configs_updated'));
+        $redirect = redirect()->back()->with('success', __('app.configs_updated'));
+
+        return $errors ? $redirect->with('error', implode('<br>', $errors)) : $redirect;
     }
 
     /**

@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -427,15 +428,36 @@ class ProductController extends Controller
                 continue;
             }
 
-            $price = (float) ($row['E'] ?? 0);
-            if ($price <= 0) {
-                $errors[] = "Row {$lineNo}: name_ar='{$nameAr}' skipped — price must be > 0";
+            // Validate the row up front: reject (don't silently coerce) malformed
+            // data — out-of-range numbers, overlong names, or a non-existent
+            // category — so a bad spreadsheet can't create orphaned/garbage rows.
+            $rowData = [
+                'name_ar' => $nameAr,
+                'name_en' => trim((string) ($row['B'] ?? '')) ?: null,
+                'price' => $row['E'] ?? null,
+                'discount_price' => ($row['F'] ?? '') !== '' ? $row['F'] : null,
+                'category_id' => ((int) ($row['G'] ?? 0)) ?: null,
+                'sort_order' => $row['K'] ?? 0,
+            ];
+
+            $validator = Validator::make($rowData, [
+                'name_ar' => ['required', 'string', 'max:255'],
+                'name_en' => ['nullable', 'string', 'max:255'],
+                'price' => ['required', 'numeric', 'gt:0', 'max:99999999'],
+                'discount_price' => ['nullable', 'numeric', 'gte:0', 'max:99999999'],
+                'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+                'sort_order' => ['nullable', 'integer', 'min:0', 'max:99999'],
+            ]);
+
+            if ($validator->fails()) {
+                $errors[] = "Row {$lineNo}: '{$nameAr}' — ".implode(' ', $validator->errors()->all());
                 $skipped++;
 
                 continue;
             }
 
-            $categoryId = (int) ($row['G'] ?? 0) ?: null;
+            $price = (float) $rowData['price'];
+            $categoryId = $rowData['category_id'];
 
             try {
                 Product::updateOrCreate(

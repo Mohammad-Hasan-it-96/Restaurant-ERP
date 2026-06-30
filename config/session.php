@@ -201,7 +201,12 @@ return [
     |
     */
 
-    'same_site' => env('SESSION_SAME_SITE', 'lax'),
+    // Keep this at "lax" (or "strict"). The session-based cart/order routes have
+    // no CSRF token, so SameSite is their CSRF defense — setting "none" would open
+    // those state-changing endpoints to cross-site forgery. Coerced below.
+    'same_site' => in_array(env('SESSION_SAME_SITE', 'lax'), ['lax', 'strict'], true)
+        ? env('SESSION_SAME_SITE', 'lax')
+        : 'lax',
 
     /*
     |--------------------------------------------------------------------------

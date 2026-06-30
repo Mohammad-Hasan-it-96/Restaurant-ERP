@@ -122,7 +122,7 @@ Parallel terminal states:
 
 The `preparing`, `cancelled`, `cancelled_by_admin` statuses no longer exist (removed in migration `2026_06_17_000000`).
 
-Order numbers format: `ORD-YYYYMMDD-0001` (sequential per day) — the `ORD-` prefix and the duplicate-submission guard window are configurable in `config/orders.php` (`ORDER_NUMBER_PREFIX`, `ORDER_DUPLICATE_GUARD_SECONDS`). Order types: `delivery`, `takeaway`, `table` — each gated by the corresponding `core.*` feature flag.
+Order numbers format: `ORD-YYYYMMDD-0001-XXXX` — a per-day sequence plus a random 4-char suffix (so numbers aren't enumerable; the sequence is parsed from right after the prefix, not the string end). The `ORD-` prefix and the duplicate-submission guard window are configurable in `config/orders.php` (`ORDER_NUMBER_PREFIX`, `ORDER_DUPLICATE_GUARD_SECONDS`). Order types: `delivery`, `takeaway`, `table` — each gated by the corresponding `core.*` feature flag.
 
 ### Product Options
 
@@ -218,6 +218,9 @@ All v1 routes: `throttle:60,1` (60 req/min per IP). Per-route overrides (replace
 - `POST /api/v1/orders` — `throttle:20,1`
 - `POST /api/v1/customer/guest` — `throttle:10,1`
 - `POST /api/v1/logs` — `throttle:30,1`
+- Token-protected customer routes (`customer.token` group) — `throttle:customer_api` (named limiter in `AppServiceProvider`, keyed on the hashed Bearer token so shared-NAT customers don't share a budget; falls back to IP).
+
+`SESSION_SAME_SITE` is coerced to `lax`/`strict` in `config/session.php` (never `none`/`null`) because the session-based cart/order routes rely on SameSite as their CSRF defense.
 
 ### Middleware & Performance
 

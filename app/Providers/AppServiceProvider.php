@@ -43,6 +43,18 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($key);
         });
 
+        // Token-authenticated customer API: key the limit on the customer's token
+        // (hashed, so the secret isn't stored in cache keys) rather than IP alone,
+        // so customers behind shared NAT don't share a budget. Falls back to IP for
+        // anything without a token. Same rate as the default v1 group throttle.
+        RateLimiter::for('customer_api', function (Request $request) {
+            $perMinute = (int) explode(',', (string) config('api.throttle.default', '60,1'))[0];
+            $token = $request->bearerToken();
+            $key = $token ? 'tok:'.sha1($token) : 'ip:'.$request->ip();
+
+            return Limit::perMinute($perMinute)->by($key);
+        });
+
         // @feature('orders.modification') ... @endfeature — wrap Blade blocks
         // that should only render when a system feature flag is enabled.
         Blade::if('feature', fn (string $path) => Feature::enabled($path));
