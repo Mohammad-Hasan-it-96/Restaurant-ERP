@@ -76,15 +76,6 @@ class CustomerController extends Controller
     }
 
     /**
-     * POST /api/v1/customer/update
-     *
-     * Works for both:
-     * - Guest (phone=null) → merge into existing customer or promote to real
-     * - Existing session → update the linked customer
-     * - New visitor (no session yet) → find-or-create by phone, bind to session
-     */
-
-    /**
      * POST /api/v1/customer/fcm-token
      *
      * Saves the customer's Firebase Cloud Messaging token so push notifications
@@ -142,27 +133,35 @@ class CustomerController extends Controller
     }
 
     /**
-     * POST /api/v1/customer/update  (extended)
+     * POST /api/v1/customer/update
      *
-     * Extra behaviour when $customer is a guest (phone = null):
-     * if the provided phone already belongs to another customer, merge this
-     * guest into that customer — transfer the FCM token if needed, then
-     * delete the orphaned guest row and return the real customer's token.
+     * Updates the current customer's profile, or promotes a guest / creates a
+     * new customer when the submitted phone is not yet registered.
+     *
+     * SECURITY (account-takeover prevention): a phone number that already belongs
+     * to a *different* customer may NOT be claimed here. Previously a guest (or an
+     * anonymous caller) could submit a victim's phone and the endpoint would merge
+     * into — and return the Bearer token of — that victim's account, with no proof
+     * of phone ownership. Reclaiming an existing phone requires an out-of-band
+     * verification (OTP) we don't have, so we reject instead of merging.
      */
     public function update(Request $request): JsonResponse
     {
         $customer = $request->attributes->get('customer');
 
-        // For guests (phone=null) we need a different unique rule: allow the
-        // phone even if it exists (we'll merge instead of erroring).
+        // A guest is a customer row with no phone yet; it may set a phone for the
+        // first time. The unique rule ignores the caller's own row so they can
+        // re-save their own phone unchanged.
         $isGuest = $customer && is_null($customer->phone);
 
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'phone' => array_filter([
                 'required', 'string', 'max:30',
+                // Guests skip the built-in unique rule because we enforce ownership
+                // explicitly below (and want a controlled 409, not a validation 422).
                 $isGuest
-                    ? null  // skip unique check — we handle merge manually below
+                    ? null
                     : ($customer
                         ? Rule::unique('customers', 'phone')->ignore($customer->id)
                         : Rule::unique('customers', 'phone')),
@@ -170,52 +169,29 @@ class CustomerController extends Controller
             'address' => 'nullable|string|max:500',
         ]);
 
-        // ── Guest merge: phone belongs to an existing real customer ──────────
-        if ($isGuest) {
-            $existing = Customer::where('phone', $validated['phone'])->first();
-
-            if ($existing) {
-                // Transfer FCM token if the real customer doesn't have one yet
-                if (! $existing->fcm_token && $customer->fcm_token) {
-                    $existing->update(['fcm_token' => $customer->fcm_token]);
-                }
-                // Update name/address on the real customer
-                $existing->update([
-                    'full_name' => $validated['name'],
-                    'default_address' => $validated['address'] ?? $existing->default_address,
-                ]);
-                // Ensure token exists
-                if (! $existing->token) {
-                    $existing->update(['token' => (string) Str::uuid()]);
-                }
-                // Clean up the now-orphaned guest row
-                $customer->delete();
-
-                return $this->success([
-                    'id' => $existing->id,
-                    'name' => $existing->full_name,
-                    'phone' => $existing->phone,
-                    'default_address' => $existing->default_address,
-                    'token' => $existing->token,
-                ], 'Profile updated successfully.');
-            }
+        // Ownership guard: if this phone is already registered to a customer that
+        // is NOT the caller, refuse — never hand back another customer's token or
+        // mutate their record. Covers both the guest path and the no-session path.
+        $existing = Customer::where('phone', $validated['phone'])->first();
+        if ($existing && (! $customer || $existing->id !== $customer->id)) {
+            return $this->error('This phone number is already registered.', 409);
         }
 
-        // ── Normal flow (non-guest, or guest with new phone) ─────────────────
+        // Brand-new visitor with no session: create their own fresh customer row.
         if (! $customer) {
-            $customer = Customer::firstOrCreate(
-                ['phone' => $validated['phone']],
-                ['full_name' => $validated['name']]
-            );
-            if (! $customer->token) {
-                $customer->update(['token' => (string) Str::uuid()]);
-            }
+            $customer = Customer::create([
+                'full_name' => $validated['name'],
+                'phone' => $validated['phone'],
+                'token' => (string) Str::uuid(),
+            ]);
         }
 
         if ($customer->is_blocked) {
             return $this->error('This account is blocked.', 403);
         }
 
+        // Update the caller's own record (guests are promoted in place, keeping
+        // their existing row and token — no cross-account transfer).
         $customer->update([
             'full_name' => $validated['name'],
             'phone' => $validated['phone'],

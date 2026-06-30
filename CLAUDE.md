@@ -98,7 +98,8 @@ Routes using cart or order placement must include **both** `customer.start` + `c
 - **Admin**: Standard Laravel session auth; roles are `admin` and `moderator` stored on the `users.role` column.
   - `admin` middleware: admin only
   - `moderator` middleware: admin or moderator
-- **Customer**: Stateless Bearer token stored in `customers.token` and in `localStorage` as `customer_token`. The `customer.token` middleware (`ResolveCustomerByToken`) resolves the customer from this token.
+  - **No public self-registration** — this is an internal ERP; staff accounts are created by an admin at `/admin/users`. There is no `auth/register` route. The login `POST` is rate-limited by the `login` named limiter (5/min, keyed on email+IP, defined in `AppServiceProvider`); `forgot-password`/`reset-password` are `throttle:5,1` and forgot-password returns a generic response (no account enumeration).
+- **Customer**: Stateless Bearer token stored in `customers.token` and in `localStorage` as `customer_token`. The `customer.token` middleware (`ResolveCustomerByToken`) resolves the customer from this token. `customer/update` will **not** claim a phone already registered to another customer (returns 409) — it never merges into or returns another customer's token without proof of ownership.
 
 ### User Roles
 
@@ -169,7 +170,7 @@ Per-client capability switches that make the product reusable across restaurants
 - **Three surfaces**: `feature('orders.modification')` global helper; `feature_or_fail('orders.modification')` global helper (aborts 403 when flag is off); `@feature('products.options') … @endfeature` Blade directive (registered in `AppServiceProvider`); and `Feature::enabled()` / `Feature::disabled()` static calls.
 - **Enforcement is layered**: customer-facing *write* routes are hard-blocked by the `feature:<flag>` route middleware (`FeatureGate`) → 403 when off; services no-op as defense-in-depth; UI always hides disabled features.
 - **Frontend exposure**: `PublicSettingsController` adds `features` (= `Feature::clientSafe()`, admin-only flags never leak) to the `/api/v1/settings/public` payload. The SPA reads it via `customer-spa/src/utils/features.js` → `featureEnabled(settings, 'orders.modification')`. Defaults to `true` when the settings haven't loaded yet.
-- **`admin.permissions_system` is special**: when off, `AdminMiddleware`/`ModeratorMiddleware` collapse to single-role mode (any authenticated user allowed).
+- **`admin.permissions_system` is special**: when off, `AdminMiddleware`/`ModeratorMiddleware` collapse the admin/moderator distinction into single-role mode — but access is still limited to **staff** (a user whose role is `admin` or `moderator`); a viewer/no-role account is never elevated. "Logged in" never means "fully privileged."
 - **Safety rule**: flags gate *new actions and UI*, never *historical data display* — disabling `products.weight_products` after weight orders exist still renders their stored values.
 - **Prod**: re-run `php artisan config:cache` after changing the config file or `FEATURE_*` env vars.
 

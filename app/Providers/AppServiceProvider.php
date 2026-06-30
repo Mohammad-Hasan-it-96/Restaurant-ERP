@@ -4,12 +4,16 @@ namespace App\Providers;
 
 use App\Services\SystemConfigService;
 use App\Support\Feature;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 use Spatie\Backup\Events\BackupHasFailed;
 use Spatie\Backup\Events\BackupWasSuccessful;
 use Spatie\Backup\Events\CleanupHasFailed;
@@ -29,6 +33,15 @@ class AppServiceProvider extends ServiceProvider
     {
         // Use Bootstrap 5 pagination views across the entire application
         Paginator::useBootstrapFive();
+
+        // Brute-force protection for admin login: 5 attempts/minute keyed on the
+        // submitted email + client IP, so guessing is bounded per account and per
+        // source. Applied via the `throttle:login` middleware on the login route.
+        RateLimiter::for('login', function (Request $request) {
+            $key = Str::lower((string) $request->input('email')).'|'.$request->ip();
+
+            return Limit::perMinute(5)->by($key);
+        });
 
         // @feature('orders.modification') ... @endfeature — wrap Blade blocks
         // that should only render when a system feature flag is enabled.

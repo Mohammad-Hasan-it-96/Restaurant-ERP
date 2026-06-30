@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,25 +29,6 @@ class AuthController extends Controller
         ])->onlyInput('email');
     }
 
-    public function register(Request $request)
-    {
-        $validatedData = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
-
-        $user = User::create([
-            'name' => $validatedData['name'],
-            'email' => $validatedData['email'],
-            'password' => Hash::make($validatedData['password']),
-        ]);
-
-        Auth::login($user);
-
-        return redirect()->route('admin.dashboard');
-    }
-
     public function logout(Request $request)
     {
         Auth::logout();
@@ -62,13 +42,11 @@ class AuthController extends Controller
     {
         $request->validate(['email' => 'required|email']);
 
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
+        // Always attempt to send, but return an identical generic response whether
+        // or not the email exists — prevents account enumeration via the response.
+        Password::sendResetLink($request->only('email'));
 
-        return $status === Password::RESET_LINK_SENT
-            ? back()->with('status', __($status))
-            : back()->withErrors(['email' => __($status)])->withInput();
+        return back()->with('status', __('If that email address is in our system, a password reset link has been sent.'));
     }
 
     public function resetPassword(Request $request)
@@ -100,11 +78,6 @@ class AuthController extends Controller
     public function view_login()
     {
         return view('auth.login');
-    }
-
-    public function view_register()
-    {
-        return view('auth.register');
     }
 
     public function forgot_password()
