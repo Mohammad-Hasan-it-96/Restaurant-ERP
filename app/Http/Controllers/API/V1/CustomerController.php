@@ -7,7 +7,6 @@ use App\Models\Customer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class CustomerController extends Controller
@@ -120,15 +119,16 @@ class CustomerController extends Controller
             'fcm_token' => 'nullable|string|max:255',
         ]);
 
-        $customer = Customer::create([
+        $customer = new Customer([
             'full_name' => 'guest',
             'phone' => null,
-            'token' => (string) Str::uuid(),
             'fcm_token' => $request->input('fcm_token'),
         ]);
+        $plainToken = $customer->issueToken(); // sets the hashed token + plaintext
+        $customer->save();
 
         return $this->success([
-            'customer_token' => $customer->token,
+            'customer_token' => $plainToken,
         ], 'Guest created.');
     }
 
@@ -155,7 +155,9 @@ class CustomerController extends Controller
         $isGuest = $customer && is_null($customer->phone);
 
         $validated = $request->validate([
-            'name' => 'required|string|max:100',
+            // Same character allowlist as StoreOrderRequest — keeps formula/control
+            // characters out of the name that later feeds CSV/XLSX exports.
+            'name' => ['required', 'string', 'max:100', 'regex:/^[\p{L}\s\-.\']+$/u'],
             'phone' => array_filter([
                 'required', 'string', 'max:30',
                 // Guests skip the built-in unique rule because we enforce ownership
@@ -177,13 +179,15 @@ class CustomerController extends Controller
             return $this->error('This phone number is already registered.', 409);
         }
 
-        // Brand-new visitor with no session: create their own fresh customer row.
+        // Determine the plaintext token to return: a freshly-issued one for a new
+        // customer, otherwise echo back the caller's own Bearer token (the stored
+        // token is hashed, so the server never has the existing plaintext).
         if (! $customer) {
-            $customer = Customer::create([
-                'full_name' => $validated['name'],
-                'phone' => $validated['phone'],
-                'token' => (string) Str::uuid(),
-            ]);
+            // Brand-new visitor with no session: create their own fresh customer row.
+            $customer = new Customer(['full_name' => $validated['name'], 'phone' => $validated['phone']]);
+            $plainToken = $customer->issueToken();
+        } else {
+            $plainToken = $request->bearerToken();
         }
 
         if ($customer->is_blocked) {
@@ -192,18 +196,18 @@ class CustomerController extends Controller
 
         // Update the caller's own record (guests are promoted in place, keeping
         // their existing row and token — no cross-account transfer).
-        $customer->update([
+        $customer->fill([
             'full_name' => $validated['name'],
             'phone' => $validated['phone'],
             'default_address' => $validated['address'] ?? $customer->default_address,
-        ]);
+        ])->save();
 
         return $this->success([
             'id' => $customer->id,
             'name' => $customer->full_name,
             'phone' => $customer->phone,
             'default_address' => $customer->default_address,
-            'token' => $customer->token,
+            'token' => $plainToken,
         ], 'Profile updated successfully.');
     }
 }

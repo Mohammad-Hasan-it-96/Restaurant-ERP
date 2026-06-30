@@ -25,6 +25,9 @@ class ProductController extends Controller
         'is_available', 'is_featured', 'is_active', 'sort_order',
     ];
 
+    /** Max length of the client `search` term — caps LIKE cost and cache-key size. */
+    private const MAX_SEARCH_LENGTH = 50;
+
     /**
      * GET /api/v1/products
      *
@@ -36,14 +39,28 @@ class ProductController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        // Key per query + locale, namespaced by the list-cache version so a
-        // write (which bumps the version on non-taggable stores) invalidates all.
-        $cacheKey = 'products.'
-            .Product::listCacheVersion().'.'
-            .app()->getLocale().'.'
-            .md5(json_encode($request->all()));
+        // Normalize + whitelist inputs ONCE so (a) the cache key can't be exploded
+        // by arbitrary junk params, and (b) a giant search term can't drive an
+        // unbounded LIKE scan. The cache key is built from these normalized values.
+        $categoryId = $request->filled('category_id') ? (int) $request->input('category_id') : null;
+        $featured = $request->boolean('featured');
 
-        $data = Product::rememberList($cacheKey, config('api.product_list_ttl'), function () use ($request) {
+        $search = trim((string) $request->input('search', ''));
+        if (mb_strlen($search) > self::MAX_SEARCH_LENGTH) {
+            $search = mb_substr($search, 0, self::MAX_SEARCH_LENGTH);
+        }
+
+        $perPage = (int) $request->input('per_page', 0);
+        if ($perPage > 0) {
+            $perPage = min($perPage, (int) config('api.max_per_page'));
+        }
+
+        // Key from the normalized whitelist only (+ locale + list-cache version,
+        // which a write bumps to invalidate all entries on non-taggable stores).
+        $cacheKey = 'products.'.Product::listCacheVersion().'.'.app()->getLocale().'.'
+            .md5($categoryId.'|'.($featured ? 1 : 0).'|'.$search.'|'.$perPage);
+
+        $data = Product::rememberList($cacheKey, config('api.product_list_ttl'), function () use ($categoryId, $featured, $search, $perPage, $request) {
             $query = Product::query()
                 ->select(self::LIST_COLUMNS)
                 ->with(['category:id,name_ar,name_en', 'weights', 'optionValues.option'])
@@ -51,15 +68,15 @@ class ProductController extends Controller
                 ->orderBy('sort_order')
                 ->orderBy('id');
 
-            if ($categoryId = $request->input('category_id')) {
+            if ($categoryId) {
                 $query->where('category_id', $categoryId);
             }
 
-            if ($request->boolean('featured')) {
+            if ($featured) {
                 $query->where('is_featured', true);
             }
 
-            if ($search = $request->input('search')) {
+            if ($search !== '') {
                 $query->where(function ($q) use ($search) {
                     $q->where('name_ar', 'like', '%'.$search.'%')
                         ->orWhere('name_en', 'like', '%'.$search.'%')
@@ -67,10 +84,8 @@ class ProductController extends Controller
                 });
             }
 
-            $perPage = (int) $request->input('per_page', 0);
-
             if ($perPage > 0) {
-                $paginated = $query->paginate(min($perPage, config('api.max_per_page')));
+                $paginated = $query->paginate($perPage);
 
                 return [
                     'items' => ProductResource::collection($paginated->items())->resolve($request),
@@ -81,7 +96,16 @@ class ProductController extends Controller
                 ];
             }
 
-            $products = $query->get();
+            // Default (no per_page): the full active menu, but bounded by a generous
+            // safety cap so the payload can never be unbounded. Fetch one extra row
+            // to detect — and log, never silently — an actual truncation.
+            $max = (int) config('api.product_list_max');
+            $products = $query->limit($max + 1)->get();
+
+            if ($products->count() > $max) {
+                logService()->warning('products.list.truncated', ['max' => $max]);
+                $products = $products->take($max);
+            }
 
             return ProductResource::collection($products)->resolve($request);
         });

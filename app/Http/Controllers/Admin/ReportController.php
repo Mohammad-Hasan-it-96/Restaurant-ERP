@@ -157,11 +157,11 @@ class ReportController extends Controller
 
             foreach ($orders as $order) {
                 fputcsv($handle, [
-                    $order->order_number,
-                    $order->customer->full_name ?? '',
-                    $order->customer->phone ?? '',
-                    $order->order_type,
-                    $order->status,
+                    \App\Support\Csv::neutralize($order->order_number),
+                    \App\Support\Csv::neutralize($order->customer->full_name ?? ''),
+                    \App\Support\Csv::neutralize($order->customer->phone ?? ''),
+                    \App\Support\Csv::neutralize($order->order_type),
+                    \App\Support\Csv::neutralize($order->status),
                     number_format((float) $order->subtotal, 2, '.', ''),
                     number_format((float) ($order->delivery_fee ?? 0), 2, '.', ''),
                     number_format((float) $order->total, 2, '.', ''),

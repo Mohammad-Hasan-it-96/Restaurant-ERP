@@ -311,10 +311,10 @@ class ProductController extends Controller
         Product::select($exportColumns)->orderBy('sort_order')->orderBy('id')
             ->chunk(1000, function ($products) use ($sheet, &$row) {
                 foreach ($products as $product) {
-                    $sheet->setCellValue("A{$row}", $product->name_ar);
-                    $sheet->setCellValue("B{$row}", $product->name_en);
-                    $sheet->setCellValue("C{$row}", $product->description_ar);
-                    $sheet->setCellValue("D{$row}", $product->description_en);
+                    $sheet->setCellValue("A{$row}", \App\Support\Csv::neutralize($product->name_ar));
+                    $sheet->setCellValue("B{$row}", \App\Support\Csv::neutralize($product->name_en));
+                    $sheet->setCellValue("C{$row}", \App\Support\Csv::neutralize($product->description_ar));
+                    $sheet->setCellValue("D{$row}", \App\Support\Csv::neutralize($product->description_en));
                     $sheet->setCellValue("E{$row}", $product->price);
                     $sheet->setCellValue("F{$row}", $product->discount_price);
                     $sheet->setCellValue("G{$row}", $product->category_id);

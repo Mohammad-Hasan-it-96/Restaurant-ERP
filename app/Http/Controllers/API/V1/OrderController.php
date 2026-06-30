@@ -33,13 +33,15 @@ class OrderController extends Controller
 
             $orderData = new OrderResource($order->load('items'));
 
-            return $this->success(
-                array_merge($orderData->resolve(), [
-                    'customer_token' => $order->customer->token,
-                ]),
-                __('app.order_placed_successfully'),
-                201
-            );
+            $payload = $orderData->resolve();
+
+            // Only return a token when one was just issued for a new customer
+            // (it's stored hashed, so a returning customer's token is never re-exposed).
+            if ($order->customer && $order->customer->plainTextToken) {
+                $payload['customer_token'] = $order->customer->plainTextToken;
+            }
+
+            return $this->success($payload, __('app.order_placed_successfully'), 201);
 
         } catch (ValidationException $e) {
             return $this->error(
@@ -172,7 +174,9 @@ class OrderController extends Controller
             return $this->success(
                 array_merge($orderData->resolve(), [
                     'old_order_number' => $oldOrder->order_number,
-                    'customer_token' => $newOrder->customer->token ?? $customer->token,
+                    // Echo back the caller's own Bearer token (modify is token-authed
+                    // and reuses the same customer; the stored token is hashed).
+                    'customer_token' => $newOrder->customer->plainTextToken ?? $request->bearerToken(),
                 ]),
                 __('app.order_modified_successfully'),
                 201

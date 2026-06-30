@@ -23,6 +23,11 @@ return [
     // Hard cap on the client-supplied per_page for the product list.
     'max_per_page' => (int) env('API_MAX_PER_PAGE', 100),
 
+    // Safety ceiling on the un-paginated ("full menu") product list response, so
+    // the payload is bounded even when no per_page is supplied. Generous — above
+    // any realistic catalogue; a truncation is logged (products.list.truncated).
+    'product_list_max' => (int) env('API_PRODUCT_LIST_MAX', 1000),
+
     // Server-side cache TTL (seconds) for the product list endpoint.
     'product_list_ttl' => (int) env('API_PRODUCT_LIST_TTL', 300),
 

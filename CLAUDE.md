@@ -99,7 +99,7 @@ Routes using cart or order placement must include **both** `customer.start` + `c
   - `admin` middleware: admin only
   - `moderator` middleware: admin or moderator
   - **No public self-registration** — this is an internal ERP; staff accounts are created by an admin at `/admin/users`. There is no `auth/register` route. The login `POST` is rate-limited by the `login` named limiter (5/min, keyed on email+IP, defined in `AppServiceProvider`); `forgot-password`/`reset-password` are `throttle:5,1` and forgot-password returns a generic response (no account enumeration).
-- **Customer**: Stateless Bearer token stored in `customers.token` and in `localStorage` as `customer_token`. The `customer.token` middleware (`ResolveCustomerByToken`) resolves the customer from this token. `customer/update` will **not** claim a phone already registered to another customer (returns 409) — it never merges into or returns another customer's token without proof of ownership.
+- **Customer**: Stateless Bearer token held in `localStorage` as `customer_token`. **Stored hashed** — `customers.token` is the SHA-256 hash (`Customer::hashToken()`), never plaintext; the `customer.token` middleware (`ResolveCustomerByToken`) hashes the presented Bearer token to look it up. Issue tokens only via `Customer::issueToken()`, which stashes the one-time plaintext on the transient `$plainTextToken` property for the response. Endpoints return a token **only when freshly issued** (new customer) or echo back the caller's own Bearer — a returning customer's token is never re-exposed (so placing an order by phone no longer leaks it). `customer/update` will **not** claim a phone already registered to another customer (returns 409).
 
 ### User Roles
 

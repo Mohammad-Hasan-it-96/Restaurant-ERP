@@ -11,7 +11,6 @@ use App\Support\Feature;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class OrderService
@@ -45,16 +44,21 @@ class OrderService
         }
 
         // ── Duplicate order guard (5-second window) ──────────────────────────
+        // Sort the item signature so the same basket in a different order hashes
+        // identically (otherwise reordering the array trivially bypassed the guard).
+        $itemSignature = collect($data['items'])
+            ->map(fn ($i) => $i['product_id'].'x'.$i['quantity'])
+            ->sort()
+            ->implode(',');
+
         $dupKey = 'order_dup_'.md5(
-            $data['customer_phone']
-            .'|'.$data['order_type']
-            .'|'.implode(',', array_map(
-                fn ($i) => $i['product_id'].'x'.$i['quantity'],
-                $data['items']
-            ))
+            $data['customer_phone'].'|'.$data['order_type'].'|'.$itemSignature
         );
 
-        if (Cache::has($dupKey)) {
+        // Atomic check-and-set: add() writes only if the key is absent and returns
+        // false otherwise, so two concurrent identical requests can't both pass the
+        // guard (the previous has()+put() left a race window between the two calls).
+        if (! Cache::add($dupKey, true, now()->addSeconds(config('orders.duplicate_guard_seconds', 5)))) {
             logService()->warning('order.create.duplicate', [
                 'customer_phone' => $data['customer_phone'],
             ]);
@@ -63,11 +67,12 @@ class OrderService
             ]);
         }
 
-        // Mark this combination as "in-flight" for the configured guard window.
-        Cache::put($dupKey, true, now()->addSeconds(config('orders.duplicate_guard_seconds', 5)));
+        // Plaintext token captured here when a brand-new customer is issued one
+        // inside the transaction, so it can be returned to the client once.
+        $plainToken = null;
 
         try {
-            $order = DB::transaction(function () use ($data) {
+            $order = DB::transaction(function () use ($data, &$plainToken) {
 
                 // ── 1. Resolve customer ──────────────────────────────────
                 // If a previous order already bound a customer to this session, reuse it.
@@ -106,9 +111,11 @@ class OrderService
                     $customerChanges['full_name'] = $data['customer_name'];
                 }
 
-                // Generate a persistent token if the customer doesn't have one yet
+                // Issue a persistent (hashed) token if the customer doesn't have one
+                // yet; keep the plaintext to return to the client this one time.
                 if (! $customer->token) {
-                    $customerChanges['token'] = (string) Str::uuid();
+                    $plainToken = $customer->issueToken();
+                    $customerChanges['token'] = $customer->token;
                 }
 
                 // Store the FCM token sent by the SPA (guests pass it here on first order)
@@ -202,6 +209,12 @@ class OrderService
 
             // ── Persist customer binding in session (outside transaction) ──
             session()->put('customer_id', $order->customer_id);
+
+            // Re-attach the one-time plaintext token (the reload above replaced the
+            // in-memory customer instance) so the controller can return it once.
+            if ($plainToken && $order->customer) {
+                $order->customer->plainTextToken = $plainToken;
+            }
 
             logService()->info('order.create.success', [
                 'customer_id' => $order->customer_id,

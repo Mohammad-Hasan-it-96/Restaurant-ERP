@@ -117,13 +117,14 @@ class SecurityHardeningTest extends TestCase
 
     public function test_guest_cannot_claim_an_existing_customers_phone(): void
     {
+        // Tokens are stored hashed; the client holds the plaintext.
         $victim = Customer::create([
             'full_name' => 'Victim',
             'phone' => '0599000111',
-            'token' => 'victim-secret-token',
+            'token' => Customer::hashToken('victim-secret-token'),
             'default_address' => 'Victim St',
         ]);
-        Customer::create(['full_name' => 'guest', 'phone' => null, 'token' => 'guest-token']);
+        Customer::create(['full_name' => 'guest', 'phone' => null, 'token' => Customer::hashToken('guest-token')]);
 
         $res = $this->withHeader('Authorization', 'Bearer guest-token')
             ->postJson('/api/v1/customer/update', [
@@ -136,7 +137,7 @@ class SecurityHardeningTest extends TestCase
         $victim->refresh();
         $this->assertSame('Victim', $victim->full_name);
         $this->assertSame('Victim St', $victim->default_address);
-        $this->assertSame('victim-secret-token', $victim->token);
+        $this->assertSame(Customer::hashToken('victim-secret-token'), $victim->token);
         $this->assertStringNotContainsString('victim-secret-token', $res->getContent());
     }
 
@@ -156,7 +157,7 @@ class SecurityHardeningTest extends TestCase
 
     public function test_guest_can_still_promote_with_a_fresh_phone(): void
     {
-        Customer::create(['full_name' => 'guest', 'phone' => null, 'token' => 'guest-token-2']);
+        Customer::create(['full_name' => 'guest', 'phone' => null, 'token' => Customer::hashToken('guest-token-2')]);
 
         $res = $this->withHeader('Authorization', 'Bearer guest-token-2')
             ->postJson('/api/v1/customer/update', [
@@ -167,9 +168,11 @@ class SecurityHardeningTest extends TestCase
         $res->assertOk();
         // Same row promoted in place — keeps its own token, no cross-account transfer.
         $this->assertDatabaseHas('customers', [
-            'token' => 'guest-token-2',
+            'token' => Customer::hashToken('guest-token-2'),
             'phone' => '0599888777',
             'full_name' => 'New User',
         ]);
+        // The echoed token is the plaintext the client already holds.
+        $this->assertSame('guest-token-2', $res->json('data.token'));
     }
 }

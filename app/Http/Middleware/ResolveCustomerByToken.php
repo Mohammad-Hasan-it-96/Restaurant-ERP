@@ -31,7 +31,8 @@ class ResolveCustomerByToken
         }
 
         if ($token) {
-            $customer = Customer::query()->where('token', $token)->first();
+            // Tokens are stored hashed — hash the presented Bearer token and match.
+            $customer = Customer::query()->where('token', Customer::hashToken($token))->first();
 
             if ($customer) {
                 // Enrich every subsequent log line in this request with the

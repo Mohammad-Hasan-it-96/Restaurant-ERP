@@ -19,11 +19,16 @@ class FcmNotificationTest extends TestCase
 
     private function makeCustomer(array $overrides = []): Customer
     {
-        return Customer::create(array_merge([
+        $customer = new Customer(array_merge([
             'full_name' => 'Test Customer',
             'phone' => '01000000001',
-            'token' => (string) Str::uuid(),
         ], $overrides));
+        // Tokens are stored hashed; issueToken() stashes the plaintext on
+        // $customer->plainTextToken for use as the Bearer credential in tests.
+        $customer->issueToken();
+        $customer->save();
+
+        return $customer;
     }
 
     private function makeOrder(Customer $customer, string $status = Order::STATUS_ACCEPTED): Order
@@ -168,7 +173,7 @@ class FcmNotificationTest extends TestCase
         $token = $response->json('data.customer_token');
         $this->assertNotEmpty($token);
 
-        $customer = Customer::where('token', $token)->first();
+        $customer = Customer::where('token', Customer::hashToken($token))->first();
         $this->assertNotNull($customer);
         $this->assertNull($customer->phone);
         $this->assertSame('guest', $customer->full_name);
@@ -186,7 +191,7 @@ class FcmNotificationTest extends TestCase
         $response->assertStatus(200);
 
         $token = $response->json('data.customer_token');
-        $customer = Customer::where('token', $token)->first();
+        $customer = Customer::where('token', Customer::hashToken($token))->first();
 
         $this->assertNotNull($customer);
         $this->assertNull($customer->phone);
@@ -209,7 +214,7 @@ class FcmNotificationTest extends TestCase
         $customer = $this->makeCustomer();
         $newToken = 'new-fcm-token-'.Str::random(10);
 
-        $response = $this->withHeader('Authorization', 'Bearer '.$customer->token)
+        $response = $this->withHeader('Authorization', 'Bearer '.$customer->plainTextToken)
             ->postJson('/api/v1/customer/fcm-token', ['fcm_token' => $newToken]);
 
         $response->assertStatus(200);
@@ -223,11 +228,11 @@ class FcmNotificationTest extends TestCase
         $customer = $this->makeCustomer(['fcm_token' => $existingToken]);
 
         // Call twice with the same token
-        $this->withHeader('Authorization', 'Bearer '.$customer->token)
+        $this->withHeader('Authorization', 'Bearer '.$customer->plainTextToken)
             ->postJson('/api/v1/customer/fcm-token', ['fcm_token' => $existingToken])
             ->assertStatus(200);
 
-        $this->withHeader('Authorization', 'Bearer '.$customer->token)
+        $this->withHeader('Authorization', 'Bearer '.$customer->plainTextToken)
             ->postJson('/api/v1/customer/fcm-token', ['fcm_token' => $existingToken])
             ->assertStatus(200);
 
@@ -247,7 +252,7 @@ class FcmNotificationTest extends TestCase
     {
         $customer = $this->makeCustomer();
 
-        $response = $this->withHeader('Authorization', 'Bearer '.$customer->token)
+        $response = $this->withHeader('Authorization', 'Bearer '.$customer->plainTextToken)
             ->postJson('/api/v1/customer/fcm-token', []);
 
         $response->assertStatus(422)
