@@ -26,6 +26,12 @@ return [
     // Server-side cache TTL (seconds) for the product list endpoint.
     'product_list_ttl' => (int) env('API_PRODUCT_LIST_TTL', 300),
 
+    // Server-side cache TTL (seconds) for the public categories list endpoint.
+    'categories_list_ttl' => (int) env('API_CATEGORIES_LIST_TTL', 3600),
+
+    // Server-side cache TTL (seconds) for the public delivery-zones list endpoint.
+    'delivery_zones_list_ttl' => (int) env('API_DELIVERY_ZONES_LIST_TTL', 300),
+
     // Browser/CDN cache max-age (seconds) for the public GET endpoints
     // (cache.headers middleware).
     'http_cache_max_age' => (int) env('API_HTTP_CACHE_MAX_AGE', 300),

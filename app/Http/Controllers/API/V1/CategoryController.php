@@ -19,7 +19,7 @@ class CategoryController extends Controller
     {
         // Cache the active-category models (locale-independent); the resource
         // renders the per-request locale. Flushed by Category model events.
-        $categories = Cache::remember(Category::PUBLIC_CACHE_KEY, 3600, fn () => Category::where('is_active', true)
+        $categories = Cache::remember(Category::PUBLIC_CACHE_KEY, config('api.categories_list_ttl'), fn () => Category::where('is_active', true)
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get());

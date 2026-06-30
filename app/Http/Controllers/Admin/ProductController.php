@@ -69,7 +69,7 @@ class ProductController extends Controller
     public function create()
     {
         $this->authorizeProductAction(Product::class, 'create');
-        $categories = Category::orderBy('name_ar')->get();
+        $categories = Category::query()->orderBy('name_ar')->get();
         $weights = Weight::active()->orderBy('sort_order')->get();
         $options = Option::active()->with('values')->orderBy('name')->get();
 

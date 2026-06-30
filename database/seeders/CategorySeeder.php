@@ -25,9 +25,9 @@ class CategorySeeder extends Seeder
         }
 
         // ── Sub-categories ───────────────────────────────────────────
-        $sandwichId = Category::where('name_ar', 'سندويش')->value('id');
-        $mealsId    = Category::where('name_ar', 'وجبات')->value('id');
-        $drinksId   = Category::where('name_ar', 'مشروبات')->value('id');
+        $sandwichId = Category::query()->where('name_ar', 'سندويش')->value('id');
+        $mealsId    = Category::query()->where('name_ar', 'وجبات')->value('id');
+        $drinksId   = Category::query()->where('name_ar', 'مشروبات')->value('id');
 
         $subs = [
             // Under Sandwiches

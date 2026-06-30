@@ -21,6 +21,30 @@ class SystemConfig extends Model
         'group',
     ];
 
+    /**
+     * Centralized cache invalidation. Every write path (set/updateOrCreate/save/
+     * create/delete) flows through Eloquent, so hooking the model events clears
+     * both the per-key and per-group caches in one place — no caller (controller,
+     * service, installer) has to remember to call clearCache().
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (SystemConfig $config) {
+            self::clearCache($config->key);
+            self::clearCache(null, $config->group);
+
+            // Moved between groups → also flush the old group's cached list.
+            if ($config->wasChanged('group') && $config->getOriginal('group')) {
+                self::clearCache(null, $config->getOriginal('group'));
+            }
+        });
+
+        static::deleted(function (SystemConfig $config) {
+            self::clearCache($config->key);
+            self::clearCache(null, $config->group);
+        });
+    }
+
     // ─── Typed getters ────────────────────────────────────────────
 
     /**

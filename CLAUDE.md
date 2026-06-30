@@ -146,9 +146,19 @@ Requires a queue worker: `php artisan queue:work` (or Supervisor in production).
 
 ### SystemConfig
 
-Key-value store in the `system_configs` table, grouped (e.g., `general`, `restaurant`, `ordering`). Use `SystemConfigService` for typed access (`getText`, `getBool`, `getJson`, `getNumber`). Values are cached 24 hours — call `SystemConfig::clearCache($key)` after writes (the service's `set()` method handles this automatically).
+Key-value store in the `system_configs` table, grouped (e.g., `general`, `restaurant`, `ordering`). Use `SystemConfigService` for typed access (`getText`, `getBool`, `getJson`, `getNumber`). Per-key (`system_config_<key>`) and per-group (`system_config_group_<group>`) values are cached 24 hours.
 
 Dashboard stats (`Order::DASHBOARD_STATS_CACHE_KEY`) are cached separately and auto-cleared on every order `saved`/`deleted` event.
+
+### Cache Invalidation (centralized in model events)
+
+Domain caches are invalidated from Eloquent `saved`/`deleted` events on the owning model — **not** by callers — so every write path (controller, service, installer, import) is covered in one place:
+
+- **SystemConfig** — `booted()` clears the per-key cache **and** the per-group `getGroup()` cache (plus the old group when a config is regrouped). This is the single invalidation point; `clearCache()` remains for ad-hoc use, and `set()`'s write-through repopulates the key warm after the event forgets it.
+- **Category** — `saved`/`deleted` forget the single key `categories.api.public` (TTL `config('api.categories_list_ttl')`).
+- **DeliveryZone** — `saved`/`deleted` forget `delivery_zones.api.public` (TTL `config('api.delivery_zones_list_ttl')`); the public list is cached in `API\V1\DeliveryZoneController`.
+- **Product** — `saved`/`deleted` call `flushListCache()`. The default `database` cache driver has **no tag support**, so it bumps a version counter (`products.cache_version`) baked into every list key (`products.<ver>.<locale>.<md5(query)>`), making stale entries unreachable; the `Cache::tags('products')` branch is dormant unless the store is switched to Redis/Memcached.
+- **Feature flags** — config-only (`App\Support\Feature` → `config/system_features.php`); no Cache store. "Invalidation" is `php artisan config:cache`. Note: flags ship inside `/api/v1/settings/public`, which carries a 5-min browser `Cache-Control` (`cache.headers`), so a flipped flag reaches already-loaded SPA clients only after that max-age lapses or a reload.
 
 ### Feature Flags (config-driven, not DB)
 

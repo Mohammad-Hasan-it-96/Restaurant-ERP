@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\DeliveryZoneResource;
 use App\Models\DeliveryZone;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 
 class DeliveryZoneController extends Controller
 {
@@ -16,10 +17,11 @@ class DeliveryZoneController extends Controller
      */
     public function index(): JsonResponse
     {
-        $zones = DeliveryZone::where('is_active', true)
+        // Cache the active zones (locale-independent). Flushed by DeliveryZone model events.
+        $zones = Cache::remember(DeliveryZone::PUBLIC_CACHE_KEY, config('api.delivery_zones_list_ttl'), fn () => DeliveryZone::where('is_active', true)
             ->orderBy('sort_order')
             ->orderBy('id')
-            ->get();
+            ->get());
 
         return $this->success(DeliveryZoneResource::collection($zones));
     }
