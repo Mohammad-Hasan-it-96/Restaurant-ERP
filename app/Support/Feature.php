@@ -27,21 +27,26 @@ class Feature
      * Is the given feature flag enabled?
      *
      * @param  string  $path  Dot path, e.g. "orders.modification".
+     * @param  bool  $default  Value to assume when the config key is absent.
+     *                         Defaults to false (fail-closed) for capability
+     *                         flags; pass true for INVERTED flags such as
+     *                         admin.permissions_system, where a missing key
+     *                         must keep the restriction in place.
      */
-    public static function enabled(string $path): bool
+    public static function enabled(string $path, bool $default = false): bool
     {
         // ── Future seam ──────────────────────────────────────────────
         // A per-restaurant/DB override would be resolved here first and
         // fall back to config below. v1 is config-only.
-        return (bool) config("system_features.{$path}", false);
+        return (bool) config("system_features.{$path}", $default);
     }
 
     /**
      * Convenience inverse of enabled().
      */
-    public static function disabled(string $path): bool
+    public static function disabled(string $path, bool $default = false): bool
     {
-        return ! static::enabled($path);
+        return ! static::enabled($path, $default);
     }
 
     /**

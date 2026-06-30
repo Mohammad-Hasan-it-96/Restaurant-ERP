@@ -20,7 +20,7 @@ class AdminMiddleware
         // admin/moderator distinction collapses — but access is still limited to
         // staff (admin or moderator). It never elevates a viewer/no-role account,
         // so a low-privilege user can't reach admin-only actions just by logging in.
-        if (Auth::check() && Feature::disabled('admin.permissions_system')) {
+        if (Auth::check() && Feature::disabled('admin.permissions_system', true)) {
             if (in_array(Auth::user()->role, ['admin', 'moderator'], true)) {
                 return $next($request);
             }

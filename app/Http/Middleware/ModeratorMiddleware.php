@@ -19,7 +19,7 @@ class ModeratorMiddleware
         // Single-role mode: when the permissions system is disabled, access is
         // still limited to staff (admin or moderator) — never a viewer/no-role
         // account. This keeps "logged in" from meaning "fully privileged."
-        if (Auth::check() && Feature::disabled('admin.permissions_system')) {
+        if (Auth::check() && Feature::disabled('admin.permissions_system', true)) {
             if (in_array(Auth::user()->role, ['admin', 'moderator'], true)) {
                 return $next($request);
             }

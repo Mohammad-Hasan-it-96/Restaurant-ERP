@@ -34,13 +34,18 @@ class AppServiceProvider extends ServiceProvider
         // Use Bootstrap 5 pagination views across the entire application
         Paginator::useBootstrapFive();
 
-        // Brute-force protection for admin login: 5 attempts/minute keyed on the
-        // submitted email + client IP, so guessing is bounded per account and per
-        // source. Applied via the `throttle:login` middleware on the login route.
+        // Brute-force protection for admin login. Two stacked limits:
+        //  • 5/min per email+IP — bounds guessing against a single account.
+        //  • 20/min per IP — caps total attempts from one source so spraying a
+        //    shared password across many staff emails can't dodge the per-email
+        //    bucket. Applied via the `throttle:login` middleware on the login route.
         RateLimiter::for('login', function (Request $request) {
-            $key = Str::lower((string) $request->input('email')).'|'.$request->ip();
+            $email = Str::lower((string) $request->input('email'));
 
-            return Limit::perMinute(5)->by($key);
+            return [
+                Limit::perMinute(5)->by($email.'|'.$request->ip()),
+                Limit::perMinute(20)->by('ip:'.$request->ip()),
+            ];
         });
 
         // Token-authenticated customer API: key the limit on the customer's token

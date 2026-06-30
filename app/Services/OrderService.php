@@ -75,15 +75,24 @@ class OrderService
             $order = DB::transaction(function () use ($data, &$plainToken) {
 
                 // ── 1. Resolve customer ──────────────────────────────────
-                // If a previous order already bound a customer to this session, reuse it.
+                // A previous order may have bound a customer to this session, but
+                // honor that binding ONLY when it matches the phone on THIS order.
+                // Otherwise a shared browser/kiosk would attach customer B's order
+                // (and PII) to customer A, whose identity lingers in the session.
+                $customer = null;
                 $sessionCustomerId = session()->get('customer_id');
 
                 if ($sessionCustomerId) {
-                    $customer = Customer::findOrFail($sessionCustomerId);
+                    $candidate = Customer::find($sessionCustomerId);
+
+                    if ($candidate && $candidate->phone === $data['customer_phone']) {
+                        $customer = $candidate;
+                    }
                 }
 
-                // Fall back to phone lookup / creation (covers first-time & session-less clients)
-                if (empty($customer)) {
+                // Fall back to phone lookup / creation (covers first-time, session-less,
+                // and mismatched-session clients).
+                if (! $customer) {
                     $customer = Customer::firstOrCreate(
                         ['phone' => $data['customer_phone']],
                         ['full_name' => $data['customer_name']]
@@ -100,27 +109,30 @@ class OrderService
 
                 // Bind the resolved customer to the session so subsequent requests
                 // (e.g. cart ↔ order correlation) don't need to look up by phone again.
-                session()->put('customer_id', $customer->id);
+                // Regenerate the session id when the bound identity changes, so a
+                // fixated/planted session can't survive the privilege change.
+                if (session()->get('customer_id') !== $customer->id) {
+                    session()->put('customer_id', $customer->id);
+                    session()->regenerate();
+                }
 
-                // Collect every customer change and persist them in ONE update,
-                // instead of up to three separate UPDATE queries.
+                // Only a BRAND-NEW customer's row is written here. A pre-existing
+                // customer must never have their name/token/fcm mutated by an
+                // unauthenticated order placed under their phone — name changes go
+                // through the (ownership-guarded) customer/update route, and tokens
+                // are issued exactly once, to the first-time customer.
                 $customerChanges = [];
 
-                // Update name if it changed
-                if ($customer->full_name !== $data['customer_name']) {
-                    $customerChanges['full_name'] = $data['customer_name'];
-                }
-
-                // Issue a persistent (hashed) token if the customer doesn't have one
-                // yet; keep the plaintext to return to the client this one time.
-                if (! $customer->token) {
+                if ($customer->wasRecentlyCreated) {
+                    // Issue a persistent (hashed) token; keep the plaintext to return
+                    // to the client this one time.
                     $plainToken = $customer->issueToken();
                     $customerChanges['token'] = $customer->token;
-                }
 
-                // Store the FCM token sent by the SPA (guests pass it here on first order)
-                if (! empty($data['fcm_token']) && $customer->fcm_token !== $data['fcm_token']) {
-                    $customerChanges['fcm_token'] = $data['fcm_token'];
+                    // Store the FCM token sent by the SPA on this first order.
+                    if (! empty($data['fcm_token'])) {
+                        $customerChanges['fcm_token'] = $data['fcm_token'];
+                    }
                 }
 
                 if ($customerChanges) {

@@ -54,6 +54,23 @@ class SecurityHardeningTest extends TestCase
         $this->post('/auth/login', $payload)->assertStatus(429);
     }
 
+    public function test_login_is_ip_capped_across_many_emails(): void
+    {
+        // Spraying one password across distinct emails dodges the per-email
+        // bucket, so a second IP-only limit (20/min) must still cut it off.
+        for ($i = 0; $i < 20; $i++) {
+            $this->post('/auth/login', [
+                'email' => "staff{$i}@example.com",
+                'password' => 'spray-password',
+            ])->assertStatus(302);
+        }
+
+        $this->post('/auth/login', [
+            'email' => 'staff-final@example.com',
+            'password' => 'spray-password',
+        ])->assertStatus(429);
+    }
+
     // ─── H4: password reset is generic (no enumeration) ──────────────────
 
     public function test_forgot_password_returns_generic_response(): void
