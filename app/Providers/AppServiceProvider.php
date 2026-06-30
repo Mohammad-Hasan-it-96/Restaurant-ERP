@@ -48,14 +48,16 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
-        // Token-authenticated customer API: key the limit on the customer's token
-        // (hashed, so the secret isn't stored in cache keys) rather than IP alone,
-        // so customers behind shared NAT don't share a budget. Falls back to IP for
-        // anything without a token. Same rate as the default v1 group throttle.
+        // Token-authenticated customer API: key the limit on the RESOLVED customer
+        // (ResolveCustomerByToken runs first in the group and attaches it), so
+        // customers behind shared NAT don't share a budget. An unresolved or
+        // rotating/garbage token falls back to the IP bucket — keying on the raw
+        // token would let an attacker mint a fresh budget per token and evade the
+        // limit entirely. Same rate as the default v1 group throttle.
         RateLimiter::for('customer_api', function (Request $request) {
             $perMinute = (int) explode(',', (string) config('api.throttle.default', '60,1'))[0];
-            $token = $request->bearerToken();
-            $key = $token ? 'tok:'.sha1($token) : 'ip:'.$request->ip();
+            $customer = $request->attributes->get('customer');
+            $key = $customer ? 'cust:'.$customer->id : 'ip:'.$request->ip();
 
             return Limit::perMinute($perMinute)->by($key);
         });

@@ -25,6 +25,20 @@ class SecurityHardeningTest extends TestCase
         RateLimiter::clear('login'); // isolate throttle state between tests
     }
 
+    /**
+     * Seed a customer with a preset token. `token` is not mass-assignable
+     * (privilege field), so it is written via direct assignment — the same
+     * sanctioned path production uses (issueToken()/explicit set).
+     */
+    private function customerWithToken(array $attributes, string $tokenHash): Customer
+    {
+        $customer = new Customer($attributes);
+        $customer->token = $tokenHash;
+        $customer->save();
+
+        return $customer;
+    }
+
     // ─── C1: public registration removed ─────────────────────────────────
 
     public function test_register_routes_are_gone(): void
@@ -135,13 +149,12 @@ class SecurityHardeningTest extends TestCase
     public function test_guest_cannot_claim_an_existing_customers_phone(): void
     {
         // Tokens are stored hashed; the client holds the plaintext.
-        $victim = Customer::create([
+        $victim = $this->customerWithToken([
             'full_name' => 'Victim',
             'phone' => '0599000111',
-            'token' => Customer::hashToken('victim-secret-token'),
             'default_address' => 'Victim St',
-        ]);
-        Customer::create(['full_name' => 'guest', 'phone' => null, 'token' => Customer::hashToken('guest-token')]);
+        ], Customer::hashToken('victim-secret-token'));
+        $this->customerWithToken(['full_name' => 'guest', 'phone' => null], Customer::hashToken('guest-token'));
 
         $res = $this->withHeader('Authorization', 'Bearer guest-token')
             ->postJson('/api/v1/customer/update', [
@@ -160,7 +173,7 @@ class SecurityHardeningTest extends TestCase
 
     public function test_anonymous_caller_cannot_claim_an_existing_phone(): void
     {
-        Customer::create(['full_name' => 'Victim', 'phone' => '0599000222', 'token' => 'tok-2']);
+        $this->customerWithToken(['full_name' => 'Victim', 'phone' => '0599000222'], 'tok-2');
 
         // No Authorization header → no resolved customer. Rejected before any token
         // is issued: the validation unique rule (422) for this no-session path, or
@@ -174,7 +187,7 @@ class SecurityHardeningTest extends TestCase
 
     public function test_guest_can_still_promote_with_a_fresh_phone(): void
     {
-        Customer::create(['full_name' => 'guest', 'phone' => null, 'token' => Customer::hashToken('guest-token-2')]);
+        $this->customerWithToken(['full_name' => 'guest', 'phone' => null], Customer::hashToken('guest-token-2'));
 
         $res = $this->withHeader('Authorization', 'Bearer guest-token-2')
             ->postJson('/api/v1/customer/update', [

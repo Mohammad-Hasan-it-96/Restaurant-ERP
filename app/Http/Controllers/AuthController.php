@@ -70,9 +70,17 @@ class AuthController extends Controller
             }
         );
 
-        return $status === Password::PASSWORD_RESET
-            ? redirect()->route('auth.view_login')->with('status', __($status))
-            : back()->withErrors(['email' => __($status)])->withInput();
+        if ($status === Password::PASSWORD_RESET) {
+            return redirect()->route('auth.view_login')->with('status', __($status));
+        }
+
+        // Collapse every failure to one generic message. The broker distinguishes
+        // a non-existent email (passwords.user) from a bad/expired token
+        // (passwords.token); echoing the raw status would let the reset form be
+        // used to enumerate which emails are registered.
+        return back()
+            ->withErrors(['email' => __('This password reset link is invalid or has expired.')])
+            ->withInput($request->only('email'));
     }
 
     public function view_login()

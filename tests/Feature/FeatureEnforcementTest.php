@@ -91,9 +91,9 @@ class FeatureEnforcementTest extends TestCase
         Queue::fake();
         config(['system_features.notifications.push' => false]);
 
-        $customer = Customer::create([
-            'full_name' => 'T', 'phone' => '0100', 'token' => (string) Str::uuid(), 'fcm_token' => 'tok',
-        ]);
+        $customer = new Customer(['full_name' => 'T', 'phone' => '0100', 'fcm_token' => 'tok']);
+        $customer->token = (string) Str::uuid(); // token isn't mass-assignable — set directly
+        $customer->save();
         $order = new Order(['status' => Order::STATUS_ACCEPTED, 'order_number' => 'ORD-1']);
         $order->setRelation('customer', $customer);
 

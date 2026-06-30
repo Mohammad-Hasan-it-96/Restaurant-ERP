@@ -14,7 +14,8 @@ use Tests\TestCase;
 /**
  * Regression tests for the Low-tier hardening:
  * L1 (SameSite coerced to lax/strict), L3 (random order-number suffix),
- * L5 (per-key config validation), L6 (stale session customer falls back to guest).
+ * L5 (per-key config validation), L6 (stale session customer falls back to guest),
+ * L7 (privilege fields are not mass-assignable), L8 (reset-password is generic).
  */
 class LowHardeningTest extends TestCase
 {
@@ -101,5 +102,63 @@ class LowHardeningTest extends TestCase
         $this->assertSame('ok', $response->getContent());
         $this->assertNull($request->attributes->get('customer'));
         $this->assertFalse($session->has('customer_id'), 'Stale id should be forgotten.');
+    }
+
+    // ─── L7: privilege fields can't be set through mass assignment ───────────
+
+    public function test_user_role_is_not_mass_assignable(): void
+    {
+        $user = new User([
+            'name' => 'Mallory',
+            'email' => 'mallory@example.com',
+            'password' => 'secret123',
+            'role' => 'admin', // attempt to self-escalate — must be ignored
+        ]);
+
+        $this->assertArrayNotHasKey('role', $user->getAttributes());
+
+        // Explicit assignment (the only sanctioned path) still works.
+        $user->role = 'moderator';
+        $this->assertSame('moderator', $user->role);
+    }
+
+    public function test_customer_token_and_block_state_are_not_mass_assignable(): void
+    {
+        $customer = new Customer([
+            'full_name' => 'Mallory',
+            'phone' => '0590001234',
+            'token' => 'forged-token',   // can't mint own auth token
+            'is_blocked' => true,        // can't toggle own block state
+            'blocked_reason' => 'n/a',
+        ]);
+
+        $attrs = $customer->getAttributes();
+        $this->assertArrayNotHasKey('token', $attrs);
+        $this->assertArrayNotHasKey('is_blocked', $attrs);
+        $this->assertArrayNotHasKey('blocked_reason', $attrs);
+
+        // issueToken() remains the sanctioned writer for the token.
+        $customer->issueToken();
+        $this->assertNotEmpty($customer->token);
+    }
+
+    // ─── L8: reset-password failure is generic (no account enumeration) ──────
+
+    public function test_reset_password_failure_does_not_enumerate_accounts(): void
+    {
+        // Unknown email: the broker returns passwords.user ("we can't find a
+        // user…"); the handler must collapse it to a single generic message.
+        $response = $this->post('/auth/reset-password', [
+            'token' => 'invalid-token',
+            'email' => 'nobody@example.com',
+            'password' => 'new-password-123',
+            'password_confirmation' => 'new-password-123',
+        ]);
+
+        $response->assertSessionHasErrors('email');
+
+        $error = session('errors')->first('email');
+        $this->assertSame('This password reset link is invalid or has expired.', $error);
+        $this->assertStringNotContainsStringIgnoringCase("can't find a user", $error);
     }
 }

@@ -18,13 +18,19 @@ class Customer extends Model
      */
     public ?string $plainTextToken = null;
 
+    /**
+     * Mass-assignable attributes.
+     *
+     * `token`, `is_blocked` and `blocked_reason` are deliberately EXCLUDED so a
+     * customer can never set their own auth token or self-unblock through a
+     * fill()/create()/update() with request data. The token is written only via
+     * issueToken() (which sets it directly on the model); block state is written
+     * only by explicit assignment in Admin\CustomerController.
+     */
     protected $fillable = [
         'full_name',
         'phone',
         'default_address',
-        'is_blocked',
-        'blocked_reason',
-        'token',
         'fcm_token',
     ];
 

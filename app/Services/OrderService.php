@@ -121,26 +121,19 @@ class OrderService
                 // unauthenticated order placed under their phone — name changes go
                 // through the (ownership-guarded) customer/update route, and tokens
                 // are issued exactly once, to the first-time customer.
-                $customerChanges = [];
-
                 if ($customer->wasRecentlyCreated) {
-                    // Issue a persistent (hashed) token; keep the plaintext to return
-                    // to the client this one time.
+                    // issueToken() sets the hashed token directly on the model (token
+                    // is not mass-assignable); keep the plaintext to return once.
                     $plainToken = $customer->issueToken();
-                    $customerChanges['token'] = $customer->token;
 
                     // Store the FCM token sent by the SPA on this first order.
                     if (! empty($data['fcm_token'])) {
-                        $customerChanges['fcm_token'] = $data['fcm_token'];
+                        $customer->fcm_token = $data['fcm_token'];
                     }
-                }
 
-                if ($customerChanges) {
-                    $customer->fill($customerChanges)->save();
+                    $customer->save();
 
-                    if (isset($customerChanges['token'])) {
-                        logService()->info('customer.token.generated', ['customer_id' => $customer->id]);
-                    }
+                    logService()->info('customer.token.generated', ['customer_id' => $customer->id]);
                 }
 
                 // ── 2. Resolve & validate products ───────────────────────

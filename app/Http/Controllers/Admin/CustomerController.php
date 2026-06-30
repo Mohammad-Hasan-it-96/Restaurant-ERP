@@ -63,10 +63,11 @@ class CustomerController extends Controller
             'blocked_reason' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $customer->update([
-            'is_blocked' => true,
-            'blocked_reason' => $request->input('blocked_reason') ?: null,
-        ]);
+        // is_blocked / blocked_reason are not mass-assignable (privilege fields) —
+        // assign explicitly.
+        $customer->is_blocked = true;
+        $customer->blocked_reason = $request->input('blocked_reason') ?: null;
+        $customer->save();
 
         activity()->log('customer.blocked', $customer, 'Customer blocked: '.$customer->full_name, [
             'reason' => $customer->blocked_reason,
@@ -80,10 +81,9 @@ class CustomerController extends Controller
      */
     public function unblock(Customer $customer)
     {
-        $customer->update([
-            'is_blocked' => false,
-            'blocked_reason' => null,
-        ]);
+        $customer->is_blocked = false;
+        $customer->blocked_reason = null;
+        $customer->save();
 
         activity()->log('customer.unblocked', $customer, 'Customer unblocked: '.$customer->full_name);
 
@@ -102,10 +102,9 @@ class CustomerController extends Controller
 
         $nowBlocked = ! $customer->is_blocked;
 
-        $customer->update([
-            'is_blocked' => $nowBlocked,
-            'blocked_reason' => $nowBlocked ? ($request->input('blocked_reason') ?: null) : null,
-        ]);
+        $customer->is_blocked = $nowBlocked;
+        $customer->blocked_reason = $nowBlocked ? ($request->input('blocked_reason') ?: null) : null;
+        $customer->save();
 
         activity()->log(
             $nowBlocked ? 'customer.blocked' : 'customer.unblocked',

@@ -196,10 +196,12 @@ class InstallController extends Controller
             }
 
             // 5. Admin from input (password cast auto-hashes). Idempotent on retry.
-            User::updateOrCreate(
-                ['email' => $admin['email']],
-                ['name' => $admin['name'], 'password' => $admin['password'], 'role' => 'admin'],
-            );
+            // role is not mass-assignable, so assign it explicitly.
+            $adminUser = User::firstOrNew(['email' => $admin['email']]);
+            $adminUser->name = $admin['name'];
+            $adminUser->password = $admin['password'];
+            $adminUser->role = 'admin';
+            $adminUser->save();
 
             // 6. Restaurant info overrides the seeded defaults.
             $config = app(SystemConfigService::class);
