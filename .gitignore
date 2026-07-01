@@ -29,3 +29,12 @@ Homestead.json
 .env.production
 .phpactor.json
 auth.json
+
+# Local tooling / IDE / junk — must never be committed
+/.idea/
+/ngrok.exe
+/.rnd
+
+# NOTE: public/spa/ (the built customer SPA) is still tracked on purpose — deploys
+# currently rely on the committed build. It moves to a CI/deploy build step in
+# Phase 3 of ARCHITECTURE_ROADMAP.md; untrack it only once that exists.

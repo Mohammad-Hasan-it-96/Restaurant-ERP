@@ -166,6 +166,10 @@ class InstallController extends Controller
                 'DB_USERNAME' => $db['db_username'],
                 'DB_PASSWORD' => $db['db_password'] ?? '',
                 'THEME_PRIMARY' => $restaurant['theme_primary'],
+                // Encrypt daily backups (DB dump + images + .env) out of the box.
+                // Generated per install; preserved on retry so existing archives
+                // stay decryptable.
+                'BACKUP_ARCHIVE_PASSWORD' => $this->backupPassword(),
             ]);
 
             // 2. Point the live process at the new DB so migrations run now.
@@ -244,6 +248,22 @@ class InstallController extends Controller
     private function guessUrl(): string
     {
         return request()->getSchemeAndHttpHost();
+    }
+
+    /**
+     * Backup archive password: reuse an existing one if the .env already carries
+     * it (so a retried/re-run install doesn't orphan earlier encrypted archives),
+     * otherwise generate a strong random secret.
+     */
+    private function backupPassword(): string
+    {
+        $existing = env('BACKUP_ARCHIVE_PASSWORD');
+
+        if (is_string($existing) && $existing !== '') {
+            return $existing;
+        }
+
+        return bin2hex(random_bytes(24));
     }
 
     /**

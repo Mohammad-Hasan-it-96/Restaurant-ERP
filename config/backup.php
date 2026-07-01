@@ -164,10 +164,13 @@ return [
             /*
              * The disk names on which the backups will be stored.
              */
-            'disks' => [
-                // Local now; add 's3' here (and set AWS_* env) to also ship off-host.
-                env('BACKUP_DESTINATION_DISK', 'local'),
-            ],
+            // Comma-separated list of destination disks, so off-host shipping needs
+            // no source edit: set BACKUP_DESTINATION_DISK=local,s3 and the AWS_* env
+            // (the s3 driver is already installed). Defaults to local-only.
+            'disks' => array_values(array_filter(array_map(
+                'trim',
+                explode(',', (string) env('BACKUP_DESTINATION_DISK', 'local'))
+            ))),
         ],
 
         /*
@@ -276,7 +279,11 @@ return [
     'monitor_backups' => [
         [
             'name' => env('APP_NAME', 'laravel-backup'),
-            'disks' => ['local'],
+            // Monitor the same disk(s) we back up to (see destination.disks above).
+            'disks' => array_values(array_filter(array_map(
+                'trim',
+                explode(',', (string) env('BACKUP_DESTINATION_DISK', 'local'))
+            ))),
             'health_checks' => [
                 \Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumAgeInDays::class => 1,
                 \Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumStorageInMegabytes::class => 5000,

@@ -50,11 +50,17 @@ return [
                 \PDOException::class,
             ],
         ],
+        // Backup/cleanup failures (backup.failed / backup.cleanup_failed) log at
+        // error level; without this allowlist entry they would never page.
+        'backup' => [
+            'prefixes' => ['backup.failed', 'backup.cleanup_failed'],
+        ],
     ],
 
     // Categories delivered SYNCHRONOUSLY (direct HTTP) because the queue/DB may be
-    // the thing that is broken. Everything else is dispatched via a queued job.
-    'sync_categories' => ['queue', 'database', 'fatal'],
+    // the thing that is broken, or the emitter is a CLI process (scheduler) with no
+    // guaranteed worker. Everything else is dispatched via a queued job.
+    'sync_categories' => ['queue', 'database', 'backup', 'fatal'],
 
     // Duplicate suppression: identical fingerprints within this window send once.
     'dedup' => [
