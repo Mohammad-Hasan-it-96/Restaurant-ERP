@@ -7,7 +7,6 @@ use App\Models\Customer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class CustomerController extends Controller
@@ -55,8 +54,8 @@ class CustomerController extends Controller
     /**
      * GET /api/v1/customer/orders
      *
-     * Returns all orders belonging to the session customer.
-     * Returns empty array when no session.
+     * Returns the session customer's recent orders (most recent first, capped so
+     * the payload can't grow unbounded with history). Empty array when no session.
      */
     public function orders(Request $request): JsonResponse
     {
@@ -69,19 +68,11 @@ class CustomerController extends Controller
         $orders = \App\Models\Order::query()->where('customer_id', $customer->id)
             ->with('items')
             ->latest()
+            ->limit(50)
             ->get();
 
         return $this->success(OrderResource::collection($orders));
     }
-
-    /**
-     * POST /api/v1/customer/update
-     *
-     * Works for both:
-     * - Guest (phone=null) → merge into existing customer or promote to real
-     * - Existing session → update the linked customer
-     * - New visitor (no session yet) → find-or-create by phone, bind to session
-     */
 
     /**
      * POST /api/v1/customer/fcm-token
@@ -128,40 +119,51 @@ class CustomerController extends Controller
             'fcm_token' => 'nullable|string|max:255',
         ]);
 
-        $customer = Customer::create([
+        $customer = new Customer([
             'full_name' => 'guest',
             'phone' => null,
-            'token' => (string) Str::uuid(),
             'fcm_token' => $request->input('fcm_token'),
         ]);
+        $plainToken = $customer->issueToken(); // sets the hashed token + plaintext
+        $customer->save();
 
         return $this->success([
-            'customer_token' => $customer->token,
+            'customer_token' => $plainToken,
         ], 'Guest created.');
     }
 
     /**
-     * POST /api/v1/customer/update  (extended)
+     * POST /api/v1/customer/update
      *
-     * Extra behaviour when $customer is a guest (phone = null):
-     * if the provided phone already belongs to another customer, merge this
-     * guest into that customer — transfer the FCM token if needed, then
-     * delete the orphaned guest row and return the real customer's token.
+     * Updates the current customer's profile, or promotes a guest / creates a
+     * new customer when the submitted phone is not yet registered.
+     *
+     * SECURITY (account-takeover prevention): a phone number that already belongs
+     * to a *different* customer may NOT be claimed here. Previously a guest (or an
+     * anonymous caller) could submit a victim's phone and the endpoint would merge
+     * into — and return the Bearer token of — that victim's account, with no proof
+     * of phone ownership. Reclaiming an existing phone requires an out-of-band
+     * verification (OTP) we don't have, so we reject instead of merging.
      */
     public function update(Request $request): JsonResponse
     {
         $customer = $request->attributes->get('customer');
 
-        // For guests (phone=null) we need a different unique rule: allow the
-        // phone even if it exists (we'll merge instead of erroring).
+        // A guest is a customer row with no phone yet; it may set a phone for the
+        // first time. The unique rule ignores the caller's own row so they can
+        // re-save their own phone unchanged.
         $isGuest = $customer && is_null($customer->phone);
 
         $validated = $request->validate([
-            'name' => 'required|string|max:100',
+            // Same character allowlist as StoreOrderRequest — keeps formula/control
+            // characters out of the name that later feeds CSV/XLSX exports.
+            'name' => ['required', 'string', 'max:100', 'regex:/^[\p{L}\s\-.\']+$/u'],
             'phone' => array_filter([
                 'required', 'string', 'max:30',
+                // Guests skip the built-in unique rule because we enforce ownership
+                // explicitly below (and want a controlled 409, not a validation 422).
                 $isGuest
-                    ? null  // skip unique check — we handle merge manually below
+                    ? null
                     : ($customer
                         ? Rule::unique('customers', 'phone')->ignore($customer->id)
                         : Rule::unique('customers', 'phone')),
@@ -169,64 +171,43 @@ class CustomerController extends Controller
             'address' => 'nullable|string|max:500',
         ]);
 
-        // ── Guest merge: phone belongs to an existing real customer ──────────
-        if ($isGuest) {
-            $existing = Customer::where('phone', $validated['phone'])->first();
-
-            if ($existing) {
-                // Transfer FCM token if the real customer doesn't have one yet
-                if (! $existing->fcm_token && $customer->fcm_token) {
-                    $existing->update(['fcm_token' => $customer->fcm_token]);
-                }
-                // Update name/address on the real customer
-                $existing->update([
-                    'full_name' => $validated['name'],
-                    'default_address' => $validated['address'] ?? $existing->default_address,
-                ]);
-                // Ensure token exists
-                if (! $existing->token) {
-                    $existing->update(['token' => (string) Str::uuid()]);
-                }
-                // Clean up the now-orphaned guest row
-                $customer->delete();
-
-                return $this->success([
-                    'id' => $existing->id,
-                    'name' => $existing->full_name,
-                    'phone' => $existing->phone,
-                    'default_address' => $existing->default_address,
-                    'token' => $existing->token,
-                ], 'Profile updated successfully.');
-            }
+        // Ownership guard: if this phone is already registered to a customer that
+        // is NOT the caller, refuse — never hand back another customer's token or
+        // mutate their record. Covers both the guest path and the no-session path.
+        $existing = Customer::where('phone', $validated['phone'])->first();
+        if ($existing && (! $customer || $existing->id !== $customer->id)) {
+            return $this->error('This phone number is already registered.', 409);
         }
 
-        // ── Normal flow (non-guest, or guest with new phone) ─────────────────
+        // Determine the plaintext token to return: a freshly-issued one for a new
+        // customer, otherwise echo back the caller's own Bearer token (the stored
+        // token is hashed, so the server never has the existing plaintext).
         if (! $customer) {
-            $customer = Customer::firstOrCreate(
-                ['phone' => $validated['phone']],
-                ['full_name' => $validated['name']]
-            );
-            if (! $customer->token) {
-                $customer->update(['token' => (string) Str::uuid()]);
-            }
+            // Brand-new visitor with no session: create their own fresh customer row.
+            $customer = new Customer(['full_name' => $validated['name'], 'phone' => $validated['phone']]);
+            $plainToken = $customer->issueToken();
+        } else {
+            $plainToken = $request->bearerToken();
         }
 
         if ($customer->is_blocked) {
             return $this->error('This account is blocked.', 403);
         }
 
-        $customer->update([
+        // Update the caller's own record (guests are promoted in place, keeping
+        // their existing row and token — no cross-account transfer).
+        $customer->fill([
             'full_name' => $validated['name'],
             'phone' => $validated['phone'],
             'default_address' => $validated['address'] ?? $customer->default_address,
-        ]);
+        ])->save();
 
         return $this->success([
             'id' => $customer->id,
             'name' => $customer->full_name,
             'phone' => $customer->phone,
             'default_address' => $customer->default_address,
-            'token' => $customer->token,
+            'token' => $plainToken,
         ], 'Profile updated successfully.');
     }
 }

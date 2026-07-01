@@ -23,12 +23,15 @@ class ImageService
      * Store an uploaded image, compressed and resized.
      *
      * @param  string  $dir  Sub-directory on the public disk (e.g. "products")
-     * @param  int  $maxWidth  Longest-edge cap in px; wider images are scaled down
-     * @param  int  $quality  JPEG/WebP quality (1–100)
+     * @param  int|null  $maxWidth  Longest-edge cap in px; defaults to config('images.max_width')
+     * @param  int|null  $quality  JPEG/WebP quality (1–100); defaults to config('images.quality')
      * @return string Relative path on the public disk, e.g. "products/ab12….jpg"
      */
-    public function store(UploadedFile $file, string $dir, int $maxWidth = 1200, int $quality = 75): string
+    public function store(UploadedFile $file, string $dir, ?int $maxWidth = null, ?int $quality = null): string
     {
+        $maxWidth ??= (int) config('images.max_width', 1200);
+        $quality ??= (int) config('images.quality', 75);
+
         // No GD, or we can't introspect the file → fall back to a plain store so
         // an upload never fails just because compression isn't possible.
         if (! function_exists('imagecreatetruecolor')) {
@@ -94,7 +97,7 @@ class ImageService
         ob_start();
         match ($type) {
             IMAGETYPE_JPEG => imagejpeg($dst, null, $quality),
-            IMAGETYPE_PNG => imagepng($dst, null, 6),   // 0–9 zlib level
+            IMAGETYPE_PNG => imagepng($dst, null, (int) config('images.png_compression_level', 6)),
             IMAGETYPE_WEBP => imagewebp($dst, null, $quality),
         };
         $binary = ob_get_clean();

@@ -89,7 +89,7 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | client_safe
+    348| client_safe
     |--------------------------------------------------------------------------
     | The whitelist of flag paths exposed to the customer SPA (and any other
     | public frontend) via GET /api/v1/settings/public. Admin-only flags such

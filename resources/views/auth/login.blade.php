@@ -70,14 +70,6 @@
                                 <i class="bi bi-box-arrow-in-right me-2"></i>{{\App\Helpers\Helpers::translate('sign_in')}}
                             </button>
                         </div>
-
-                        <div class="text-center">
-                            <p class="mb-0">{{\App\Helpers\Helpers::translate('dont_have_account')}}
-                                <a href="{{ route('auth.view_register') }}" class="text-decoration-none fw-medium">
-                                    {{\App\Helpers\Helpers::translate('create_account')}}
-                                </a>
-                            </p>
-                        </div>
                     </form>
                 </div>
             </div>

@@ -10,6 +10,7 @@ use App\Services\NotificationService;
 use App\Services\SystemConfigService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class OrderController extends Controller
 {
@@ -53,12 +54,12 @@ class OrderController extends Controller
             });
         }
 
-        $orders = $query->paginate(20)->withQueryString();
+        $orders = $query->paginate(config('pagination.orders'))->withQueryString();
 
-        // Counts per status for tab badges
-        $counts = Order::selectRaw('status, count(*) as total')
+        // Counts per status for tab badges (cached; flushed by Order model events).
+        $counts = Cache::remember(Order::STATUS_COUNTS_CACHE_KEY, config('dashboard.status_counts_ttl'), fn () => Order::selectRaw('status, count(*) as total')
             ->groupBy('status')
-            ->pluck('total', 'status');
+            ->pluck('total', 'status'));
 
         // Latest order ID for JS polling baseline
         $latestId = Order::max('id') ?? 0;
@@ -114,6 +115,11 @@ class OrderController extends Controller
 
         $order->load('customer');
         $this->notifications->notifyOrderStatus($order);
+
+        activity()->log('order.accepted', $order, 'Order #'.$order->order_number, [
+            'to' => Order::STATUS_ACCEPTED,
+            'delivery_fee' => $deliveryFee,
+        ]);
 
         return back()->with('success', __('app.order_accepted'));
     }
@@ -192,6 +198,10 @@ class OrderController extends Controller
         $order->load('customer');
         $this->notifications->notifyOrderStatus($order);
 
+        activity()->log('order.rejected', $order, 'Order #'.$order->order_number, [
+            'reason' => $order->rejection_reason,
+        ]);
+
         return back()->with('success', __('app.order_rejected'));
     }
 
@@ -207,6 +217,8 @@ class OrderController extends Controller
         $order->load('customer');
         $this->notifications->notifyOrderStatus($order);
 
+        activity()->log('order.ready', $order, 'Order #'.$order->order_number);
+
         return back()->with('success', __('app.order_marked_ready'));
     }
 
@@ -218,6 +230,8 @@ class OrderController extends Controller
         }
 
         $order->update(['status' => Order::STATUS_DELIVERED]);
+
+        activity()->log('order.delivered', $order, 'Order #'.$order->order_number);
 
         return back()->with('success', __('app.order_marked_delivered'));
     }
@@ -239,6 +253,8 @@ class OrderController extends Controller
             'completed_at' => now(),
         ]);
 
+        activity()->log('order.completed', $order, 'Order #'.$order->order_number);
+
         return back()->with('success', __('app.order_completed'));
     }
 
@@ -256,6 +272,10 @@ class OrderController extends Controller
             // Keep the legacy fields in sync (read by dashboard / reports / SPA).
             'payment_status' => Order::PAYMENT_PAID,
             'payment_method' => 'cash',
+        ]);
+
+        activity()->log('order.paid', $order, 'Order #'.$order->order_number, [
+            'method' => 'cash',
         ]);
 
         return back()->with('success', __('app.order_marked_paid'));

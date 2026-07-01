@@ -17,7 +17,7 @@ class OptionController extends Controller
             $query->where('name', 'like', '%'.$request->search.'%');
         }
 
-        $options = $query->orderBy('name')->paginate(20)->withQueryString();
+        $options = $query->orderBy('name')->paginate(config('pagination.options'))->withQueryString();
 
         return view('admin.options.index', compact('options'));
     }

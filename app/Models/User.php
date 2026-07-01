@@ -15,11 +15,19 @@ class User extends Authenticatable
      *
      * @var array<int, string>
      */
+    /**
+     * Mass-assignable attributes.
+     *
+     * `role` is deliberately EXCLUDED: it is the privilege boundary, so it must
+     * never be settable from a request payload via fill()/create()/update().
+     * Every legitimate write assigns it explicitly (UserController store/update,
+     * InstallController) so a future `User::create($request->all())` can't
+     * escalate a user to admin.
+     */
     protected $fillable = [
         'name',
         'email',
         'password',
-        'role',
         'profile_picture',
     ];
 

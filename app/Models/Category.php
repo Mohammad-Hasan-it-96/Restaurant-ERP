@@ -5,9 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Cache;
 
 class Category extends Model
 {
+    /** Cache key for the public /api/v1/categories list (locale-independent models). */
+    const PUBLIC_CACHE_KEY = 'categories.api.public';
+
     protected $fillable = [
         'name_ar',
         'name_en',
@@ -16,6 +20,16 @@ class Category extends Model
         'sort_order',
         'is_active',
     ];
+
+    /**
+     * Categories are read on nearly every public/admin page but change rarely,
+     * so flush the cached list whenever one is created/updated/deleted.
+     */
+    protected static function booted(): void
+    {
+        static::saved(fn () => Cache::forget(self::PUBLIC_CACHE_KEY));
+        static::deleted(fn () => Cache::forget(self::PUBLIC_CACHE_KEY));
+    }
 
     protected function casts(): array
     {

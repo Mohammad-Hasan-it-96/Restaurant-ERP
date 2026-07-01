@@ -24,6 +24,22 @@ class FeatureFlagTest extends TestCase
         $this->assertFalse(Feature::enabled('does.not.exist'));
     }
 
+    public function test_missing_inverted_flag_can_fail_closed_via_default(): void
+    {
+        // admin.permissions_system is INVERTED — a missing key must keep the
+        // permission system ON (role separation intact), not collapse it. The
+        // explicit default param is how the auth middlewares request that.
+        // Drop the whole admin group so the key is genuinely absent (a present
+        // null would be returned verbatim, bypassing the default).
+        config(['system_features.admin' => []]);
+
+        // Capability default (false) would fail open for this inverted flag…
+        $this->assertTrue(Feature::disabled('admin.permissions_system'));
+        // …but the fail-closed default the middlewares pass keeps it enabled.
+        $this->assertTrue(Feature::enabled('admin.permissions_system', true));
+        $this->assertFalse(Feature::disabled('admin.permissions_system', true));
+    }
+
     public function test_feature_global_helper_wraps_resolver(): void
     {
         config(['system_features.products.options' => false]);

@@ -16,10 +16,16 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
-        // Single-role mode: when the permissions system is disabled, any
-        // authenticated user has full access (no admin/moderator distinction).
-        if (Auth::check() && Feature::disabled('admin.permissions_system')) {
-            return $next($request);
+        // Single-role mode: when the permissions system is disabled, the
+        // admin/moderator distinction collapses — but access is still limited to
+        // staff (admin or moderator). It never elevates a viewer/no-role account,
+        // so a low-privilege user can't reach admin-only actions just by logging in.
+        if (Auth::check() && Feature::disabled('admin.permissions_system', true)) {
+            if (in_array(Auth::user()->role, ['admin', 'moderator'], true)) {
+                return $next($request);
+            }
+
+            return redirect()->route('admin.dashboard')->with('error', 'You do not have permission to access this page.');
         }
 
         if (Auth::check() && Auth::user()->role === 'admin') {

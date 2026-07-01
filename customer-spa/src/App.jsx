@@ -45,8 +45,13 @@ export default function App() {
   }, [activePage, showOrders, showProfile]);
 
   useEffect(() => {
-    document.title = t('documentTitle');
-  }, [t, lang]);
+    // Prefer the configured restaurant name (locale-aware); fall back to the
+    // generic i18n title until settings load.
+    const name = lang === 'ar'
+      ? (settings.restaurant_name || settings.restaurant_name_en)
+      : (settings.restaurant_name_en || settings.restaurant_name);
+    document.title = name || t('documentTitle');
+  }, [t, lang, settings.restaurant_name, settings.restaurant_name_en]);
 
   // Auto-select first root category
   useEffect(() => {

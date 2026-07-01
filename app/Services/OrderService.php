@@ -11,7 +11,6 @@ use App\Support\Feature;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class OrderService
@@ -45,16 +44,21 @@ class OrderService
         }
 
         // ── Duplicate order guard (5-second window) ──────────────────────────
+        // Sort the item signature so the same basket in a different order hashes
+        // identically (otherwise reordering the array trivially bypassed the guard).
+        $itemSignature = collect($data['items'])
+            ->map(fn ($i) => $i['product_id'].'x'.$i['quantity'])
+            ->sort()
+            ->implode(',');
+
         $dupKey = 'order_dup_'.md5(
-            $data['customer_phone']
-            .'|'.$data['order_type']
-            .'|'.implode(',', array_map(
-                fn ($i) => $i['product_id'].'x'.$i['quantity'],
-                $data['items']
-            ))
+            $data['customer_phone'].'|'.$data['order_type'].'|'.$itemSignature
         );
 
-        if (Cache::has($dupKey)) {
+        // Atomic check-and-set: add() writes only if the key is absent and returns
+        // false otherwise, so two concurrent identical requests can't both pass the
+        // guard (the previous has()+put() left a race window between the two calls).
+        if (! Cache::add($dupKey, true, now()->addSeconds(config('orders.duplicate_guard_seconds', 5)))) {
             logService()->warning('order.create.duplicate', [
                 'customer_phone' => $data['customer_phone'],
             ]);
@@ -63,22 +67,32 @@ class OrderService
             ]);
         }
 
-        // Mark this combination as "in-flight" for 5 seconds
-        Cache::put($dupKey, true, now()->addSeconds(5));
+        // Plaintext token captured here when a brand-new customer is issued one
+        // inside the transaction, so it can be returned to the client once.
+        $plainToken = null;
 
         try {
-            $order = DB::transaction(function () use ($data) {
+            $order = DB::transaction(function () use ($data, &$plainToken) {
 
                 // ── 1. Resolve customer ──────────────────────────────────
-                // If a previous order already bound a customer to this session, reuse it.
+                // A previous order may have bound a customer to this session, but
+                // honor that binding ONLY when it matches the phone on THIS order.
+                // Otherwise a shared browser/kiosk would attach customer B's order
+                // (and PII) to customer A, whose identity lingers in the session.
+                $customer = null;
                 $sessionCustomerId = session()->get('customer_id');
 
                 if ($sessionCustomerId) {
-                    $customer = Customer::findOrFail($sessionCustomerId);
+                    $candidate = Customer::find($sessionCustomerId);
+
+                    if ($candidate && $candidate->phone === $data['customer_phone']) {
+                        $customer = $candidate;
+                    }
                 }
 
-                // Fall back to phone lookup / creation (covers first-time & session-less clients)
-                if (empty($customer)) {
+                // Fall back to phone lookup / creation (covers first-time, session-less,
+                // and mismatched-session clients).
+                if (! $customer) {
                     $customer = Customer::firstOrCreate(
                         ['phone' => $data['customer_phone']],
                         ['full_name' => $data['customer_name']]
@@ -95,33 +109,31 @@ class OrderService
 
                 // Bind the resolved customer to the session so subsequent requests
                 // (e.g. cart ↔ order correlation) don't need to look up by phone again.
-                session()->put('customer_id', $customer->id);
-
-                // Collect every customer change and persist them in ONE update,
-                // instead of up to three separate UPDATE queries.
-                $customerChanges = [];
-
-                // Update name if it changed
-                if ($customer->full_name !== $data['customer_name']) {
-                    $customerChanges['full_name'] = $data['customer_name'];
+                // Regenerate the session id when the bound identity changes, so a
+                // fixated/planted session can't survive the privilege change.
+                if (session()->get('customer_id') !== $customer->id) {
+                    session()->put('customer_id', $customer->id);
+                    session()->regenerate();
                 }
 
-                // Generate a persistent token if the customer doesn't have one yet
-                if (! $customer->token) {
-                    $customerChanges['token'] = (string) Str::uuid();
-                }
+                // Only a BRAND-NEW customer's row is written here. A pre-existing
+                // customer must never have their name/token/fcm mutated by an
+                // unauthenticated order placed under their phone — name changes go
+                // through the (ownership-guarded) customer/update route, and tokens
+                // are issued exactly once, to the first-time customer.
+                if ($customer->wasRecentlyCreated) {
+                    // issueToken() sets the hashed token directly on the model (token
+                    // is not mass-assignable); keep the plaintext to return once.
+                    $plainToken = $customer->issueToken();
 
-                // Store the FCM token sent by the SPA (guests pass it here on first order)
-                if (! empty($data['fcm_token']) && $customer->fcm_token !== $data['fcm_token']) {
-                    $customerChanges['fcm_token'] = $data['fcm_token'];
-                }
-
-                if ($customerChanges) {
-                    $customer->fill($customerChanges)->save();
-
-                    if (isset($customerChanges['token'])) {
-                        logService()->info('customer.token.generated', ['customer_id' => $customer->id]);
+                    // Store the FCM token sent by the SPA on this first order.
+                    if (! empty($data['fcm_token'])) {
+                        $customer->fcm_token = $data['fcm_token'];
                     }
+
+                    $customer->save();
+
+                    logService()->info('customer.token.generated', ['customer_id' => $customer->id]);
                 }
 
                 // ── 2. Resolve & validate products ───────────────────────
@@ -203,12 +215,23 @@ class OrderService
             // ── Persist customer binding in session (outside transaction) ──
             session()->put('customer_id', $order->customer_id);
 
+            // Re-attach the one-time plaintext token (the reload above replaced the
+            // in-memory customer instance) so the controller can return it once.
+            if ($plainToken && $order->customer) {
+                $order->customer->plainTextToken = $plainToken;
+            }
+
             logService()->info('order.create.success', [
                 'customer_id' => $order->customer_id,
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
                 'total' => $order->total,
             ]);
+
+            activity()->log('order.placed', $order, 'Order #'.$order->order_number, [
+                'order_type' => $order->order_type,
+                'total' => $order->total,
+            ], $order->customer);
 
             return $order;
 
@@ -373,6 +396,10 @@ class OrderService
             'new_order_id' => $newOrder->id,
             'new_order_num' => $newOrder->order_number,
         ]);
+
+        activity()->log('order.modified', $newOrder, 'Order #'.$newOrder->order_number.' (from #'.$oldOrder->order_number.')', [
+            'old_order_number' => $oldOrder->order_number,
+        ], $customer);
 
         return $newOrder;
     }

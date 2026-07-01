@@ -1,5 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import api, { extractArray, extractData } from '../api/client';
+import { setCurrency } from '../utils/format';
+import { applyTheme } from '../utils/theme';
 
 function decodeText(v) {
   if (!v) return '';
@@ -29,6 +31,9 @@ export default function useRestaurantData() {
       const s = extractData(sR.value.data) || {};
       s.restaurant_name    = decodeText(s.restaurant_name)    || '';
       s.restaurant_name_en = decodeText(s.restaurant_name_en) || '';
+      // Configure currency + brand theme before the settings-driven re-render.
+      if (s.currency) setCurrency(s.currency);
+      applyTheme(s.theme);
       setSettings(s);
     }
     if (cR.status === 'fulfilled') {

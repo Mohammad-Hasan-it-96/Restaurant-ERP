@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -57,7 +58,7 @@ class ProductController extends Controller
         $sortBy = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'created_at';
         $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
 
-        $products = $query->orderBy($sortBy, $direction)->paginate(15)->withQueryString();
+        $products = $query->orderBy($sortBy, $direction)->paginate(config('pagination.products'))->withQueryString();
         $categories = Category::query()->orderBy('name_ar')->get();
 
         // Keep legacy users list for export dropdown
@@ -69,7 +70,7 @@ class ProductController extends Controller
     public function create()
     {
         $this->authorizeProductAction(Product::class, 'create');
-        $categories = Category::orderBy('name_ar')->get();
+        $categories = Category::query()->orderBy('name_ar')->get();
         $weights = Weight::active()->orderBy('sort_order')->get();
         $options = Option::active()->with('values')->orderBy('name')->get();
 
@@ -135,6 +136,8 @@ class ProductController extends Controller
 
         $product->weights()->sync($isWeightBased ? ($validated['weights'] ?? []) : []);
         $product->optionValues()->sync($isWeightBased ? ($validated['option_values'] ?? []) : []);
+
+        activity()->log('product.created', $product, 'Product created: '.$product->name_ar);
 
         return redirect()
             ->route('admin.products.index')
@@ -220,6 +223,8 @@ class ProductController extends Controller
         $product->weights()->sync($isWeightBased ? ($validated['weights'] ?? []) : []);
         $product->optionValues()->sync($isWeightBased ? ($validated['option_values'] ?? []) : []);
 
+        activity()->log('product.updated', $product, 'Product updated: '.$product->name_ar);
+
         $back = $request->input('_back', route('admin.products.index'));
 
         return redirect($back)->with('success', __('app.product_updated'));
@@ -245,6 +250,8 @@ class ProductController extends Controller
 
         $product->delete();
 
+        activity()->log('product.deleted', $product, 'Product deleted: '.$product->name_ar);
+
         return redirect()
             ->route('admin.products.index')
             ->with('success', __('app.product_deleted'));
@@ -259,7 +266,10 @@ class ProductController extends Controller
 
     public function export(Request $request)
     {
-        $products = Product::with('category')->orderBy('sort_order')->orderBy('id')->get();
+        // Only the columns the export actually writes (no category relation — the
+        // sheet emits the raw category_id). Chunked below to bound memory.
+        $exportColumns = ['id', 'name_ar', 'name_en', 'description_ar', 'description_en',
+            'price', 'discount_price', 'category_id', 'is_available', 'is_featured', 'is_active', 'sort_order'];
 
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
@@ -297,22 +307,25 @@ class ProductController extends Controller
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
-        // ── Data rows ─────────────────────────────────────────────
+        // ── Data rows (chunked so a large catalogue isn't all hydrated at once) ──
         $row = 2;
-        foreach ($products as $product) {
-            $sheet->setCellValue("A{$row}", $product->name_ar);
-            $sheet->setCellValue("B{$row}", $product->name_en);
-            $sheet->setCellValue("C{$row}", $product->description_ar);
-            $sheet->setCellValue("D{$row}", $product->description_en);
-            $sheet->setCellValue("E{$row}", $product->price);
-            $sheet->setCellValue("F{$row}", $product->discount_price);
-            $sheet->setCellValue("G{$row}", $product->category_id);
-            $sheet->setCellValue("H{$row}", $product->is_available ? 1 : 0);
-            $sheet->setCellValue("I{$row}", $product->is_featured ? 1 : 0);
-            $sheet->setCellValue("J{$row}", $product->is_active ? 1 : 0);
-            $sheet->setCellValue("K{$row}", $product->sort_order);
-            $row++;
-        }
+        Product::select($exportColumns)->orderBy('sort_order')->orderBy('id')
+            ->chunk(1000, function ($products) use ($sheet, &$row) {
+                foreach ($products as $product) {
+                    $sheet->setCellValue("A{$row}", \App\Support\Csv::neutralize($product->name_ar));
+                    $sheet->setCellValue("B{$row}", \App\Support\Csv::neutralize($product->name_en));
+                    $sheet->setCellValue("C{$row}", \App\Support\Csv::neutralize($product->description_ar));
+                    $sheet->setCellValue("D{$row}", \App\Support\Csv::neutralize($product->description_en));
+                    $sheet->setCellValue("E{$row}", $product->price);
+                    $sheet->setCellValue("F{$row}", $product->discount_price);
+                    $sheet->setCellValue("G{$row}", $product->category_id);
+                    $sheet->setCellValue("H{$row}", $product->is_available ? 1 : 0);
+                    $sheet->setCellValue("I{$row}", $product->is_featured ? 1 : 0);
+                    $sheet->setCellValue("J{$row}", $product->is_active ? 1 : 0);
+                    $sheet->setCellValue("K{$row}", $product->sort_order);
+                    $row++;
+                }
+            });
 
         $filename = 'products_export_'.now()->format('Y-m-d').'.xlsx';
 
@@ -415,15 +428,36 @@ class ProductController extends Controller
                 continue;
             }
 
-            $price = (float) ($row['E'] ?? 0);
-            if ($price <= 0) {
-                $errors[] = "Row {$lineNo}: name_ar='{$nameAr}' skipped — price must be > 0";
+            // Validate the row up front: reject (don't silently coerce) malformed
+            // data — out-of-range numbers, overlong names, or a non-existent
+            // category — so a bad spreadsheet can't create orphaned/garbage rows.
+            $rowData = [
+                'name_ar' => $nameAr,
+                'name_en' => trim((string) ($row['B'] ?? '')) ?: null,
+                'price' => $row['E'] ?? null,
+                'discount_price' => ($row['F'] ?? '') !== '' ? $row['F'] : null,
+                'category_id' => ((int) ($row['G'] ?? 0)) ?: null,
+                'sort_order' => $row['K'] ?? 0,
+            ];
+
+            $validator = Validator::make($rowData, [
+                'name_ar' => ['required', 'string', 'max:255'],
+                'name_en' => ['nullable', 'string', 'max:255'],
+                'price' => ['required', 'numeric', 'gt:0', 'max:99999999'],
+                'discount_price' => ['nullable', 'numeric', 'gte:0', 'max:99999999'],
+                'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+                'sort_order' => ['nullable', 'integer', 'min:0', 'max:99999'],
+            ]);
+
+            if ($validator->fails()) {
+                $errors[] = "Row {$lineNo}: '{$nameAr}' — ".implode(' ', $validator->errors()->all());
                 $skipped++;
 
                 continue;
             }
 
-            $categoryId = (int) ($row['G'] ?? 0) ?: null;
+            $price = (float) $rowData['price'];
+            $categoryId = $rowData['category_id'];
 
             try {
                 Product::updateOrCreate(

@@ -54,7 +54,7 @@
                                         <td>{{ $zone->area_name }}</td>
                                         <td class="text-end fw-semibold">
                                             {{ number_format($zone->estimated_fee, 2) }}
-                                            <span class="text-muted fw-normal">{{ __('app.currency') }}</span>
+                                            <span class="text-muted fw-normal">{{ currency_symbol() }}</span>
                                         </td>
                                     </tr>
                                     @endforeach
@@ -72,7 +72,7 @@
                                    min="0" step="0.01"
                                    value="{{ $order->estimated_delivery_fee ?? 0 }}"
                                    placeholder="0.00">
-                            <span class="input-group-text">{{ __('app.currency') }}</span>
+                            <span class="input-group-text">{{ currency_symbol() }}</span>
                         </div>
                         <div class="form-text">{{ __('app.delivery_fee_hint') }}</div>
                     </div>

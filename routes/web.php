@@ -13,6 +13,30 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('public.home');
 
+// Comprehensive health report (database, cache, queue, storage, disk, versions).
+// Admin-gated via the web session — automated external liveness must use /up.
+Route::get('api/health', \App\Http\Controllers\API\HealthController::class)
+    ->middleware(['auth', 'admin'])
+    ->name('api.health');
+
+// ── Installer wizard ────────────────────────────────────────────────────────
+// Reachable only while not installed (gated by EnsureInstalled). Runs before the
+// DB/.env are configured; see the "Installer Wizard" section in CLAUDE.md.
+Route::prefix('install')->name('install.')
+    ->controller(\App\Http\Controllers\InstallController::class)
+    ->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('database', 'database')->name('database');
+        Route::post('database', 'storeDatabase')->name('database.store');
+        Route::get('app', 'appUrl')->name('app');
+        Route::post('app', 'storeApp')->name('app.store');
+        Route::get('restaurant', 'restaurant')->name('restaurant');
+        Route::post('restaurant', 'storeRestaurant')->name('restaurant.store');
+        Route::get('admin', 'admin')->name('admin');
+        Route::post('admin', 'storeAdmin')->name('admin.store');
+        Route::get('finish', 'finish')->name('finish');
+    });
+
 // Move the language change route outside the auth middleware
 Route::middleware('feature:localization.languages')->group(function () {
     Route::get('/language/{locale}', [LanguageController::class, 'changeLanguage'])->name('language.change');
@@ -21,13 +45,16 @@ Route::middleware('feature:localization.languages')->group(function () {
 
 Route::group(['prefix' => 'auth', 'as' => 'auth.'], function () {
     Route::get('login', [AuthController::class, 'view_login'])->name('view_login');
-    Route::post('login', [AuthController::class, 'login'])->name('login');
-    Route::get('register', [AuthController::class, 'view_register'])->name('view_register');
-    Route::post('register', [AuthController::class, 'register'])->name('register');
+    // Brute-force protection: named "login" limiter (keyed on email+IP) — see AppServiceProvider.
+    Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login')->name('login');
+    // NOTE: public self-registration is intentionally removed. This is an internal
+    // ERP — staff accounts are created by an admin at /admin/users.
     Route::post('logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
-    Route::post('forgot-password', [AuthController::class, 'sendResetLinkEmail'])->name('forgot-password.submit');
-    // Add these to your auth group
+    Route::post('forgot-password', [AuthController::class, 'sendResetLinkEmail'])
+        ->middleware('throttle:5,1')
+        ->name('forgot-password.submit');
     Route::post('reset-password', [AuthController::class, 'resetPassword'])
+        ->middleware('throttle:5,1')
         ->name('password.update');
     Route::get('forgot-password', [AuthController::class, 'forgot_password'])->name('forgot-password');
     Route::get('/reset-password/{token}', [AuthController::class, 'view_resetPassword'])->name('password.reset');
@@ -39,19 +66,40 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
 
     // Dashboard - accessible by all authenticated users
     Route::get('dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
-    Route::get('system-secure-metrics-health-logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index']);
-    // Reports & Analytics
-    Route::get('reports', [ReportController::class, 'index'])->name('reports');
-    Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');
+    Route::get('system-secure-metrics-health-logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index'])
+        ->middleware('admin');
+
+    // Activity Log (business audit trail) — admin only
+    Route::get('activity-logs', [\App\Http\Controllers\Admin\ActivityLogController::class, 'index'])
+        ->middleware('admin')
+        ->name('activity-logs.index');
+
+    // Release / upgrade notes — admin only
+    Route::get('release-notes', [\App\Http\Controllers\Admin\ReleaseNotesController::class, 'index'])
+        ->middleware('admin')
+        ->name('release-notes.index');
+    // Reports & Analytics — staff only; export is heavy so it is also throttled.
+    Route::get('reports', [ReportController::class, 'index'])->middleware('moderator')->name('reports');
+    Route::get('reports/export', [ReportController::class, 'export'])
+        ->middleware(['moderator', 'throttle:5,1'])
+        ->name('reports.export');
 
     // Products routes
     Route::group(['prefix' => 'products', 'as' => 'products.'], function () {
         Route::get('', [AdminProductController::class, 'index'])->name('index');
-        Route::get('export', [AdminProductController::class, 'export'])->name('export');
-        Route::get('import', [AdminProductController::class, 'import'])->name('import');
-        Route::get('template', [AdminProductController::class, 'downloadTemplate'])->name('template');
-        Route::post('import', [AdminProductController::class, 'processImport'])->name('import.process');
-        Route::post('{product}/toggle-availability', [AdminProductController::class, 'toggleAvailability'])->name('toggle-availability');
+
+        // Export/template/availability are staff-level; bulk import (a destructive
+        // mass write) is admin-only. Heavy export/import actions are throttled.
+        Route::get('export', [AdminProductController::class, 'export'])
+            ->middleware(['moderator', 'throttle:5,1'])->name('export');
+        Route::get('template', [AdminProductController::class, 'downloadTemplate'])
+            ->middleware('moderator')->name('template');
+        Route::post('{product}/toggle-availability', [AdminProductController::class, 'toggleAvailability'])
+            ->middleware('moderator')->name('toggle-availability');
+        Route::get('import', [AdminProductController::class, 'import'])
+            ->middleware('admin')->name('import');
+        Route::post('import', [AdminProductController::class, 'processImport'])
+            ->middleware(['admin', 'throttle:5,1'])->name('import.process');
 
         Route::middleware(['moderator'])->group(function () {
             Route::get('create', [AdminProductController::class, 'create'])->name('create');
@@ -106,8 +154,8 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
         });
     });
 
-    // Customers routes
-    Route::group(['prefix' => 'customers', 'as' => 'customers.'], function () {
+    // Customers routes — staff only (PII + block controls).
+    Route::group(['prefix' => 'customers', 'as' => 'customers.', 'middleware' => 'moderator'], function () {
         Route::get('', [CustomerController::class, 'index'])->name('index');
         Route::get('{customer}', [CustomerController::class, 'show'])->name('show');
         Route::post('{customer}/block', [CustomerController::class, 'block'])->name('block');
@@ -115,8 +163,8 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
         Route::post('{customer}/toggle-block', [CustomerController::class, 'toggleBlock'])->name('toggle-block');
     });
 
-    // Orders routes
-    Route::group(['prefix' => 'orders', 'as' => 'orders.'], function () {
+    // Orders routes — staff only; financial actions (delivery fee, mark-paid) are admin-only.
+    Route::group(['prefix' => 'orders', 'as' => 'orders.', 'middleware' => 'moderator'], function () {
         Route::get('', [App\Http\Controllers\Admin\OrderController::class, 'index'])->name('index');
         Route::get('{order}', [App\Http\Controllers\Admin\OrderController::class, 'show'])->name('show');
         Route::get('{order}/invoice', [App\Http\Controllers\Admin\OrderController::class, 'invoice'])->name('invoice');
@@ -124,12 +172,14 @@ Route::group(['middleware' => 'auth', 'prefix' => 'admin', 'as' => 'admin.'], fu
         Route::post('{order}/reject', [App\Http\Controllers\Admin\OrderController::class, 'reject'])
             ->middleware('feature:orders.admin_cancel')
             ->name('reject');
-        Route::patch('{order}/delivery-fee', [App\Http\Controllers\Admin\OrderController::class, 'setDeliveryFee'])->name('delivery-fee');
+        Route::patch('{order}/delivery-fee', [App\Http\Controllers\Admin\OrderController::class, 'setDeliveryFee'])
+            ->middleware('admin')->name('delivery-fee');
         // ── Strict forward workflow transitions: accepted → ready → delivered → completed ──
         Route::patch('{order}/ready', [App\Http\Controllers\Admin\OrderController::class, 'markReady'])->name('ready');
         Route::patch('{order}/delivered', [App\Http\Controllers\Admin\OrderController::class, 'markDelivered'])->name('delivered');
         Route::patch('{order}/completed', [App\Http\Controllers\Admin\OrderController::class, 'markCompleted'])->name('completed');
-        Route::patch('{order}/mark-paid', [App\Http\Controllers\Admin\OrderController::class, 'markAsPaid'])->name('mark-paid');
+        Route::patch('{order}/mark-paid', [App\Http\Controllers\Admin\OrderController::class, 'markAsPaid'])
+            ->middleware('admin')->name('mark-paid');
         // ── Test push notification (admin-only dev/QA tool) ───────────────────
         Route::post('test-notification', [App\Http\Controllers\Admin\OrderController::class, 'testNotification'])
             ->middleware('admin')

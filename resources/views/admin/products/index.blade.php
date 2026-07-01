@@ -82,6 +82,20 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="col-md-4">
+                    <label for="availability_filter" class="form-label">{{\App\Helpers\Helpers::translate('active')}}</label>
+                    <select name="is_available" id="availability_filter" class="form-select">
+                        <option value="All" {{ request('is_available', 'All') === 'All' ? 'selected' : '' }}>
+                            {{\App\Helpers\Helpers::translate('all')}}
+                        </option>
+                        <option value="1" {{ request('is_available') === '1' ? 'selected' : '' }}>
+                            {{ \App\Helpers\Helpers::translate('available') }}
+                        </option>
+                        <option value="0" {{ request('is_available') === '0' ? 'selected' : '' }}>
+                            {{ \App\Helpers\Helpers::translate('unavailable') }}
+                        </option>
+                    </select>
+                </div>
                 <div class="col-md-12 mt-3">
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-filter me-1"></i> {{\App\Helpers\Helpers::translate('apply_filters')}}

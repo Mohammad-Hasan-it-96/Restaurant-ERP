@@ -16,7 +16,7 @@ class ProductSeeder extends Seeder
         $userId = User::value('id') ?? 1;
 
         // Helper: resolve category id by Arabic name
-        $cat = fn(string $nameAr): ?int => Category::where('name_ar', $nameAr)->value('id');
+        $cat = fn(string $nameAr): ?int => Category::query()->where('name_ar', $nameAr)->value('id');
 
         $products = [
             // ── شاورما ─────────────────────────────────────────────

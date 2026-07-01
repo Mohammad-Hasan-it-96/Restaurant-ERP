@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Language;
+use App\Support\Installer;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
@@ -11,6 +12,12 @@ class SetLocale
 {
     public function handle(Request $request, Closure $next)
     {
+        // Before install there is no DB — skip locale resolution (it queries the
+        // languages table) so the installer can run.
+        if (! Installer::isInstalled()) {
+            return $next($request);
+        }
+
         if ($request->is('api/*')) {
             // API requests: honour Accept-Language header first (sent by SPA),
             // then fall back to session or DB default

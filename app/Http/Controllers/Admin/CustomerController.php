@@ -29,7 +29,7 @@ class CustomerController extends Controller
             });
         }
 
-        $customers = $query->paginate(15)->withQueryString();
+        $customers = $query->paginate(config('pagination.customers'))->withQueryString();
 
         return view('admin.customers.index', compact('customers'));
     }
@@ -39,10 +39,14 @@ class CustomerController extends Controller
      */
     public function show(Request $request, Customer $customer)
     {
-        $orders = $customer->orders()->latest()->paginate(10);
-        $ordersCount = $customer->orders()->count();
+        $orders = $customer->orders()->latest()->paginate(config('pagination.customer_orders'));
+        // Derive count + latest order from the paginator (no extra queries on
+        // page 1); only the all-time sum needs its own aggregate query.
+        $ordersCount = $orders->total();
         $totalSpent = (float) $customer->orders()->sum('total');
-        $lastOrder = $customer->orders()->latest()->first();
+        $lastOrder = $orders->currentPage() === 1
+            ? $orders->first()
+            : $customer->orders()->latest()->first();
 
         $back = $request->headers->get('referer', route('admin.customers.index'));
 
@@ -59,9 +63,14 @@ class CustomerController extends Controller
             'blocked_reason' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $customer->update([
-            'is_blocked' => true,
-            'blocked_reason' => $request->input('blocked_reason') ?: null,
+        // is_blocked / blocked_reason are not mass-assignable (privilege fields) —
+        // assign explicitly.
+        $customer->is_blocked = true;
+        $customer->blocked_reason = $request->input('blocked_reason') ?: null;
+        $customer->save();
+
+        activity()->log('customer.blocked', $customer, 'Customer blocked: '.$customer->full_name, [
+            'reason' => $customer->blocked_reason,
         ]);
 
         return back()->with('success', __('app.customer_blocked_success'));
@@ -72,10 +81,11 @@ class CustomerController extends Controller
      */
     public function unblock(Customer $customer)
     {
-        $customer->update([
-            'is_blocked' => false,
-            'blocked_reason' => null,
-        ]);
+        $customer->is_blocked = false;
+        $customer->blocked_reason = null;
+        $customer->save();
+
+        activity()->log('customer.unblocked', $customer, 'Customer unblocked: '.$customer->full_name);
 
         return back()->with('success', __('app.customer_unblocked_success'));
     }
@@ -92,10 +102,16 @@ class CustomerController extends Controller
 
         $nowBlocked = ! $customer->is_blocked;
 
-        $customer->update([
-            'is_blocked' => $nowBlocked,
-            'blocked_reason' => $nowBlocked ? ($request->input('blocked_reason') ?: null) : null,
-        ]);
+        $customer->is_blocked = $nowBlocked;
+        $customer->blocked_reason = $nowBlocked ? ($request->input('blocked_reason') ?: null) : null;
+        $customer->save();
+
+        activity()->log(
+            $nowBlocked ? 'customer.blocked' : 'customer.unblocked',
+            $customer,
+            ($nowBlocked ? 'Customer blocked: ' : 'Customer unblocked: ').$customer->full_name,
+            $nowBlocked ? ['reason' => $customer->blocked_reason] : [],
+        );
 
         $msg = $nowBlocked
             ? __('app.customer_blocked_success')

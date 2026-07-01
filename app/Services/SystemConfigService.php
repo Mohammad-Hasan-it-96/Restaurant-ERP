@@ -136,6 +136,39 @@ class SystemConfigService
         return $trimmed;
     }
 
+    // ─── Currency ──────────────────────────────────────────────────
+
+    /**
+     * Resolved currency configuration.
+     *
+     * @return array{code:string,symbol:string,position:string,decimals:int}
+     */
+    public function currency(): array
+    {
+        $position = strtolower($this->getText('currency_position', 'suffix'));
+
+        return [
+            'code' => $this->getText('currency_code', 'USD'),
+            'symbol' => $this->getText('currency_symbol', '$'),
+            'position' => in_array($position, ['prefix', 'suffix'], true) ? $position : 'suffix',
+            'decimals' => max(0, (int) $this->getNumber('currency_decimals', 0)),
+        ];
+    }
+
+    /**
+     * Format a numeric amount as a money string using the configured currency
+     * (symbol, position, decimals, thousands separator).
+     */
+    public function formatMoney(int|float|string|null $amount): string
+    {
+        $currency = $this->currency();
+        $number = number_format((float) $amount, $currency['decimals']);
+
+        return $currency['position'] === 'prefix'
+            ? $currency['symbol'].$number
+            : $number.' '.$currency['symbol'];
+    }
+
     // ─── Restaurant-specific helpers ───────────────────────────────
 
     /**

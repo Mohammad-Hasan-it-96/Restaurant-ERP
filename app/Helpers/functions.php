@@ -11,8 +11,25 @@
 |
 */
 
+use App\Services\ActivityLogger;
 use App\Services\LogService;
+use App\Services\SystemConfigService;
 use App\Support\Feature;
+use App\Support\Version;
+
+if (! function_exists('activity')) {
+    /**
+     * Resolve the ActivityLogger for recording business audit events.
+     *
+     * Records curated business events (admin and customer) to the activity_logs
+     * table, separate from LogService's technical logs:
+     *   activity()->log('order.accepted', $order, 'Order #'.$order->order_number);
+     */
+    function activity(): ActivityLogger
+    {
+        return app(ActivityLogger::class);
+    }
+}
 
 if (! function_exists('logService')) {
     /**
@@ -26,6 +43,43 @@ if (! function_exists('logService')) {
     function logService(): LogService
     {
         return app(LogService::class);
+    }
+}
+
+if (! function_exists('money')) {
+    /**
+     * Format an amount with the configured currency (symbol, position, decimals).
+     *
+     * Single formatting path for restaurant-tunable currency in Blade:
+     *   {{ money($order->total) }}
+     */
+    function money(int|float|string|null $amount): string
+    {
+        return app(SystemConfigService::class)->formatMoney($amount);
+    }
+}
+
+if (! function_exists('currency_symbol')) {
+    /**
+     * The configured currency symbol on its own (for labels next to a number
+     * that is formatted separately): {{ currency_symbol() }}.
+     */
+    function currency_symbol(): string
+    {
+        return app(SystemConfigService::class)->currency()['symbol'];
+    }
+}
+
+if (! function_exists('app_version')) {
+    /**
+     * The application's current semantic version, e.g. "1.0.0".
+     *
+     * Named app_version() (not version()) to avoid confusion with Laravel's
+     * framework version via app()->version(). Use in Blade: v{{ app_version() }}.
+     */
+    function app_version(): string
+    {
+        return Version::current();
     }
 }
 

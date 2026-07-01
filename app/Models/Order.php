@@ -6,22 +6,35 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 class Order extends Model
 {
-    /** Cache key for the admin dashboard summary stats. */
+    /** Cache key for the admin dashboard summary stat cards. */
     const DASHBOARD_STATS_CACHE_KEY = 'dashboard.stats';
 
+    /** Cache key for the heavier dashboard aggregates (charts, top lists). */
+    const DASHBOARD_DETAILED_STATS_CACHE_KEY = 'dashboard.detailed_stats';
+
+    /** Cache key for the order index status badge counts. */
+    const STATUS_COUNTS_CACHE_KEY = 'orders.status_counts';
+
     /**
-     * Flush the cached dashboard stats whenever an order is created, updated
-     * (e.g. a status change), or deleted. Every write path goes through
-     * Eloquent (Order::create / $order->update), so the saved/deleted events
-     * cover them all in one place.
+     * Flush the cached dashboard stats + order status counts whenever an order is
+     * created, updated (e.g. a status change), or deleted. Every write path goes
+     * through Eloquent (Order::create / $order->update), so the saved/deleted
+     * events cover them all in one place.
      */
     protected static function booted(): void
     {
-        static::saved(fn () => Cache::forget(self::DASHBOARD_STATS_CACHE_KEY));
-        static::deleted(fn () => Cache::forget(self::DASHBOARD_STATS_CACHE_KEY));
+        $flush = function () {
+            Cache::forget(self::DASHBOARD_STATS_CACHE_KEY);
+            Cache::forget(self::DASHBOARD_DETAILED_STATS_CACHE_KEY);
+            Cache::forget(self::STATUS_COUNTS_CACHE_KEY);
+        };
+
+        static::saved($flush);
+        static::deleted($flush);
     }
 
     // ??? Order type constants ??????????????????????????????????????
@@ -174,17 +187,28 @@ class Order extends Model
     }
 
     /**
-     * Generate a unique order number like ORD-20260503-0001.
+     * Generate a unique order number like ORD-20260503-0001-A1B2.
+     * The leading prefix is configurable via config/orders.php (ORDER_NUMBER_PREFIX).
+     * A random suffix is appended so order numbers aren't trivially guessable /
+     * enumerable (the daily sequence stays internal-friendly but no longer leaks
+     * order volume to anyone who can read one number).
      */
     public static function generateOrderNumber(): string
     {
         $today = now()->format('Ymd');
-        $prefix = 'ORD-'.$today.'-';
+        $prefix = config('orders.number_prefix', 'ORD-').$today.'-';
         $last = self::where('order_number', 'like', $prefix.'%')
             ->orderByDesc('id')
             ->value('order_number');
-        $seq = $last ? ((int) substr($last, -4)) + 1 : 1;
 
-        return $prefix.str_pad($seq, 4, '0', STR_PAD_LEFT);
+        // The 4-digit sequence sits immediately after the prefix; read it from
+        // there (not the end of the string) since a random suffix now follows it.
+        // Handles legacy numbers (no suffix) too.
+        $seq = 1;
+        if ($last !== null) {
+            $seq = ((int) substr($last, strlen($prefix), 4)) + 1;
+        }
+
+        return $prefix.str_pad($seq, 4, '0', STR_PAD_LEFT).'-'.strtoupper(Str::random(4));
     }
 }

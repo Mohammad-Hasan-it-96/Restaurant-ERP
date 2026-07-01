@@ -127,7 +127,7 @@ class CartService
      */
     private function resolveProduct(int $productId): Product
     {
-        $product = Product::where('id', $productId)
+        $product = Product::query()->where('id', $productId)
             ->where('is_active', true)
             ->where('is_available', true)
             ->first();

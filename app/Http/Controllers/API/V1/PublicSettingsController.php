@@ -32,6 +32,10 @@ class PublicSettingsController extends Controller
             'is_open_now' => $this->config->isOpenAt(),
             'delivery_note' => $this->config->getFirstText(['delivery_note'], ''),
             'customer_cancel_before_minutes' => (int) $this->config->getNumber('customer_cancel_before_minutes', 0),
+            // Currency (code/symbol/position/decimals) so the SPA renders prices consistently.
+            'currency' => $this->config->currency(),
+            // Brand theme tokens (config-driven) applied to the SPA :root at boot.
+            'theme' => config('theme'),
             // Whitelisted feature flags only — admin-only flags are never exposed.
             'features' => Feature::clientSafe(),
         ];

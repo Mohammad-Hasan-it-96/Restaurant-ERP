@@ -9,6 +9,15 @@ use Illuminate\Support\Facades\Validator;
 
 class ConfigController extends Controller
 {
+    /** Config keys whose value must be numeric (downstream getNumber casts rely on it). */
+    private const NUMERIC_CONFIG_KEYS = [
+        'currency_decimals',
+        'customer_cancel_before_minutes',
+    ];
+
+    /** Upper bound on a single config value's length (bounds oversized/abusive writes). */
+    private const MAX_CONFIG_VALUE_LENGTH = 20000;
+
     /**
      * Display a listing of all system configurations.
      *
@@ -59,6 +68,8 @@ class ConfigController extends Controller
         $data = $request->except('_token', '_method');
 
         $affectedGroups = [];
+        $changedKeys = [];
+        $errors = [];
 
         // ── Handle restaurant_logo file upload ─────────────────────────
         if ($request->hasFile('restaurant_logo_file')) {
@@ -71,6 +82,7 @@ class ConfigController extends Controller
                 $config->save();
                 SystemConfig::clearCache('restaurant_logo');
                 $affectedGroups[] = $config->group;
+                $changedKeys[] = 'restaurant_logo';
             }
             // Overwrite the text-input value so it won't be saved again below
             $data['config_restaurant_logo'] = $path;
@@ -90,6 +102,22 @@ class ConfigController extends Controller
                 continue;
             }
 
+            // Per-key validation: bound the length of every value and enforce the
+            // numeric type on keys whose downstream casts (getNumber/currency())
+            // depend on it — reject (don't persist) bad values instead of letting
+            // them break those casts later.
+            $strValue = is_scalar($value) ? (string) $value : '';
+            if (mb_strlen($strValue) > self::MAX_CONFIG_VALUE_LENGTH) {
+                $errors[] = $configKey.': value too long';
+
+                continue;
+            }
+            if (in_array($configKey, self::NUMERIC_CONFIG_KEYS, true) && $strValue !== '' && ! is_numeric($strValue)) {
+                $errors[] = $configKey.': must be a number';
+
+                continue;
+            }
+
             // Get the config to update
             $config = SystemConfig::where('key', $configKey)->first();
 
@@ -100,6 +128,7 @@ class ConfigController extends Controller
                 // Clear the cache for this config
                 SystemConfig::clearCache($configKey);
                 $affectedGroups[] = $config->group;
+                $changedKeys[] = $configKey;
             }
         }
 
@@ -108,7 +137,16 @@ class ConfigController extends Controller
             SystemConfig::clearCache(null, $grp);
         }
 
-        return redirect()->back()->with('success', __('app.configs_updated'));
+        if (! empty($changedKeys)) {
+            activity()->log('settings.updated', null, 'System settings updated', [
+                'keys' => array_values(array_unique($changedKeys)),
+                'groups' => array_values(array_unique($affectedGroups)),
+            ]);
+        }
+
+        $redirect = redirect()->back()->with('success', __('app.configs_updated'));
+
+        return $errors ? $redirect->with('error', implode('<br>', $errors)) : $redirect;
     }
 
     /**
@@ -136,11 +174,13 @@ class ConfigController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        SystemConfig::create([
+        $config = SystemConfig::create([
             'key' => $request->key,
             'value' => $request->value,
             'group' => $group,
         ]);
+
+        activity()->log('settings.created', $config, 'Config created: '.$config->key);
 
         return redirect()
             ->route('admin.configs.group', $group)
@@ -162,6 +202,8 @@ class ConfigController extends Controller
         SystemConfig::clearCache($config->key);
 
         $config->delete();
+
+        activity()->log('settings.deleted', $config, 'Config deleted: '.$config->key);
 
         return redirect()
             ->route('admin.configs.group', $group)

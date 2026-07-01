@@ -20,7 +20,7 @@ class WeightController extends Controller
         $sortBy = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'sort_order';
         $direction = $request->input('direction') === 'desc' ? 'desc' : 'asc';
 
-        $weights = $query->orderBy($sortBy, $direction)->paginate(20)->withQueryString();
+        $weights = $query->orderBy($sortBy, $direction)->paginate(config('pagination.weights'))->withQueryString();
 
         return view('admin.weights.index', compact('weights'));
     }

@@ -21,6 +21,30 @@ class SystemConfig extends Model
         'group',
     ];
 
+    /**
+     * Centralized cache invalidation. Every write path (set/updateOrCreate/save/
+     * create/delete) flows through Eloquent, so hooking the model events clears
+     * both the per-key and per-group caches in one place — no caller (controller,
+     * service, installer) has to remember to call clearCache().
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (SystemConfig $config) {
+            self::clearCache($config->key);
+            self::clearCache(null, $config->group);
+
+            // Moved between groups → also flush the old group's cached list.
+            if ($config->wasChanged('group') && $config->getOriginal('group')) {
+                self::clearCache(null, $config->getOriginal('group'));
+            }
+        });
+
+        static::deleted(function (SystemConfig $config) {
+            self::clearCache($config->key);
+            self::clearCache(null, $config->group);
+        });
+    }
+
     // ─── Typed getters ────────────────────────────────────────────
 
     /**
@@ -172,15 +196,13 @@ class SystemConfig extends Model
         } elseif ($group) {
             Cache::forget(self::$cachePrefix.'group_'.$group);
         } else {
-            // Clear all system config cache
-            $keys = self::all()->pluck('key')->toArray();
-            foreach ($keys as $k) {
+            // Clear all system config cache. Pluck only the columns we need
+            // (SELECT key / DISTINCT group) instead of hydrating every full row.
+            foreach (self::query()->pluck('key') as $k) {
                 Cache::forget(self::$cachePrefix.$k);
             }
 
-            // Clear all group caches
-            $groups = self::distinct()->pluck('group')->toArray();
-            foreach ($groups as $g) {
+            foreach (self::query()->distinct()->pluck('group') as $g) {
                 Cache::forget(self::$cachePrefix.'group_'.$g);
             }
         }

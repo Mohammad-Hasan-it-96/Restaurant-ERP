@@ -95,13 +95,13 @@ class ReportController extends Controller
             ')
             ->groupBy('order_items.product_name')
             ->orderByDesc('total_quantity')
-            ->limit(10)
+            ->limit(config('dashboard.report_top_products'))
             ->get();
 
         // ── Paginated orders table ────────────────────────────────────────────
         $orders = $this->applyFilters(Order::with('customer'), $filters)
             ->orderByDesc('created_at')
-            ->paginate(20)
+            ->paginate(config('pagination.reports'))
             ->withQueryString();
 
         return view('admin.reports.index', compact(
@@ -157,11 +157,11 @@ class ReportController extends Controller
 
             foreach ($orders as $order) {
                 fputcsv($handle, [
-                    $order->order_number,
-                    $order->customer->full_name ?? '',
-                    $order->customer->phone ?? '',
-                    $order->order_type,
-                    $order->status,
+                    \App\Support\Csv::neutralize($order->order_number),
+                    \App\Support\Csv::neutralize($order->customer->full_name ?? ''),
+                    \App\Support\Csv::neutralize($order->customer->phone ?? ''),
+                    \App\Support\Csv::neutralize($order->order_type),
+                    \App\Support\Csv::neutralize($order->status),
                     number_format((float) $order->subtotal, 2, '.', ''),
                     number_format((float) ($order->delivery_fee ?? 0), 2, '.', ''),
                     number_format((float) $order->total, 2, '.', ''),

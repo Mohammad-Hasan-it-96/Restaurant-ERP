@@ -2,7 +2,7 @@
 
 return [
     // General
-    'app_name' => 'Laravel MuscleHub',
+    'app_name' => 'Restaurant ERP',
 
     // Customer Home (Public Page)
     'menu'                       => 'Menu',
@@ -405,10 +405,7 @@ return [
 
     // Restaurant settings
     'restaurant'                    => 'Restaurant',
-    'restaurant_name'               => 'ملحمة الغدير',
     'restaurant_logo'               => 'Restaurant Logo',
-    'restaurant_phone'              => '0983820430',
-    'restaurant_whatsapp'           => '+963 983 820 430',
     'opening_hours'                 => '8 AM to 12 PM',
     'is_accepting_orders'           => 'Accepting Orders',
     'rejection_reasons'             => 'Rejection Reasons',
@@ -500,7 +497,6 @@ return [
     'delivery'                    => 'Delivery',
     'takeaway'                    => 'Takeaway',
     'yes_cancel'                  => 'Yes, Cancel',
-    'currency'                    => 'SYP',
     'cancelled_by_admin'          => 'Cancelled by Admin',
     'cancelled_by_customer'       => 'Cancelled by Customer',
 
@@ -532,6 +528,8 @@ return [
     'top_products'  => 'Top Selling Products',
     'sold'                  => 'sold',
     'no_data'               => 'No data available',
+    'release_notes'         => 'Release Notes',
+    'current_version'       => 'Current version',
     'sales_today'           => 'Sales Today',
     'total_customers_count' => 'Total Customers',
     'pending_orders'        => 'Pending Orders',
@@ -563,6 +561,39 @@ return [
     'blocked_reason_placeholder' => 'e.g. Repeated cancellations, abuse…',
     'optional'                   => 'optional',
     'clear'                      => 'Clear',
+
+    // ── Activity Log (business audit trail) ──
+    'from'                        => 'From',
+    'system'                      => 'System',
+    'activity_log'                => 'Activity Log',
+    'health_check'                => 'Health Check',
+    'activity_search_placeholder' => 'Search actor, subject, action…',
+    'activity_action'             => 'Action',
+    'activity_actor'              => 'Actor',
+    'activity_subject'            => 'Subject',
+    'activity_details'            => 'Details',
+    'activity_time'               => 'Time',
+    'activity_none_found'         => 'No activity found',
+    'activity_actions'            => [
+        'product.created'    => 'Product created',
+        'product.updated'    => 'Product updated',
+        'product.deleted'    => 'Product deleted',
+        'order.accepted'     => 'Order accepted',
+        'order.rejected'     => 'Order rejected',
+        'order.ready'        => 'Order ready',
+        'order.delivered'    => 'Order delivered',
+        'order.completed'    => 'Order completed',
+        'order.paid'         => 'Order paid',
+        'order.placed'       => 'Order placed',
+        'order.modified'     => 'Order modified',
+        'order.cancelled'    => 'Order cancelled',
+        'settings.updated'   => 'Settings updated',
+        'settings.created'   => 'Setting created',
+        'settings.deleted'   => 'Setting deleted',
+        'customer.blocked'   => 'Customer blocked',
+        'customer.unblocked' => 'Customer unblocked',
+    ],
+
     'view'                       => 'View',
     'total'                      => 'Total',
     'total_spent'                => 'Total Spent',

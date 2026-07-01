@@ -20,7 +20,7 @@ class DeliveryZoneController extends Controller
         $sortBy = in_array($request->input('sort'), $allowed) ? $request->input('sort') : 'created_at';
         $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
 
-        $zones = $query->orderBy($sortBy, $direction)->paginate(15)->withQueryString();
+        $zones = $query->orderBy($sortBy, $direction)->paginate(config('pagination.delivery_zones'))->withQueryString();
 
         return view('admin.delivery_zones.index', compact('zones'));
     }

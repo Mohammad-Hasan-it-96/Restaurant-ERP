@@ -19,7 +19,7 @@ class DashboardController extends BaseController
     public function dashboard(Request $request)
     {
         // ── Summary cards (cached 120s; flushed by Order model events) ────────
-        $stats = Cache::remember(Order::DASHBOARD_STATS_CACHE_KEY, 120, function () {
+        $stats = Cache::remember(Order::DASHBOARD_STATS_CACHE_KEY, config('dashboard.stats_ttl'), function () {
             $today = Carbon::today();
 
             return [
@@ -41,42 +41,65 @@ class DashboardController extends BaseController
 
         // ── Recent orders (kept live — cheap latest-10, should always be fresh) ─
         $recentOrders = Order::latest()
-            ->limit(10)
+            ->limit(config('dashboard.recent_orders'))
             ->get();
 
-        // ── Statuses excluded from sales/product totals (not real sales) ──────
-        $excludedStatuses = [
-            Order::STATUS_CANCELLED_BY_CUSTOMER,
-            Order::STATUS_REJECTED,
-            Order::STATUS_MODIFIED,
-        ];
+        // ── Heavier aggregates: cached, flushed by Order model events ──────────
+        $detailed = Cache::remember(Order::DASHBOARD_DETAILED_STATS_CACHE_KEY, config('dashboard.detailed_stats_ttl'), function () {
+            $excludedStatuses = [
+                Order::STATUS_CANCELLED_BY_CUSTOMER,
+                Order::STATUS_REJECTED,
+                Order::STATUS_MODIFIED,
+            ];
 
-        // ── Total customers (stat card) ───────────────────────────────────────
-        $totalCustomers = Customer::count();
+            // Order-type breakdown — one grouped query (was 3 count()s in the view).
+            $typeCounts = Order::selectRaw('order_type, COUNT(*) as cnt')
+                ->groupBy('order_type')
+                ->pluck('cnt', 'order_type');
 
-        // ── Top 5 customers by order count ────────────────────────────────────
-        $topCustomers = Customer::withCount('orders')
-            ->orderByDesc('orders_count')
-            ->limit(5)
-            ->get();
+            // Weekly chart — one grouped query (was N separate per-day counts).
+            $chartDays = (int) config('dashboard.chart_days', 7);
+            $weekStart = Carbon::today()->subDays($chartDays - 1)->startOfDay();
+            $daily = Order::where('created_at', '>=', $weekStart)
+                ->selectRaw('DATE(created_at) as d, COUNT(*) as cnt')
+                ->groupBy('d')
+                ->pluck('cnt', 'd');
 
-        // ── Top 5 products by quantity sold ───────────────────────────────────
-        $topProducts = OrderItem::query()
-            ->selectRaw('product_name, SUM(quantity) as total_sold')
-            ->whereHas('order', fn ($q) => $q->whereNotIn('status', $excludedStatuses))
-            ->groupBy('product_name')
-            ->orderByDesc('total_sold')
-            ->limit(5)
-            ->get();
+            $weekLabels = [];
+            $weekCounts = [];
+            for ($i = $chartDays - 1; $i >= 0; $i--) {
+                $day = Carbon::today()->subDays($i);
+                $weekLabels[] = $day->format('D');
+                $weekCounts[] = (int) ($daily[$day->format('Y-m-d')] ?? 0);
+            }
 
-        // ── Weekly orders chart (last 7 days, oldest → newest) ────────────────
-        $weekLabels = [];
-        $weekCounts = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $day = Carbon::today()->subDays($i);
-            $weekLabels[] = $day->format('D');
-            $weekCounts[] = Order::whereDate('created_at', $day)->count();
-        }
+            return [
+                'totalCustomers' => Customer::count(),
+                'topCustomers' => Customer::withCount('orders')
+                    ->orderByDesc('orders_count')->limit(config('dashboard.top_customers'))->get(),
+                'topProducts' => OrderItem::query()
+                    ->selectRaw('product_name, SUM(quantity) as total_sold')
+                    ->whereHas('order', fn ($q) => $q->whereNotIn('status', $excludedStatuses))
+                    ->groupBy('product_name')->orderByDesc('total_sold')
+                    ->limit(config('dashboard.top_products'))->get(),
+                'weekLabels' => $weekLabels,
+                'weekCounts' => $weekCounts,
+                'typeTable' => (int) ($typeCounts[Order::TYPE_TABLE] ?? 0),
+                'typeDelivery' => (int) ($typeCounts[Order::TYPE_DELIVERY] ?? 0),
+                'typeTakeaway' => (int) ($typeCounts[Order::TYPE_TAKEAWAY] ?? 0),
+            ];
+        });
+
+        [
+            'totalCustomers' => $totalCustomers,
+            'topCustomers' => $topCustomers,
+            'topProducts' => $topProducts,
+            'weekLabels' => $weekLabels,
+            'weekCounts' => $weekCounts,
+            'typeTable' => $typeTable,
+            'typeDelivery' => $typeDelivery,
+            'typeTakeaway' => $typeTakeaway,
+        ] = $detailed;
 
         // ── Restaurant branding (shown in the dashboard banner) ───────────────
         $restaurantName = $this->config->getFirstText(
@@ -97,6 +120,9 @@ class DashboardController extends BaseController
             'topProducts',
             'weekLabels',
             'weekCounts',
+            'typeTable',
+            'typeDelivery',
+            'typeTakeaway',
             'restaurantName',
             'restaurantNameAr',
             'restaurantNameEn',
